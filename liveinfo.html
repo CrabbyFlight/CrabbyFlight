@@ -11,15 +11,18 @@
     --radius:14px; --gap:16px;
   }
 
-html, body {
-  margin:0; padding:0; height:100%;
+  /* Page transparent for OBS; editor retains dark bg */
+  html, body {
+  margin:0;
+  padding:0;
+  height:100%;
   background: transparent !important;
   color: var(--ink);
   font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
 }
-/* keep editor comfy, overlays transparent */
 body.editor { background: var(--bg); }
-body.info, body.departures { background: transparent; }
+body.info, body.departures { background: transparent !important; }
+  body.editor { background: var(--bg); }
 
   /* ===== Editor (app) ===== */
   .wrap{ max-width:980px; margin:0 auto; padding:28px; background:var(--bg);}
