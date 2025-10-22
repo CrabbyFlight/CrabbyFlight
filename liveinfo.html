@@ -73,17 +73,6 @@
     color: var(--ink);
     font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   }
-
-  /* Lock layout and hide app UI while splash is active */
-  body.splashing { overflow: hidden; }
-
-  /* Hide overlays so they can’t flash under the splash */
-  body.splashing #screen-editor,
-  body.splashing #screen-info,
-  body.splashing #screen-departures { visibility: hidden; }
-
-  /* Stop yellow sweep animation during splash */
-  body.splashing .header::after { display: none; }
   
   body.editor { background: var(--bg) !important; }
   body.info, body.departures { background: transparent !important; }
@@ -138,6 +127,11 @@
   .header::after{ content:""; position:absolute; top:0; left:-45%; width:40%; height:100%; pointer-events:none;
     background:linear-gradient(120deg, rgba(255,209,0,0) 0%, rgba(255,209,0,0.45) 50%, rgba(255,209,0,0) 100%);
     filter:blur(1px); animation:hdrSweep 4s linear infinite }
+
+  /* Hide the yellow sweep until the overlay is ready */
+.header::after { display: none; }
+body.ready .header::after { display: block; }
+  
   @keyframes hdrSweep{ 0%{ transform:translateX(0) } 100%{ transform:translateX(250%) } }
 
   .table { display:grid; grid-template-columns:96px 1fr 1fr 120px 72px 188px; column-gap:14px;
@@ -180,15 +174,7 @@
   body.departures #screen-editor, body.departures #screen-info{ display:none }
 </style>
 </head>
-<body class="splashing">
-<div id="splash" style="
-  position:fixed; inset:0; height:100vh;
-  background:#1d1f22;
-  display:flex; align-items:center; justify-content:center;
-  z-index:9999; will-change:opacity;
-">
-  <img src="logo.png" alt="CrabbyFlight" width="180" height="180" style="height:auto;">
-</div>
+<body>
 
 <!-- ============== EDITOR ============== -->
 <div id="screen-editor" class="wrap">
@@ -470,21 +456,6 @@ function subscribe(){
   function bind(){ if (mode==='editor') bindEditor(); subscribe(); applyOverlayOptions(); }
   bind();
   
-// --- Splash: keep app hidden, show splash 2s, then quick fade-out ---
-window.addEventListener('load', () => {
-  const splash = document.getElementById('splash');
-  const revealApp = () => document.body.classList.remove('splashing');
-
-  if (!splash) { revealApp(); return; }
-
-  setTimeout(() => {
-    // unhide app beneath splash first, then fade splash
-    revealApp();
-    splash.style.transition = 'opacity 0.3s ease';
-    splash.style.opacity = '0';
-    setTimeout(() => splash.remove(), 300);
-  }, 2000); // hold 2s
-});
 </script>
 </body>
 </html>
