@@ -410,19 +410,30 @@
     const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=labels[st]||st.toUpperCase();
   }
 
-  function subscribe(){
-    const r = ref(db, `rooms/${room}`);
-    onValue(r, snap=>{
-      const data = snap.val() || DEFAULTS;
-      if (mode==='info') renderInfo(data);
-      if (mode==='departures') renderDepartures(data);
-      if (mode==='editor') {
-        for(const k of FIELDS){ const el=document.getElementById(k); if(el && typeof data[k]==='string'){ el.value=data[k]; } }
-        const statusEl=document.getElementById('status'); const customRow=document.getElementById('customRow');
-        if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
+  let firstPaint = false;
+
+function subscribe(){
+  const r = ref(db, `rooms/${room}`);
+  onValue(r, snap=>{
+    const data = snap.val() || DEFAULTS;
+    if (mode==='info') renderInfo(data);
+    if (mode==='departures') renderDepartures(data);
+    if (mode==='editor') {
+      for(const k of FIELDS){
+        const el=document.getElementById(k);
+        if(el && typeof data[k]==='string'){ el.value=data[k]; }
       }
-    });
-  }
+      const statusEl=document.getElementById('status');
+      const customRow=document.getElementById('customRow');
+      if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
+    }
+    // Fade in after first paint
+    if (!firstPaint) {
+      document.body.classList.add('ready');
+      firstPaint = true;
+    }
+  });
+}
 
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
