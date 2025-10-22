@@ -11,6 +11,9 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1d1f22">  
 
+<!-- iOS PWA name -->
+<meta name="apple-mobile-web-app-title" content="CrabbyFlight">
+  
 <!-- Required for iOS PWA full-screen + splash -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -39,22 +42,6 @@
 <link rel="apple-touch-startup-image" href="splash-2048x2732.png"
   media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   
-<!-- iOS/macOS PWA startup images -->
-<link rel="apple-touch-startup-image" href="splash-1290x2796.png"
-  media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1179x2556.png"
-  media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1170x2532.png"
-  media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1125x2436.png"
-  media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-828x1792.png"
-  media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-750x1334.png"
-  media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1242x2688.png"
-  media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-
 <!-- iPad sizes -->
 <link rel="apple-touch-startup-image" href="splash-1536x2048.png"
   media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
@@ -350,7 +337,13 @@
     document.body.classList.add(mode);
   }
   applyMode();
-  window.addEventListener('hashchange', ()=>{ ({mode, room}=parseHash()); applyMode(); bind(); });
+ window.addEventListener('hashchange', ()=>{
+  ({mode, room}=parseHash());
+  document.body.classList.remove('ready');
+  firstPaint = false;
+  applyMode();
+  bind();
+});
 
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
