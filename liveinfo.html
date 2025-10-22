@@ -72,6 +72,15 @@
     color: var(--ink);
     font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   }
+    /* Prevent pre-flash until splash hides */
+  body {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  body.ready {
+    opacity: 1;
+  }
+  
   body.editor { background: var(--bg) !important; }
   body.info, body.departures { background: transparent !important; }
 
@@ -457,15 +466,16 @@ function subscribe(){
   function bind(){ if (mode==='editor') bindEditor(); subscribe(); applyOverlayOptions(); }
   bind();
   
-  // --- Splash screen delay ---
+  // --- Splash: hold 2 s, then quick fade; prevent pre-flash ---
   window.addEventListener('load', () => {
+    document.body.classList.add('ready'); // reveal page smoothly
     const splash = document.getElementById('splash');
     if (!splash) return;
     setTimeout(() => {
       splash.style.transition = 'opacity 0.3s ease';
       splash.style.opacity = '0';
       setTimeout(() => splash.remove(), 300);
-    }, 2000); // 2 seconds before quick fade
+    }, 2000);
   });
 </script>
 </body>
