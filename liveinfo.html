@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
 <link rel="apple-touch-icon" href="logo192.png">
 <link rel="manifest" href="manifest.json">
+<link rel="preload" as="image" href="logo.png">
 <meta name="theme-color" content="#1d1f22">  
 
 <!-- iOS PWA name -->
@@ -61,7 +62,7 @@
 
   /* Hide overlays until first data paint, then fade in */
   body.info #screen-info,
-  body.departures #screen-departures { opacity: 0; transition: opacity .15s ease; }
+   body.departures #screen-departures { opacity: 0; transition: opacity .15s ease; }
   body.ready.info #screen-info,
   body.ready.departures #screen-departures { opacity: 1; }
 
@@ -72,14 +73,17 @@
     color: var(--ink);
     font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   }
-    /* Prevent pre-flash until splash hides */
-  body {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-  body.ready {
-    opacity: 1;
-  }
+
+  /* Lock layout and hide app UI while splash is active */
+  body.splashing { overflow: hidden; }
+
+  /* Hide overlays so they can’t flash under the splash */
+  body.splashing #screen-editor,
+  body.splashing #screen-info,
+  body.splashing #screen-departures { visibility: hidden; }
+
+  /* Stop yellow sweep animation during splash */
+  body.splashing .header::after { display: none; }
   
   body.editor { background: var(--bg) !important; }
   body.info, body.departures { background: transparent !important; }
@@ -176,14 +180,14 @@
   body.departures #screen-editor, body.departures #screen-info{ display:none }
 </style>
 </head>
-<body>
+<body class="splashing">
 <div id="splash" style="
-  position:fixed; inset:0;
+  position:fixed; inset:0; height:100vh;
   background:#1d1f22;
   display:flex; align-items:center; justify-content:center;
-  z-index:9999;
+  z-index:9999; will-change:opacity;
 ">
-  <img src="logo.png" alt="CrabbyFlight" style="width:180px; height:auto;">
+  <img src="logo.png" alt="CrabbyFlight" width="180" height="180" style="height:auto;">
 </div>
 
 <!-- ============== EDITOR ============== -->
@@ -466,17 +470,21 @@ function subscribe(){
   function bind(){ if (mode==='editor') bindEditor(); subscribe(); applyOverlayOptions(); }
   bind();
   
-  // --- Splash: hold 2 s, then quick fade; prevent pre-flash ---
-  window.addEventListener('load', () => {
-    document.body.classList.add('ready'); // reveal page smoothly
-    const splash = document.getElementById('splash');
-    if (!splash) return;
-    setTimeout(() => {
-      splash.style.transition = 'opacity 0.3s ease';
-      splash.style.opacity = '0';
-      setTimeout(() => splash.remove(), 300);
-    }, 2000);
-  });
+// --- Splash: keep app hidden, show splash 2s, then quick fade-out ---
+window.addEventListener('load', () => {
+  const splash = document.getElementById('splash');
+  const revealApp = () => document.body.classList.remove('splashing');
+
+  if (!splash) { revealApp(); return; }
+
+  setTimeout(() => {
+    // unhide app beneath splash first, then fade splash
+    revealApp();
+    splash.style.transition = 'opacity 0.3s ease';
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 300);
+  }, 2000); // hold 2s
+});
 </script>
 </body>
 </html>
