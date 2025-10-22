@@ -72,6 +72,12 @@
     --radius:14px; --gap:16px;
   }
 
+  /* Hide overlays until first data paint, then fade in */
+  body.info #screen-info,
+  body.departures #screen-departures { opacity: 0; transition: opacity .15s ease; }
+  body.ready.info #screen-info,
+  body.ready.departures #screen-departures { opacity: 1; }
+
   /* ===== Force transparent page for OBS; editor keeps dark bg ===== */
   html, body {
     margin:0; padding:0; height:100%;
