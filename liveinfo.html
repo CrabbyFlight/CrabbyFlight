@@ -4,55 +4,43 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CrabbyFlight — Live Overlay (Firebase)</title>
-  
+
 <!-- App Icon & PWA Meta -->
 <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
 <link rel="apple-touch-icon" href="logo192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="preload" as="image" href="logo.png">
-<meta name="theme-color" content="#1d1f22">  
+<meta name="theme-color" content="#1d1f22">
 
 <!-- iOS PWA name -->
 <meta name="apple-mobile-web-app-title" content="CrabbyFlight">
-  
-<!-- Required for iOS PWA full-screen + splash -->
+
+<!-- Required for iOS PWA full-screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<!-- iOS/macOS PWA startup images -->
-<link rel="apple-touch-startup-image" href="splash-1290x2796.png"
-  media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1179x2556.png"
-  media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1170x2532.png"
-  media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1125x2436.png"
-  media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-828x1792.png"
-  media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-750x1334.png"
-  media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1242x2688.png"
-  media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1536x2048.png"
-  media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1668x2224.png"
-  media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1668x2388.png"
-  media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-2048x2732.png"
-  media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  
-<!-- iPad sizes -->
-<link rel="apple-touch-startup-image" href="splash-1536x2048.png"
-  media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1668x2224.png"
-  media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-1668x2388.png"
-  media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="splash-2048x2732.png"
-  media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  
+<!-- NOTE: All system startup images removed on purpose -->
+
+<!-- Early boot: decide if we show in-app splash, and set the initial mode class ASAP -->
+<script>
+  (function () {
+    // Determine mode from hash (#editor:room, #info:room, #departures:room)
+    var raw = (location.hash || '').replace(/^#/, '');
+    var mode = (raw.split(':')[0] || 'editor').toLowerCase();
+    // Add the mode class as early as possible (applies once body exists)
+    document.addEventListener('DOMContentLoaded', function () {
+      document.body.classList.add(mode || 'editor');
+    });
+
+    // Standalone detection (iOS navigator.standalone; general display-mode)
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    // Only show splash when launched from Home Screen AND in editor mode
+    if (standalone && mode === 'editor') {
+      document.documentElement.classList.add('show-splash');
+    }
+  })();
+</script>
+
 <style>
   :root{
     --bg:#1d1f22; --panel:#2a2d31; --ink:#f2f3f5; --muted:#b5bcc6; --line:#3a3f46;
@@ -60,11 +48,33 @@
     --radius:14px; --gap:16px;
   }
 
+  /* ===== Prevent first-paint flashes =====
+     Hide all screens by default; reveal only the active one once the body gets a mode class. */
+  #screen-editor, #screen-info, #screen-departures { display:none; }
+  body.editor #screen-editor { display:block; }
+  body.info #screen-info { display:block; }
+  body.departures #screen-departures { display:block; }
+
   /* Hide overlays until first data paint, then fade in */
   body.info #screen-info,
-   body.departures #screen-departures { opacity: 0; transition: opacity .15s ease; }
+  body.departures #screen-departures { opacity: 0; transition: opacity .15s ease; }
   body.ready.info #screen-info,
   body.ready.departures #screen-departures { opacity: 1; }
+
+  /* ===== In-app splash (logo) — shows only when <html> has .show-splash ===== */
+  #inapp-splash{
+    position:fixed; inset:0; z-index:9999; display:none;
+    background:var(--bg);
+    align-items:center; justify-content:center; flex-direction:column;
+    transition: opacity .35s ease;
+  }
+  .show-splash #inapp-splash{ display:flex; }
+  #inapp-splash img{ width:160px; height:160px; opacity:0; transform:scale(.95);
+    animation:cfLogoPop .45s ease forwards .08s; }
+  #inapp-splash .label{ margin-top:14px; color:var(--ink); font-weight:600; opacity:.7; letter-spacing:.2px; }
+  @keyframes cfLogoPop{ to{ opacity:1; transform:scale(1); } }
+  /* fade it out once the app is ready */
+  body.ready #inapp-splash{ opacity:0; pointer-events:none; }
 
   /* ===== Force transparent page for OBS; editor keeps dark bg ===== */
   html, body {
@@ -73,7 +83,6 @@
     color: var(--ink);
     font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   }
-  
   body.editor { background: var(--bg) !important; }
   body.info, body.departures { background: transparent !important; }
 
@@ -93,7 +102,7 @@
   button:hover{ background:#3f454d } button:active{ transform:translateY(1px) }
   .hint{ color:var(--muted); font-size:12px; }
 
-  /* ===== INFO overlay: semi-transparent rounded card ===== */
+  /* ===== INFO overlay ===== */
   .container { position:absolute; top:24px; left:24px; }
   .info-box {
     background: rgba(44,48,54,0.62);
@@ -118,7 +127,7 @@
   .separator-diamond { width: 6px; height: 6px; background: white; transform: rotate(45deg); display: inline-block; margin: 0 8px; }
   .bottom-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
 
-  /* ===== DEPARTURES board: boxed panel that floats (page is transparent) ===== */
+  /* ===== DEPARTURES board ===== */
   .board { position:absolute; top:32px; left:32px; min-width:760px; border-radius:12px; overflow:hidden;
     background:#2c3036; border:1px solid #3d434b; box-shadow:var(--shadow); }
   .header { background:#FFD100; color:#000; display:flex; align-items:center; gap:10px;
@@ -127,11 +136,10 @@
   .header::after{ content:""; position:absolute; top:0; left:-45%; width:40%; height:100%; pointer-events:none;
     background:linear-gradient(120deg, rgba(255,209,0,0) 0%, rgba(255,209,0,0.45) 50%, rgba(255,209,0,0) 100%);
     filter:blur(1px); animation:hdrSweep 4s linear infinite }
-
   /* Hide the yellow sweep until the overlay is ready */
-.header::after { display: none; }
-body.ready .header::after { display: block; }
-  
+  .header::after { display: none; }
+  body.ready .header::after { display: block; }
+
   @keyframes hdrSweep{ 0%{ transform:translateX(0) } 100%{ transform:translateX(250%) } }
 
   .table { display:grid; grid-template-columns:96px 1fr 1fr 120px 72px 188px; column-gap:14px;
@@ -164,17 +172,15 @@ body.ready .header::after { display: block; }
   .muted{ color:#cfcfcf; }
   .footer{ display:flex; justify-content:flex-end; gap:24px; padding:10px 18px 16px; color:#cfcfcf; font-size:16px; flex-wrap:nowrap; white-space:nowrap; text-shadow:2px 2px 4px rgba(0,0,0,0.7); }
   .footer strong{ color:#fff; }
-
-  /* ===== Visibility modes ===== */
-  body.editor #screen-editor{ display:block }
-  body.editor #screen-info, body.editor #screen-departures{ display:none }
-  body.info #screen-info{ display:block }
-  body.info #screen-editor, body.info #screen-departures{ display:none }
-  body.departures #screen-departures{ display:block }
-  body.departures #screen-editor, body.departures #screen-info{ display:none }
 </style>
 </head>
 <body>
+
+<!-- ===== In-app splash (only shown for standalone + editor) ===== -->
+<div id="inapp-splash" aria-hidden="true">
+  <img src="logo192.png" alt="CrabbyFlight">
+  <div class="label">CrabbyFlight</div>
+</div>
 
 <!-- ============== EDITOR ============== -->
 <div id="screen-editor" class="wrap">
@@ -240,7 +246,7 @@ body.ready .header::after { display: block; }
     <div class="top-row">
       <div class="airport-info">
         <span class="dynamic" id="i_from">Oslo (ENGM)</span>
-        <svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
+        <svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v 2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
         <span class="dynamic" id="i_to">Liverpool (EGGP)</span>
       </div>
       <span class="separator-diamond"></span>
@@ -344,13 +350,13 @@ body.ready .header::after { display: block; }
     document.body.classList.add(mode);
   }
   applyMode();
- window.addEventListener('hashchange', ()=>{
-  ({mode, room}=parseHash());
-  document.body.classList.remove('ready');
-  firstPaint = false;
-  applyMode();
-  bind();
-});
+  window.addEventListener('hashchange', ()=>{
+    ({mode, room}=parseHash());
+    document.body.classList.remove('ready');
+    firstPaint = false;
+    applyMode();
+    bind();
+  });
 
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
@@ -380,7 +386,7 @@ body.ready .header::after { display: block; }
         `Editor:      ${base}#editor:${room}${qs}`,
         `Info:        ${base}#info:${room}${qs}`,
         `Departures:  ${base}#departures:${room}${qs}`
-      ].join('\\n');
+      ].join('\n');
       try{ await navigator.clipboard.writeText(lines); copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy Overlay URLs',1500); }catch{ alert(lines); }
     };
   }
@@ -412,28 +418,31 @@ body.ready .header::after { display: block; }
 
   let firstPaint = false;
 
-function subscribe(){
-  const r = ref(db, `rooms/${room}`);
-  onValue(r, snap=>{
-    const data = snap.val() || DEFAULTS;
-    if (mode==='info') renderInfo(data);
-    if (mode==='departures') renderDepartures(data);
-    if (mode==='editor') {
-      for(const k of FIELDS){
-        const el=document.getElementById(k);
-        if(el && typeof data[k]==='string'){ el.value=data[k]; }
+  function subscribe(){
+    const r = ref(db, `rooms/${room}`);
+    onValue(r, snap=>{
+      const data = snap.val() || DEFAULTS;
+      if (mode==='info') renderInfo(data);
+      if (mode==='departures') renderDepartures(data);
+      if (mode==='editor') {
+        for(const k of FIELDS){
+          const el=document.getElementById(k);
+          if(el && typeof data[k]==='string'){ el.value=data[k]; }
+        }
+        const statusEl=document.getElementById('status');
+        const customRow=document.getElementById('customRow');
+        if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
       }
-      const statusEl=document.getElementById('status');
-      const customRow=document.getElementById('customRow');
-      if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
-    }
-    // Fade in after first paint
-    if (!firstPaint) {
-      document.body.classList.add('ready');
-      firstPaint = true;
-    }
-  });
-}
+      // Fade in after first paint
+      if (!firstPaint) {
+        document.body.classList.add('ready');
+        firstPaint = true;
+        // Remove in-app splash after fade
+        const s = document.getElementById('inapp-splash');
+        if (s) setTimeout(()=>{ s.remove(); }, 400);
+      }
+    });
+  }
 
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
@@ -455,7 +464,6 @@ function subscribe(){
 
   function bind(){ if (mode==='editor') bindEditor(); subscribe(); applyOverlayOptions(); }
   bind();
-  
 </script>
 </body>
 </html>
