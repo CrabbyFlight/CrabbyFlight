@@ -462,8 +462,20 @@
     }
   });
 
-  function bind(){ if (mode==='editor') bindEditor(); subscribe(); applyOverlayOptions(); }
-  bind();
+  function bind(){
+  if (mode === 'editor') bindEditor();
+  subscribe();
+  applyOverlayOptions();
+}
+bind();
+
+// After initial navigation to #editor:crabroom
+if (mode === 'editor') {
+  try {
+    // show just the domain in the bar
+    history.replaceState(null, '', '/');
+  } catch (e) {}
+}
 </script>
 </body>
 </html>
