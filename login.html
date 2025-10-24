@@ -6,18 +6,91 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="manifest" href="manifest.json">
   <style>
-    :root{ --bg:#1d1f22; --panel:#2a2d31; --ink:#fff; --accent:#FFD100; }
-    body{ margin:0; height:100vh; display:flex; align-items:center; justify-content:center;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--ink); }
-    .card{ width:360px; padding:22px; background:var(--panel); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.6);}
-    h1{ margin:0 0 14px; font-size:20px; }
-    input{ width:100%; padding:10px 12px; margin:8px 0; border-radius:8px; border:1px solid #3a3d41;
-      background:#232528; color:var(--ink); font-size:15px; }
-    button{ width:100%; padding:10px 12px; border-radius:8px; border:none; background:var(--accent); color:#000; font-weight:700; cursor:pointer; margin-top:8px; }
-    .hint{ font-size:13px; color:#cfcfcf; margin-top:8px; text-align:center; }
-    .row{ display:flex; gap:8px; margin-top:8px; }
-    .sm{ flex:1; padding:10px; border-radius:8px; border:none; background:#32363c; color:var(--ink); cursor:pointer; }
-    #msg{ margin-top:10px; font-size:13px; color:#ffa500; min-height:18px; text-align:center; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #1d1f22;
+      color: #f2f3f5;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      width: 360px;
+      padding: 32px 28px;
+      background: #2a2d31;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.6);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      text-align: center;
+    }
+
+    input {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #444a52;
+      background: #32363c;
+      color: #f2f3f5;
+      outline: none;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    input:focus {
+      border-color: #5b9cff;
+      box-shadow: 0 0 0 3px rgba(91,156,255,.18);
+    }
+
+    button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #454b54;
+      background: #373c43;
+      color: #f2f3f5;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #3f454d;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .row button.sm {
+      font-size: 14px;
+      padding: 10px;
+      flex: 1;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #b5bcc6;
+      text-align: center;
+    }
+
+    #msg {
+      text-align: center;
+      font-size: 14px;
+      color: #ffa500;
+    }
   </style>
 </head>
 <body>
@@ -27,16 +100,16 @@
     <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
     <button id="btnPrimary">Login / Register</button>
     <div class="row">
-      <button class="sm" id="btnGuest">Continue as Guest</button>
+      <button class="sm" id="btnGuest">Guest</button>
       <button class="sm" id="btnLogout" style="display:none">Sign out</button>
     </div>
     <div id="msg"></div>
-    <div class="hint">After signing you will be taken to your editor (room = your UID).</div>
+    <div class="hint">After login you’ll be redirected to your editor (your UID room).</div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
@@ -49,25 +122,36 @@
     const auth = getAuth(app);
 
     const msgEl = document.getElementById('msg');
-    const btnPrimary = document.getElementById('btnPrimary');
     const emailEl = document.getElementById('email');
     const passEl = document.getElementById('password');
+    const btnPrimary = document.getElementById('btnPrimary');
     const btnGuest = document.getElementById('btnGuest');
+    const btnLogout = document.getElementById('btnLogout');
+
+    // Show logout button if already signed in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        btnLogout.style.display = 'block';
+      } else {
+        btnLogout.style.display = 'none';
+      }
+    });
 
     btnPrimary.addEventListener('click', async () => {
       msgEl.textContent = '';
       const email = (emailEl.value || '').trim();
       const password = passEl.value || '';
-      if (!email || !password) { msgEl.textContent = 'Please enter email & password.'; return; }
+      if (!email || !password) {
+        msgEl.textContent = 'Please enter email & password.';
+        return;
+      }
 
       try {
-        // try login first
         await signInWithEmailAndPassword(auth, email, password);
         msgEl.textContent = 'Signed in — redirecting…';
         window.location.href = `index.html#editor:${auth.currentUser.uid}`;
       } catch (loginErr) {
         try {
-          // create account if doesn't exist
           await createUserWithEmailAndPassword(auth, email, password);
           msgEl.textContent = 'Account created — redirecting…';
           window.location.href = `index.html#editor:${auth.currentUser.uid}`;
@@ -84,6 +168,18 @@
         window.location.href = `index.html#editor:${auth.currentUser.uid}`;
       } catch (err) {
         msgEl.textContent = err.message || 'Guest sign-in failed.';
+      }
+    });
+
+    btnLogout.addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+        msgEl.textContent = 'Signed out.';
+        emailEl.value = '';
+        passEl.value = '';
+        btnLogout.style.display = 'none';
+      } catch (err) {
+        msgEl.textContent = err.message || 'Sign-out failed.';
       }
     });
   </script>
