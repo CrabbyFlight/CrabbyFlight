@@ -109,7 +109,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
@@ -128,19 +128,11 @@
     const btnGuest = document.getElementById('btnGuest');
     const btnLogout = document.getElementById('btnLogout');
 
-    // Show logout button if already signed in
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        btnLogout.style.display = 'block';
-      } else {
-        btnLogout.style.display = 'none';
-      }
-    });
-
     btnPrimary.addEventListener('click', async () => {
       msgEl.textContent = '';
       const email = (emailEl.value || '').trim();
       const password = passEl.value || '';
+
       if (!email || !password) {
         msgEl.textContent = 'Please enter email & password.';
         return;
@@ -149,14 +141,14 @@
       try {
         await signInWithEmailAndPassword(auth, email, password);
         msgEl.textContent = 'Signed in — redirecting…';
-        window.location.href = `index.html#editor:${auth.currentUser.uid}`;
-      } catch (loginErr) {
+        redirectToEditor();
+      } catch {
         try {
           await createUserWithEmailAndPassword(auth, email, password);
           msgEl.textContent = 'Account created — redirecting…';
-          window.location.href = `index.html#editor:${auth.currentUser.uid}`;
-        } catch (createErr) {
-          msgEl.textContent = createErr.message || 'Error signing in.';
+          redirectToEditor();
+        } catch (err) {
+          msgEl.textContent = err.message || 'Error signing in.';
         }
       }
     });
@@ -165,7 +157,7 @@
       try {
         await signInAnonymously(auth);
         msgEl.textContent = 'Guest signed in — redirecting…';
-        window.location.href = `index.html#editor:${auth.currentUser.uid}`;
+        redirectToEditor();
       } catch (err) {
         msgEl.textContent = err.message || 'Guest sign-in failed.';
       }
@@ -175,13 +167,26 @@
       try {
         await signOut(auth);
         msgEl.textContent = 'Signed out.';
-        emailEl.value = '';
-        passEl.value = '';
         btnLogout.style.display = 'none';
       } catch (err) {
         msgEl.textContent = err.message || 'Sign-out failed.';
       }
     });
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        btnLogout.style.display = 'block';
+      }
+    });
+
+    function redirectToEditor() {
+      const hash = localStorage.getItem('crabby-intended-hash');
+      if (hash) {
+        location.href = `index.html${hash}`;
+      } else {
+        location.href = `index.html#editor:${auth.currentUser.uid}`;
+      }
+    }
   </script>
 </body>
 </html>
