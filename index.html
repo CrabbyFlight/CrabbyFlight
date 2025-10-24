@@ -236,14 +236,17 @@
     const auth = getAuth(app);
 
     let authReady = false;
-    onAuthStateChanged(auth, (user) => {
-      authReady = true;
-      if (!user) {
-        const currentHash = location.hash || '';
-        localStorage.setItem('crabby-intended-hash', currentHash);
-        location.href = 'login.html';
-        return;
-      }
+onAuthStateChanged(auth, (user) => {
+  authReady = true;
+
+  const currentHash = location.hash || '';
+  const [hashMode] = currentHash.replace(/^#/, '').split(':');
+
+  if (!user && hashMode !== 'info' && hashMode !== 'departures') {
+    localStorage.setItem('crabby-intended-hash', currentHash);
+    location.href = 'login.html';
+    return;
+  }
       if (!location.hash) {
         location.replace(`#editor:${user.uid}`);
       }
