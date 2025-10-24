@@ -1,16 +1,25 @@
-<!-- /manifest.json -->
 {
-  "id": "crabbyflight.app",
+  "id": "/",
   "name": "CrabbyFlight",
   "short_name": "CrabbyFlight",
-  "start_url": "./#editor:me",
-  "scope": "./",
+  "description": "Fast, installable, iOS-friendly PWA for CrabbyFlight.",
+  "start_url": "/#editor:me",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1d1f22",
-  "theme_color": "#FFD100",
+  "theme_color": "#1d1f22",
   "icons": [
-    { "src": "logo192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-  ],
-  "display_override": ["standalone","fullscreen","minimal-ui"]
+    {
+      "src": "/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }
