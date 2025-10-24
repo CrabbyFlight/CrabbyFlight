@@ -129,13 +129,20 @@
     const btnLogout = document.getElementById('btnLogout');
 
     // Show logout button if already signed in
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        btnLogout.style.display = 'block';
-      } else {
-        btnLogout.style.display = 'none';
-      }
-    });
+onAuthStateChanged(auth, (user) => {
+  authReady = true;
+
+  const raw = (location.hash || '').replace(/^#/, '');
+  const [mode] = raw.split(':');
+
+  if (!user && mode !== 'info' && mode !== 'departures') {
+    localStorage.setItem('crabby-intended-hash', location.hash || '');
+    location.href = 'login.html';
+    return;
+  }
+
+  hashChanged();
+});
 
     btnPrimary.addEventListener('click', async () => {
       msgEl.textContent = '';
