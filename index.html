@@ -19,10 +19,13 @@
     const raw = (location.hash || '').replace(/^#/, '');
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
     document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
-
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (standalone && mode === 'editor') document.documentElement.classList.add('show-splash'); // why: avoid editor→auth flash until auth known
-  })();
+    if (standalone && mode === 'editor') document.documentElement.classList.add('show-splash');
+  const hideSplash=()=>document.documentElement.classList.remove('show-splash');
+window.addEventListener('load', hideSplash);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) hideSplash(); });
+setTimeout(hideSplash, 1500);
+})();
 </script>
 
 <style>
@@ -562,21 +565,22 @@
       applyOverlayOptions();
     }
   }
-
-<script type="module">
-  import { setPersistence, browserLocalPersistence, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-
-  // Ensure persistence in standalone Safari/iOS
-  try { await setPersistence(auth, browserLocalPersistence); } catch {}
-
-  // Wait for the *first* auth state, then hide splash and run your existing logic
-  await new Promise((resolve) => {
-    const unsub = onAuthStateChanged(auth, () => { unsub(); resolve(); });
+  try {
+  await setPersistence(auth, browserLocalPersistence);
+} catch {}
+await new Promise((resolve) => {
+  const unsub = onAuthStateChanged(auth, () => { unsub(); resolve(); });
+});
+document.documentElement.classList.remove('show-splash');
+bind();
+// Quick jump back to editor with 'e'
+  addEventListener('keydown', (e)=>{
+    if((mode==='info'||mode==='departures') && (e.key==='e'||e.key==='E')){
+      const base=location.href.split('#')[0]; location.href = `${base}#editor:${room}`;
+    }
   });
 
-  document.documentElement.classList.remove('show-splash'); // why: only after auth is known
-  bind(); // runs your existing onAuthStateChanged inside bind() without UX flash
+  if (mode === 'editor') { try { history.replaceState(null, '', '/'); } catch (e) {} }
 </script>
 </body>
 </html>
