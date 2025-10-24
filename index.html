@@ -141,6 +141,21 @@ onAuthStateChanged(auth, (user) => {
     return;
   }
 
+  // Redirect to UID editor if signed in and no hash
+  if (user && !location.hash) {
+    location.replace(`#editor:${user.uid}`);
+    return;
+  }
+
+  // Handle redirect back to originally intended location
+  const intended = localStorage.getItem('crabby-intended-hash');
+  if (user && intended && intended !== '') {
+    localStorage.removeItem('crabby-intended-hash');
+    if (location.hash.indexOf(user.uid) === -1) {
+      location.replace(intended.replace(':crabroom', `:${user.uid}`));
+    }
+  }
+
   hashChanged();
 });
 
