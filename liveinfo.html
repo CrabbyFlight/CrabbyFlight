@@ -1,3 +1,4 @@
+@ -1,482 +1,482 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,10 +7,14 @@
 <title>CrabbyFlight — Live Overlay (Firebase)</title>
 
 <!-- App Icon & PWA Meta -->
-<link rel="icon" type="image/png" sizes="512x512" href="logo512.png">
-<link rel="apple-touch-icon" href="logo512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="logo192.png?v=2">
+<link rel="icon" type="image/png" sizes="512x512" href="logo512.png?v=2">
+<link rel="apple-touch-icon" href="logo512.png?v=2">
+<link rel="manifest" href="manifest.json?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="logo.png">
+<link rel="apple-touch-icon" href="logo192.png">
 <link rel="manifest" href="manifest.json">
-<link rel="preload" as="image" href="logo512.png">
+<link rel="preload" as="image" href="logo.png">
 <meta name="theme-color" content="#1d1f22">
 
 <!-- iOS PWA name -->
@@ -375,32 +380,21 @@
     function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
     if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
 
-    const liveBase = new URL('liveinfo.html', location.href).toString();
-document.getElementById('openInfo').onclick = () =>
-  window.open(`${liveBase}#info:${room}${location.search}`, '_blank');
-document.getElementById('openDep').onclick = () =>
-  window.open(`${liveBase}#departures:${room}${location.search}`, '_blank');
+    document.getElementById('openInfo').onclick = ()=> window.open(`#info:${room}${location.search}`, '_blank');
+    document.getElementById('openDep').onclick  = ()=> window.open(`#departures:${room}${location.search}`, '_blank');
 
     const copyBtn = document.getElementById('copyUrls');
-if (copyBtn) copyBtn.onclick = async ()=>{
-  // Always build links that point to the actual liveinfo.html file,
-  // instead of "/" (which triggers index.html redirect)
-  const liveBase = new URL('liveinfo.html', location.href).toString();
-  const qs = location.search || '';
-  const lines = [
-    `Editor:      ${liveBase}#editor:${room}${qs}`,
-    `Info:        ${liveBase}#info:${room}${qs}`,
-    `Departures:  ${liveBase}#departures:${room}${qs}`
-  ].join('\n');
-
-  try {
-    await navigator.clipboard.writeText(lines);
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => copyBtn.textContent = 'Copy Overlay URLs', 1500);
-  } catch {
-    alert(lines);
+    if (copyBtn) copyBtn.onclick = async ()=>{
+      const base = location.href.split('#')[0];
+      const qs = location.search || '';
+      const lines = [
+        `Editor:      ${base}#editor:${room}${qs}`,
+        `Info:        ${base}#info:${room}${qs}`,
+        `Departures:  ${base}#departures:${room}${qs}`
+      ].join('\n');
+      try{ await navigator.clipboard.writeText(lines); copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy Overlay URLs',1500); }catch{ alert(lines); }
+    };
   }
-};
 
   function renderInfo(d){
     const v=(k,def='')=>(d?.[k]||'').trim()||def;
@@ -479,6 +473,14 @@ if (copyBtn) copyBtn.onclick = async ()=>{
   applyOverlayOptions();
 }
 bind();
+
+// After initial navigation to #editor:crabroom
+if (mode === 'editor') {
+  try {
+    // show just the domain in the bar
+    history.replaceState(null, '', '/');
+  } catch (e) {}
+}
 </script>
 </body>
 </html>
