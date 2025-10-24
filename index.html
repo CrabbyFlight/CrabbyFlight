@@ -21,6 +21,11 @@
     document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     if (standalone && mode === 'editor') document.documentElement.classList.add('show-splash');
+// why: prevent stuck splash in iOS standalone
+const hideSplash=()=>document.documentElement.classList.remove('show-splash');
+window.addEventListener('load', hideSplash);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) hideSplash(); });
+setTimeout(hideSplash, 1500); // fallback
   })();
 </script>
 

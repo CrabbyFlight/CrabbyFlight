@@ -1,7 +1,7 @@
 {
   "name": "CrabbyFlight",
   "short_name": "CrabbyFlight",
-  "start_url": "./#editor:crabroom",
+  "start_url": "/#editor:crabroom",
   "display": "standalone",
   "background_color": "#1d1f22",
   "theme_color": "#FFD100",
@@ -16,5 +16,11 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "scope": "/",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
   ]
 }
