@@ -1,464 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device‑width, initial‑scale=1.0" />
-  <title>CrabbyFlight — Live Overlay (Firebase)</title>
-
-  <!-- App Icon & PWA Meta -->
-  <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
-  <link rel="apple-touch-icon" href="logo192.png">
+  <meta charset="utf-8" />
+  <title>Login — CrabbyFlight</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1d1f22">
-  <meta name="apple-mobile-web-app-title" content="CrabbyFlight">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
   <style>
-    :root {
-      --bg: #1d1f22;
-      --panel: #2a2d31;
-      --ink: #f2f3f5;
-      --muted: #b5bcc6;
-      --line: #3a3f46;
-      --brand: #FFD100;
-      --accent: #FFA500;
-      --shadow: 0 8px 24px rgba(0,0,0,.28);
-      --radius: 14px;
-      --gap: 16px;
-    }
-
-    /* Prevent first-paint flashes */
-    #screen-editor, #screen-info, #screen-departures {
-      display: none;
-    }
-    body.editor #screen-editor { display: block; }
-    body.info #screen-info { display: block; }
-    body.departures #screen-departures { display: block; }
-
-    body.info #screen-info, body.departures #screen-departures {
-      opacity: 0;
-      transition: opacity .15s ease;
-    }
-    body.ready.info #screen-info, body.ready.departures #screen-departures {
-      opacity: 1;
-    }
-
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: transparent !important;
-      color: var(--ink);
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    }
-    body.editor {
-      background: var(--bg) !important;
-    }
-    body.info, body.departures {
-      background: transparent !important;
+      background: #1d1f22;
+      color: #f2f3f5;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .wrap {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 28px;
-      background: var(--bg);
-    }
     .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 18px;
-      margin: 14px 0;
-      box-shadow: var(--shadow);
-    }
-    h1 {
-      margin: 0 0 14px;
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: .2px;
-    }
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      margin: 6px 0 6px;
-    }
-    input, select {
-      width: 100%;
-      background: #32363c;
-      border: 1px solid #444a52;
-      color: var(--ink);
+      width: 360px;
+      padding: 32px 28px;
+      background: #2a2d31;
       border-radius: 12px;
-      padding: 10px 14px;
-      height: 44px;
-      box-sizing: border-box;
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
+      box-shadow: 0 8px 30px rgba(0,0,0,.6);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
-    input:focus, select:focus {
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      text-align: center;
+    }
+
+    input {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #444a52;
+      background: #32363c;
+      color: #f2f3f5;
+      outline: none;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    input:focus {
       border-color: #5b9cff;
       box-shadow: 0 0 0 3px rgba(91,156,255,.18);
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--gap);
-    }
-    .btns {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-    .btns button#btnSignOut {
-      margin-left: auto;
-      background: #FF6B6B;
-      border-color: #e65c5c;
-    }
 
     button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
       border: 1px solid #454b54;
       background: #373c43;
-      color: var(--ink);
-      padding: 10px 14px;
-      border-radius: 12px;
+      color: #f2f3f5;
       cursor: pointer;
-      transition: background .15s ease, transform .02s ease;
+      transition: background 0.15s ease;
+      width: 100%;
     }
+
     button:hover {
       background: #3f454d;
     }
-    button:active {
-      transform: translateY(1px);
-    }
-    .hint {
-      color: var(--muted);
-      font-size: 12px;
+
+    .row {
+      display: flex;
+      gap: 10px;
     }
 
-    /* Info overlay styling continues... (keep your existing styling for .info-box, board etc) */
+    .row button.sm {
+      font-size: 14px;
+      padding: 10px;
+      flex: 1;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #b5bcc6;
+      text-align: center;
+    }
+
+    #msg {
+      text-align: center;
+      font-size: 14px;
+      color: #ffa500;
+    }
   </style>
 </head>
-
 <body>
-  <!-- In-app splash -->
-  <div id="inapp-splash" aria-hidden="true">
-    <img src="logo192.png" alt="CrabbyFlight">
-    <div class="label">CrabbyFlight</div>
-  </div>
-
-  <!-- EDITOR SCREEN -->
-  <div id="screen-editor" class="wrap">
-    <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
-    <div class="card">
-      <div class="grid">
-        <div><label>From</label><input id="from" placeholder="Oslo (ENGM)"></div>
-        <div><label>To</label><input id="to" placeholder="Liverpool (EGGP)"></div>
-      </div>
-      <div class="grid">
-        <div><label>Flight</label><input id="flight" placeholder="POR9392"></div>
-        <div><label>Callsign</label><input id="callsign" placeholder="WALL13"></div>
-      </div>
-      <div class="grid">
-        <div><label>Gate (Departures)</label><input id="gate" placeholder="B12"></div>
-        <div><label>Status (Departures)</label>
-          <select id="status">
-            <option value="on-time">ON TIME</option>
-            <option value="boarding">BOARDING</option>
-            <option value="delayed">DELAYED</option>
-            <option value="cancelled">CANCELLED</option>
-            <option value="sideways">SIDEWAYS</option>
-            <option value="custom">Custom…</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid" id="customRow" style="display:none">
-        <div><label>Custom status text</label><input id="status_custom" placeholder="e.g. DIVERTED TO EDI"></div>
-        <div><label>&nbsp;</label><input disabled value="Shown on the board as blue badge"></div>
-      </div>
-      <div class="grid">
-        <div><label>Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
-        <div><label>Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
-      </div>
-      <div class="grid">
-        <div><label>Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
-        <div><label>Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
-      </div>
-      <div class="grid">
-        <div><label>Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
-        <div><label>LIVE</label><select id="live"><option value="on">On</option><option value="off">Off</option></select></div>
-      </div>
-
-      <div class="btns">
-        <button id="openInfo">Open Info (#info)</button>
-        <button id="openDep">Open Departures (#departures)</button>
-        <button id="copyUrls">Copy Overlay URLs</button>
-        <button id="btnSignOut">Sign out</button>
-        <span class="hint">Use the same room ID. You can add <code>?x</code>, <code>?y</code>, <code>?scale</code> to position/size overlays.</span>
-      </div>
-
+  <div class="card">
+    <h1>CrabbyFlight — Login</h1>
+    <input id="email" type="email" placeholder="Email" autocomplete="username" />
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+    <button id="btnPrimary">Login / Register</button>
+    <div class="row">
+      <button class="sm" id="btnGuest">Guest</button>
+      <button class="sm" id="btnLogout" style="display:none">Sign out</button>
     </div>
-    <div class="card"><div class="hint">In OBS Browser Source, point to this file with <code>#info:ROOM</code> or <code>#departures:ROOM</code>.</div></div>
-  </div>
-
-  <!-- INFO OVERLAY SCREEN (no edit controls) -->
-  <div id="screen-info" class="container">
-    <!-- your existing info overlay markup (unchanged) -->
-  </div>
-
-  <!-- DEPARTURES BOARD SCREEN -->
-  <div id="screen-departures" class="board">
-    <!-- your existing table and markup (unchanged) -->
+    <div id="msg"></div>
+    <div class="hint">After login you’ll be redirected to your editor (your UID room).</div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
       authDomain: "crabbyflight.firebaseapp.com",
-      databaseURL: "https://crabbyflight-default-rtdb.firebaseio.com",
       projectId: "crabbyflight",
-      storageBucket: "crabbyflight.firebasestorage.app",
-      messagingSenderId: "741648861487",
-      appId: "1:741648861487:web:583ec0887f5ac3dce079da",
-      measurementId: "G-8PZNG3Y1CE"
+      databaseURL: "https://crabbyflight-default-rtdb.firebaseio.com"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db  = getDatabase(app);
     const auth = getAuth(app);
 
-    let authReady = false;
-onAuthStateChanged(auth, (user) => {
-  authReady = true;
+    const msgEl = document.getElementById('msg');
+    const emailEl = document.getElementById('email');
+    const passEl = document.getElementById('password');
+    const btnPrimary = document.getElementById('btnPrimary');
+    const btnGuest = document.getElementById('btnGuest');
+    const btnLogout = document.getElementById('btnLogout');
 
-  const currentHash = location.hash || '';
-  const [hashMode] = currentHash.replace(/^#/, '').split(':');
-
-  if (!user && hashMode !== 'info' && hashMode !== 'departures') {
-    localStorage.setItem('crabby-intended-hash', currentHash);
-    location.href = 'login.html';
-    return;
-  }
-      if (!location.hash) {
-        location.replace(`#editor:${user.uid}`);
-      }
-      const intended = localStorage.getItem('crabby-intended-hash');
-      if (intended && intended !== '') {
-        localStorage.removeItem('crabby-intended-hash');
-        location.replace(intended.replace(':crabroom', `:${user.uid}`));
+    // Show logout button if already signed in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        btnLogout.style.display = 'block';
+      } else {
+        btnLogout.style.display = 'none';
       }
     });
 
-    function parseHash(){
-      const raw = (location.hash||'').replace(/^#/,'');
-      const [mode, room] = raw.split(':');
-      return { mode:(mode||'editor').toLowerCase(), room: room||'crabroom' };
-    }
-    let {mode, room} = parseHash();
-    function applyMode(){
-      document.body.classList.remove('editor','info','departures');
-      document.body.classList.add(mode);
-    }
-    applyMode();
-    window.addEventListener('hashchange', ()=>{
-      ({mode, room} = parseHash());
-      document.body.classList.remove('ready');
-      applyMode();
-      bind();
-    });
-
-    const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live"];
-    const DEFAULTS = {
-      from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13",
-      gate:"B12", status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-      aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on"
-    };
-
-    function bindEditor(){
-      const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
-      const statusEl = els['status'];
-      const customRow = document.getElementById('customRow');
-
-      const signOutBtn = document.getElementById('btnSignOut');
-      if(signOutBtn){
-        signOutBtn.addEventListener('click', async ()=> {
-          try{
-            await signOut(auth);
-            location.href = 'login.html';
-          }catch(err){
-            alert('Sign out failed: '+(err.message||err));
-          }
-        });
-      }
-
-      function readData(){
-        const d = {};
-        for(const k of FIELDS){
-          const el = els[k];
-          if(el) d[k] = (el.value||'').trim();
-        }
-        return d;
-      }
-      let t = null;
-      function saveData(){
-        clearTimeout(t);
-        t = setTimeout(()=> set(ref(db, `rooms/${room}`), readData()), 120);
-      }
-      for(const k of FIELDS){
-        const el = els[k];
-        if(!el) continue;
-        el.addEventListener('input', saveData);
-        el.addEventListener('change', saveData);
-      }
-      function toggleCustom(){
-        if(customRow) customRow.style.display = (statusEl&&statusEl.value==='custom') ? 'grid' : 'none';
-      }
-      if(statusEl){
-        statusEl.addEventListener('change', toggleCustom);
-        toggleCustom();
-      }
-
-      document.getElementById('openInfo').onclick = ()=> window.open(`#info:${room}${location.search}`,'_blank');
-      document.getElementById('openDep').onclick  = ()=> window.open(`#departures:${room}${location.search}`,'_blank');
-
-      const copyBtn = document.getElementById('copyUrls');
-      if(copyBtn){
-        copyBtn.onclick = async ()=>{
-          const base = location.href.split('#')[0];
-          const qs = location.search||'';
-          const lines = [
-            `Editor: ${base}#editor:${room}${qs}`,
-            `Info:   ${base}#info:${room}${qs}`,
-            `Departures: ${base}#departures:${room}${qs}`
-          ].join('\n');
-          try{
-            await navigator.clipboard.writeText(lines);
-            copyBtn.textContent='Copied!';
-            setTimeout(()=>copyBtn.textContent='Copy Overlay URLs',1500);
-          }catch{
-            alert(lines);
-          }
-        };
-      }
-    }
-
-    function renderInfo(data){
-      const v = (k,def='')=>(data?.[k]||'').trim()||def;
-      const setT = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
-      setT('i_from', v('from', DEFAULTS.from));
-      setT('i_to',   v('to',   DEFAULTS.to));
-      setT('i_flight', v('flight', DEFAULTS.flight));
-      setT('i_callsign', v('callsign', DEFAULTS.callsign));
-      setT('i_aircraft',  v('aircraft', DEFAULTS.aircraft));
-      setT('i_cruise',    v('cruise',   DEFAULTS.cruise));
-      setT('i_enroute',   v('enroute',  DEFAULTS.enroute));
-      const live = v('live','on')==='on';
-      document.getElementById('i_live_block').style.display = live?'inline-flex':'none';
-    }
-
-    function renderDepartures(data){
-      const v = (k,def='')=>(data?.[k]||'').trim()||def;
-      const setT = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
-      setT('d_from', v('from', DEFAULTS.from));
-      setT('d_to',   v('to',   DEFAULTS.to));
-      setT('d_flight', v('flight', DEFAULTS.flight));
-      setT('d_gate',   v('gate',   DEFAULTS.gate));
-      setT('d_dep',    v('dep_utc', DEFAULTS.dep_utc));
-      setT('d_arr',    v('arr_utc', DEFAULTS.arr_utc));
-      setT('d_enroute', v('enroute', DEFAULTS.enroute));
-      setT('d_time',   v('dep_utc', DEFAULTS.dep_utc).replace(' UTC',''));
-      const st = v('status','on-time');
-      const node = document.getElementById('d_status');
-      if(st==='custom'){
-        if(node) node.className='status custom';
-        const txt = v('status_custom','STATUS');
-        const stTxt = document.getElementById('d_status_text');
-        if(stTxt) stTxt.textContent = txt;
+    btnPrimary.addEventListener('click', async () => {
+      msgEl.textContent = '';
+      const email = (emailEl.value || '').trim();
+      const password = passEl.value || '';
+      if (!email || !password) {
+        msgEl.textContent = 'Please enter email & password.';
         return;
       }
-      const labels = {
-        'on-time':'ON TIME','boarding':'BOARDING','delayed':'DELAYED',
-        'cancelled':'CANCELLED','sideways':'SIDEWAYS'
-      };
-      if(node) node.className = 'status '+st;
-      const stTxt = document.getElementById('d_status_text');
-      if(stTxt) stTxt.textContent = labels[st]||st.toUpperCase();
-    }
 
-    let firstPaint = false;
-    function subscribe(){
-      const r = ref(db, `rooms/${room}`);
-      onValue(r, snap=>{
-        const data = snap.val() || DEFAULTS;
-        if(mode==='info') renderInfo(data);
-        if(mode==='departures') renderDepartures(data);
-        if(mode==='editor'){
-          FIELDS.forEach(k=>{
-            const el = document.getElementById(k);
-            if(el && typeof data[k]==='string'){
-              el.value = data[k];
-            }
-          });
-          const statusEl = document.getElementById('status');
-          const customRow = document.getElementById('customRow');
-          if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
-        }
-        if(!firstPaint){
-          document.body.classList.add('ready');
-          firstPaint = true;
-          const s = document.getElementById('inapp-splash');
-          if(s) setTimeout(()=> s.remove(),400);
-        }
-      });
-    }
-
-    function applyOverlayOptions(){
-      const usp = new URLSearchParams(location.search);
-      const x = parseFloat(usp.get('x')||'');
-      const y = parseFloat(usp.get('y')||'');
-      const s = parseFloat(usp.get('scale')||'');
-      const onlyReal = usp.get('onlyReal');
-      const place = el=>{
-        if(!el) return;
-        if(!Number.isNaN(x)) el.style.left = x+'px';
-        if(!Number.isNaN(y)) el.style.top  = y+'px';
-        if(!Number.isNaN(s)) el.style.transform = `scale(${s})`;
-        el.style.transformOrigin = 'top left';
-      };
-      if(mode==='info') place(document.querySelector('#screen-info .info-box').parentElement);
-      if(mode==='departures'){
-        place(document.getElementById('screen-departures'));
-        if(onlyReal==='1'||onlyReal==='true'){
-          document.querySelectorAll('.table .tr').forEach(tr=>{
-            if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')){
-              tr.style.display='none';
-            }
-          });
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        msgEl.textContent = 'Signed in — redirecting…';
+        window.location.href = `index.html#editor:${auth.currentUser.uid}`;
+      } catch (loginErr) {
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          msgEl.textContent = 'Account created — redirecting…';
+          window.location.href = `index.html#editor:${auth.currentUser.uid}`;
+        } catch (createErr) {
+          msgEl.textContent = createErr.message || 'Error signing in.';
         }
       }
-    }
+    });
 
-    function bind(){
-      if(mode==='editor') bindEditor();
-      subscribe();
-      applyOverlayOptions();
-    }
-    bind();
+    btnGuest.addEventListener('click', async () => {
+      try {
+        await signInAnonymously(auth);
+        msgEl.textContent = 'Guest signed in — redirecting…';
+        window.location.href = `index.html#editor:${auth.currentUser.uid}`;
+      } catch (err) {
+        msgEl.textContent = err.message || 'Guest sign-in failed.';
+      }
+    });
 
-    // After initial navigation to editor default
-    if(mode==='editor'){
-      try { history.replaceState(null,'','/'); }
-      catch(e) {}
-    }
-
+    btnLogout.addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+        msgEl.textContent = 'Signed out.';
+        emailEl.value = '';
+        passEl.value = '';
+        btnLogout.style.display = 'none';
+      } catch (err) {
+        msgEl.textContent = err.message || 'Sign-out failed.';
+      }
+    });
   </script>
 </body>
 </html>
