@@ -20,7 +20,10 @@
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
     document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (standalone && mode === 'editor') document.documentElement.classList.add('show-splash');
+    // why: avoid deadlock—don’t show splash on editor; it may never mark "ready" when signed-out
+    if (standalone && (mode === 'info' || mode === 'departures')) {
+      document.documentElement.classList.add('show-splash');
+    }
   })();
 </script>
 
@@ -245,7 +248,7 @@
 <!-- DEPARTURES OVERLAY -->
 <div id="screen-departures" class="board">
   <div class="header">
-    <svg viewBox="0 0 24 24" fill="black"><path d="M2.5 19h19v2h-19zM3.87 9.91l4.12 1.28 4.75-4.89 1.88.59-2.91 6.83 7.23 2.25c.53.17.87.64.87 1.2 0 .82-.79 1.41-1.57 1.17L.69 12.38l.53-1.96 2.65-.51z"/></svg>
+    <svg viewBox="0 0 24 24" fill="black"><path d="M2.5 19h19v2h-19zM3.87 9.91l4.12 1.28 4.75-4.89 1.88.59-2.91 6.83 7.23 2.25c.53.17.87.64.87 1.2 0 .82-.79 1.41-1.17 1.17L.69 12.38l.53-1.96 2.65-.51z"/></svg>
     DEPARTURES
   </div>
 
@@ -548,6 +551,10 @@
         ensureUIDRoomAndBadge();
         if (!signedInUser){
           requireAuthUI(true);
+          // --- important: never let splash block the auth screen ---
+          document.body.classList.add('ready');
+          const s = document.getElementById('inapp-splash');
+          if (s) { try { s.remove(); } catch {} }
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
         } else {
           requireAuthUI(false);
