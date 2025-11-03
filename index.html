@@ -1,46 +1,87 @@
-<!-- path: /index.html -->
+<!-- /index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CrabbyFlight</title>
-<link rel="icon" href="logo192.png"/>
-<link rel="apple-touch-icon" href="logo192.png"/>
-<link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#1d1f22"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CrabbyFlight — Live Overlay (Firebase)</title>
+
+<link rel="icon" type="image/png" sizes="32x32" href="logo192.png">
+<link rel="apple-touch-icon" href="logo192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d1f22">
+<meta name="apple-mobile-web-app-title" content="CrabbyFlight">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<script>
+  (function () {
+    const raw = (location.hash || '').replace(/^#/, '');
+    const mode = (raw.split(':')[0] || 'editor').toLowerCase();
+    document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
+    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    // why: avoid deadlock—don’t show splash on editor; it may never mark "ready" when signed-out
+    if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
+      document.documentElement.classList.add('show-splash');
+    }
+  })();
+</script>
 
 <style>
-  :root{--bg:#1d1f22;--panel:#2a2d31;--ink:#f2f3f5;--muted:#b5bcc6;--line:#3a3f46;--brand:#FFD100;--shadow:0 8px 24px rgba(0,0,0,.28);--radius:14px;--gap:16px}
-  html,body{margin:0;height:100%;background:transparent;color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  /* screens */
-  #screen-editor,#screen-info,#screen-departures,#screen-frame{display:none}
-  body.editor     #screen-editor{display:block;background:var(--bg)}
-  body.info       #screen-info{display:block}
+  :root{
+    --bg:#1d1f22; --panel:#2a2d31; --ink:#f2f3f5; --muted:#b5bcc6; --line:#3a3f46;
+    --brand:#FFD100; --accent:#FFA500; --shadow:0 8px 24px rgba(0,0,0,.28);
+    --radius:14px; --gap:16px;
+  }
+  #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
+  body.editor #screen-editor{display:block}
+  body.info #screen-info{display:block}
   body.departures #screen-departures{display:block}
-  body.frame      #screen-frame{display:block}
+  body.frame #screen-frame{display:block}
+  body.require-auth #screen-editor{display:none!important}
+  body.require-auth #screen-auth{display:block}
 
-  /* editor */
-  .wrap{max-width:980px;margin:0 auto;padding:28px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:18px 0;box-shadow:var(--shadow)}
-  h1{margin:0 0 14px;font-size:26px;font-weight:800}
-  label{display:block;margin:0 0 6px;color:var(--muted);font-size:12px;font-weight:600}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  input,select{width:100%;box-sizing:border-box;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:46px}
-  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  button{border:1px solid #454b54;background:#373c43;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;height:42px}
+  #inapp-splash{position:fixed;inset:0;z-index:9999;display:none;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;transition:opacity .35s ease}
+  .show-splash #inapp-splash{display:flex}
+  #inapp-splash img{width:160px;height:160px;opacity:0;transform:scale(.95);animation:cfLogoPop .45s ease forwards .08s}
+  #inapp-splash .label{margin-top:14px;color:var(--ink);font-weight:600;opacity:.7;letter-spacing:.2px}
+  @keyframes cfLogoPop{to{opacity:1;transform:scale(1)}}
+  body.ready #inapp-splash{opacity:0;pointer-events:none}
+
+  html,body{margin:0;padding:0;height:100%;background:transparent!important;color:var(--ink);
+    font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body.editor{background:var(--bg)!important}
+  body.info,body.departures,body.frame{background:transparent!important}
+
+  .wrap{max-width:980px;margin:0 auto;padding:28px;background:var(--bg)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0;box-shadow:var(--shadow)}
+  h1{margin:0 0 14px;font-size:26px;font-weight:700;letter-spacing:.2px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:6px 0 6px}
+  input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
+  input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  button{border:1px solid #454b54;background:#373c43;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;transition:background .15s ease,transform .02s ease}
+  button:hover{background:#3f454d} button:active{transform:translateY(1px)}
   .hint{color:var(--muted);font-size:12px}
+  .pill{display:inline-block;padding:4px 10px;font-size:12px;border-radius:999px;background:#31363d;border:1px solid #3f454d}
+  .ok{color:#00d58a} .warn{color:#ffb84d}
 
-  @media (max-width:720px){.grid{grid-template-columns:1fr} input,select{font-size:16px}}
+  /* Auth */
+  #screen-auth .auth-wrap{max-width:420px;margin:64px auto;padding:0 16px}
+  .auth-logo{display:flex;justify-content:center;margin:4px 0 14px}
+  .auth-logo img{max-width:260px;max-height:120px;object-fit:contain;filter:drop-shadow(0 6px 24px rgba(0,0,0,.25))}
+  .auth-status{font-size:12px;color:#ffb4b4;min-height:18px}
+  .auth-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 
-  /* info overlay */
+  /* Info */
   .container{position:absolute;top:24px;left:24px}
   .info-box{background:rgba(44,48,54,.62);border:1px solid rgba(61,67,75,.85);border-radius:12px;box-shadow:var(--shadow);color:#fff;font-size:18px;padding:12px 18px;line-height:1.4;display:inline-block;min-width:480px;text-shadow:2px 2px 4px rgba(0,0,0,.9);backdrop-filter:blur(2px)}
   .plane-icon{vertical-align:middle;margin:0 5px;transform:rotate(90deg);width:16px;height:16px}
   @keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}100%{transform:scale(1);opacity:1}}
   @keyframes flashText{0%,50%,100%{opacity:1}25%,75%{opacity:.6}}
   .live-indicator{display:inline-flex;align-items:center;gap:5px}
-  .live-dot{width:10px;height:10px;background:red;border-radius:50%;animation:pulse 1s infinite}
+  .live-dot{width:10px;height:10px;background:red;border-radius:50%;display:inline-block;animation:pulse 1s infinite}
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
   .top-row{display:flex;align-items:center;margin-bottom:5px}
@@ -50,15 +91,18 @@
   .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
   .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
 
-  /* departures (original look) */
+  /* Departures */
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:12px;overflow:hidden;background:#2c3036;border:1px solid #3d434b;box-shadow:var(--shadow)}
-  .header{background:#FFD100;color:#000;display:flex;align-items:center;gap:10px;font-weight:800;padding:12px 18px;font-size:22px}
+  .header{background:#FFD100;color:#000;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;padding:12px 18px;font-size:22px;position:relative;overflow:hidden}
   .header svg{width:22px;height:22px}
+  .header::after{content:"";position:absolute;top:0;left:-45%;width:40%;height:100%;background:linear-gradient(120deg, rgba(255,209,0,0) 0%, rgba(255,209,0,.45) 50%, rgba(255,209,0,0) 100%);filter:blur(1px);animation:hdrSweep 4s linear infinite;display:none}
+  body.ready .header::after{display:block}
+  @keyframes hdrSweep{0%{transform:translateX(0)}100%{transform:translateX(250%)}}
   .table{display:grid;grid-template-columns:96px 1fr 1fr 120px 72px 188px;column-gap:14px;padding:10px 18px 14px;font-size:17px;color:#fff}
   .th,.tr{display:contents}
   .th span{color:#cfcfcf;padding:8px 0 6px;border-bottom:1px solid rgba(255,255,255,.20);text-transform:uppercase;font-size:14px;letter-spacing:.8px}
   .cell{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);min-height:44px;display:flex;align-items:center}
-  .status{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;font-weight:700;font-size:13px;background:#31363d;border:1px solid #3f454d}
+  .status{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.3px;background:#31363d;border:1px solid #3f454d}
   .dot{width:8px;height:8px;border-radius:50%;background:#999}
   .on-time{color:#00ff90}.on-time .dot{background:#00ff90}
   .boarding{color:#4dd2ff}.boarding .dot{background:#4dd2ff}
@@ -66,38 +110,68 @@
   .cancelled{color:#ff4d4d}.cancelled .dot{background:#ff4d4d}
   .sideways{color:#FFA500}.sideways .dot{background:#FFA500}
   .status.custom{color:#5b9cff}.status.custom .dot{background:#5b9cff}
+  .tr.real{position:relative}
+  .tr.real .cell{background:linear-gradient(90deg,rgba(255,165,0,.12),rgba(255,165,0,0))}
+  .tr.real::before{content:"";position:absolute;left:-25%;top:0;height:100%;width:20%;background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.12), rgba(255,255,255,0));filter:blur(2px);transform:skewX(-8deg);animation:rowSheen 6s linear infinite}
+  @keyframes rowSheen{0%{transform:translateX(0) skewX(-8deg)}100%{transform:translateX(650%) skewX(-8deg)}}
+  .real .flight{color:#FFA500;font-weight:800}
+  .real .from,.real .to{color:#FFA500;font-weight:700}
+  .muted{color:#cfcfcf}
   .footer{display:flex;justify-content:flex-end;gap:24px;padding:10px 18px 16px;color:#cfcfcf;font-size:16px;white-space:nowrap;text-shadow:2px 2px 4px rgba(0,0,0,.7)}
   .footer strong{color:#fff}
 
-  /* frame (basic) */
-  #screen-frame{position:absolute;inset:0}
-  .frame-root{position:absolute;inset:0;width:1920px;height:1080px;pointer-events:none}
-  .frame-svg{position:absolute;inset:0}
-  .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:10px;display:flex;align-items:center;gap:10px;font-weight:800;padding:6px 10px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);color:#fff}
-  .frame-logo img{width:22px;height:22px}
-  .wc{position:absolute;left:32px;top:700px;width:640px;height:480px;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
+  /* Frame overlay */
+  #screen-frame{position:absolute;inset:0;pointer-events:none}
+  .frame-edge{position:absolute;inset:10px;border:6px solid var(--brand);border-radius:16px;box-shadow:0 0 0 2px rgba(0,0,0,.6) inset}
+  .frame-badge{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(0,0,0,.88);border:2px solid var(--brand);padding:6px 14px;border-radius:999px;font-weight:800;letter-spacing:.2px}
+  .frame-info{position:absolute;top:24px;left:24px}
+  .webcam-border{position:absolute;border:6px solid var(--brand);border-radius:16px;box-shadow:0 0 0 2px rgba(0,0,0,.65) inset}
+  .webcam-border.guides{outline:1px dashed rgba(255,255,255,.2)} /* why: optional visual aid if ever toggled */
+
   /* URLs modal */
   .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center}
   .modal.open{display:flex}
   .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-  .sheet{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:560px;max-width:92vw;padding:18px;box-shadow:var(--shadow)}
+  .sheet{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:560px;max-width:92vw;padding:18px 18px 14px;box-shadow:var(--shadow)}
+  .sheet h3{margin:0 0 8px;font-size:20px}
   .url-row{display:grid;grid-template-columns:84px 1fr auto;gap:10px;align-items:center;margin:10px 0}
+  .url-row code{color:#cfcfcf}
   .url-row input{height:42px}
+  .modal-actions{display:flex;justify-content:flex-end;margin-top:8px}
 </style>
-
-<script>
-  // adds body class from hash
-  addEventListener('DOMContentLoaded',()=>{
-    const raw=(location.hash||'').replace(/^#/,'');document.body.classList.add((raw.split(':')[0]||'editor').toLowerCase());
-  });
-</script>
 </head>
 <body>
 
-<!-- ===== Editor ===== -->
-<div id="screen-editor" class="wrap">
-  <h1>CrabbyFlight — Overlay Editor</h1>
+<div id="inapp-splash" aria-hidden="true">
+  <img src="logo192.png" alt="CrabbyFlight">
+  <div class="label">CrabbyFlight</div>
+</div>
 
+<!-- AUTH -->
+<div id="screen-auth">
+  <div class="auth-wrap">
+    <div class="card" style="text-align:center">
+      <div class="auth-logo">
+        <!-- why: show brand; graceful fallback -->
+        <img src="logo.png" alt="CrabbyFlight" onerror="this.onerror=null; this.src='logo192.png'">
+      </div>
+      <label>Email</label><input id="auth_email" type="email" inputmode="email" autocomplete="username" placeholder="you@example.com">
+      <label>Password</label><input id="auth_password" type="password" autocomplete="current-password" placeholder="••••••••">
+      <div class="auth-actions">
+        <button id="btn_signin">Sign in</button>
+        <button id="btn_signup" title="Create an account for yourself">Sign up</button>
+      </div>
+      <div class="auth-status" id="auth_status"></div>
+    </div>
+    <div class="card">
+      <span class="pill" id="net_badge">Status: checking…</span>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div id="screen-editor" class="wrap">
+  <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
   <div class="card">
     <div class="grid">
       <div><label>From</label><input id="from" placeholder="Oslo (ENGM)"></div>
@@ -121,10 +195,12 @@
         </select>
       </div>
     </div>
+
     <div class="grid" id="customRow" style="display:none">
       <div><label>Custom status text</label><input id="status_custom" placeholder="e.g. DIVERTED TO EDI"></div>
       <div><label>&nbsp;</label><input disabled value="Shown on the board as blue badge"></div>
     </div>
+
     <div class="grid">
       <div><label>Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
       <div><label>Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
@@ -135,48 +211,75 @@
     </div>
     <div class="grid">
       <div><label>Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
-      <div><label>LIVE</label><select id="live"><option value="on">On</option><option value="off">Off</option></select></div>
+      <div><label>LIVE</label>
+        <select id="live"><option value="on">On</option><option value="off">Off</option></select>
+      </div>
+    </div>
+
+    <!-- Webcam frame controls -->
+    <div class="card" style="margin-top:18px">
+      <h2 style="margin:0 0 10px;font-size:18px">Webcam Frame</h2>
+      <div class="grid">
+        <div>
+          <label>Size preset</label>
+          <select id="wc_preset">
+            <optgroup label="16:9">
+              <option value="1920x1080">1920×1080 (1080p)</option>
+              <option value="1280x720" selected>1280×720 (720p)</option>
+              <option value="960x540">960×540</option>
+              <option value="852x480">852×480</option>
+            </optgroup>
+            <optgroup label="4:3">
+              <option value="1280x960">1280×960</option>
+              <option value="1024x768">1024×768</option>
+              <option value="800x600">800×600</option>
+              <option value="640x480">640×480</option>
+            </optgroup>
+            <optgroup label="Square">
+              <option value="1080x1080">1080×1080</option>
+            </optgroup>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div>
+          <label>Corner</label>
+          <select id="wc_corner">
+            <option value="bl" selected>Bottom-Left</option>
+            <option value="br">Bottom-Right</option>
+            <option value="tl">Top-Left</option>
+            <option value="tr">Top-Right</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid" id="wc_custom_row" style="display:none">
+        <div><label>Custom width (px)</label><input id="wc_w" inputmode="numeric" placeholder="e.g. 1280"></div>
+        <div><label>Custom height (px)</label><input id="wc_h" inputmode="numeric" placeholder="e.g. 720"></div>
+      </div>
+      <div class="grid">
+        <div><label>Margin from edges (px)</label><input id="wc_margin" inputmode="numeric" placeholder="24"></div>
+        <div><label>&nbsp;</label><input disabled value="Open ‘Frame’ overlay and drop your webcam under it in OBS"></div>
+      </div>
+      <div class="btns">
+        <button id="openFrame">Open Frame</button>
+      </div>
     </div>
 
     <div class="btns">
       <button id="openInfo">Open Info</button>
       <button id="openDep">Open Departures</button>
-      <button id="copyUrls">Show OBS URLs</button>
-    </div>
-  </div>
-
-  <!-- Frame (basic only) -->
-  <div class="card">
-    <h2 style="margin:0 0 10px">Frame (Basic) — Webcam</h2>
-    <div class="grid">
-      <div>
-        <label>Webcam preset (OBS)</label>
-        <select id="wc_preset">
-          <option value="1920x1080">1920 × 1080</option>
-          <option value="1280x720">1280 × 720</option>
-          <option value="960x540">960 × 540</option>
-          <option value="640x480" selected>640 × 480 (4:3)</option>
-          <option value="352x288">352 × 288 (4:3)</option>
-          <option value="320x240">320 × 240 (4:3)</option>
-        </select>
-      </div>
-      <div><label>WC X</label><input id="opt_wcX" type="number" value="32"></div>
-      <div><label>WC Y</label><input id="opt_wcY" type="number" value="700"></div>
-    </div>
-    <div class="btns">
-      <button id="openFrame">Open Frame</button>
-      <span class="hint">Use this URL in a Browser Source.</span>
+      <button id="copyUrls" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
+      <button id="btn_signout" style="margin-left:auto">Sign out</button>
     </div>
   </div>
 </div>
 
-<!-- ===== Info overlay ===== -->
+<!-- INFO OVERLAY -->
 <div id="screen-info" class="container">
   <div class="info-box">
     <div class="top-row">
       <div class="airport-info">
         <span class="dynamic" id="i_from">Oslo (ENGM)</span>
-        <svg class="plane-icon" viewBox="0 0 24 24" fill="white"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
+        <svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v 2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
         <span class="dynamic" id="i_to">Liverpool (EGGP)</span>
       </div>
       <span class="separator-diamond"></span>
@@ -185,28 +288,70 @@
         <span class="flight-label">Callsign:</span> <span class="dynamic" id="i_callsign">WALL13</span>
       </div>
     </div>
+
     <div class="bottom-row">
       <strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320neo</span> |
       <strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span> |
       Time en route: <span class="dynamic" id="i_enroute">~2hrs</span>
     </div>
-    <div class="bottom-row" style="margin-top:3px;gap:10px">
+
+    <div class="bottom-row" style="margin-top:3px; gap:10px;">
       <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
       1080p30FPS | macOS + OneCast
     </div>
   </div>
 </div>
 
-<!-- ===== Departures overlay (original) ===== -->
+<!-- FRAME OVERLAY (brand edge + webcam border + info box) -->
+<div id="screen-frame" aria-hidden="true">
+  <div class="frame-edge"></div>
+  <div class="frame-badge">CrabbyFlight</div>
+
+  <div class="frame-info">
+    <!-- scoped info (classes, not IDs) -->
+    <div class="info-box">
+      <div class="top-row">
+        <div class="airport-info">
+          <span class="dynamic i_from">Oslo (ENGM)</span>
+          <svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v 2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
+          <span class="dynamic i_to">Liverpool (EGGP)</span>
+        </div>
+        <span class="separator-diamond"></span>
+        <div class="flight-info">
+          <span class="flight-label">Flight:</span> <span class="dynamic i_flight">POR9392</span> |
+          <span class="flight-label">Callsign:</span> <span class="dynamic i_callsign">WALL13</span>
+        </div>
+      </div>
+
+      <div class="bottom-row">
+        <strong>Aircraft:</strong> <span class="dynamic i_aircraft">A320neo</span> |
+        <strong>Cruise:</strong> <span class="dynamic i_cruise">35,000ft</span> |
+        Time en route: <span class="dynamic i_enroute">~2hrs</span>
+      </div>
+
+      <div class="bottom-row" style="margin-top:3px; gap:10px;">
+        <span class="live-indicator i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
+        1080p30FPS | macOS + OneCast
+      </div>
+    </div>
+  </div>
+
+  <!-- webcam border rectangle -->
+  <div id="wc_frame" class="webcam-border"></div>
+</div>
+
+<!-- DEPARTURES OVERLAY -->
 <div id="screen-departures" class="board">
   <div class="header">
     <svg viewBox="0 0 24 24" fill="black"><path d="M2.5 19h19v2h-19zM3.87 9.91l4.12 1.28 4.75-4.89 1.88.59-2.91 6.83 7.23 2.25c.53.17.87.64.87 1.2 0 .82-.79 1.41-1.17 1.17L.69 12.38l.53-1.96 2.65-.51z"/></svg>
     DEPARTURES
   </div>
+
   <div class="table">
     <div class="th">
       <span>Time</span><span>From</span><span>To</span><span>Flight</span><span>Gate</span><span>Status</span>
     </div>
+
     <div class="tr">
       <div class="cell">13:55</div><div class="cell">Springfield (SPFD)</div><div class="cell">Shelbyville (SHBY)</div><div class="cell">SPF101</div><div class="cell">A07</div>
       <div class="cell"><span class="status on-time"><span class="dot"></span>ON TIME</span></div>
@@ -215,134 +360,398 @@
       <div class="cell">14:05</div><div class="cell">Gotham (GTHM)</div><div class="cell">Metropolis (MTRP)</div><div class="cell">BAT247</div><div class="cell">C03</div>
       <div class="cell"><span class="status delayed"><span class="dot"></span>DELAYED 12 MIN</span></div>
     </div>
-    <div class="tr">
+
+    <div class="tr real">
       <div class="cell" id="d_time">14:30</div>
-      <div class="cell" id="d_from">Oslo (ENGM)</div>
-      <div class="cell" id="d_to">Liverpool (EGGP)</div>
-      <div class="cell" id="d_flight">POR9392</div>
-      <div class="cell" id="d_gate">B12</div>
-      <div class="cell"><span class="status on-time" id="d_status"><span class="dot"></span><span id="d_status_text">ON TIME</span></span></div>
+      <div class="cell from" id="d_from">Oslo (ENGM)</div>
+      <div class="cell to" id="d_to">Liverpool (EGGP)</div>
+      <div class="cell flight" id="d_flight">POR9392</div>
+      <div class="cell gate" id="d_gate">B12</div>
+      <div class="cell">
+        <span class="status on-time" id="d_status"><span class="dot"></span><span id="d_status_text">ON TIME</span></span>
+      </div>
+    </div>
+
+    <div class="tr">
+      <div class="cell">15:10</div><div class="cell">Area 51 (????)</div><div class="cell">Roswell (RSWL)</div><div class="cell">UFO001</div><div class="cell">X99</div>
+      <div class="cell"><span class="status boarding"><span class="dot"></span>BOARDING</span></div>
     </div>
     <div class="tr">
       <div class="cell">15:25</div><div class="cell">Atlantis (ATLS)</div><div class="cell">Bermuda (BRMD)</div><div class="cell">SEA404</div><div class="cell">D21</div>
       <div class="cell"><span class="status cancelled"><span class="dot"></span>CANCELLED</span></div>
     </div>
   </div>
+
   <div class="footer">
-    <div>Time en route: <strong id="d_enroute">~2 hrs</strong></div>
-    <div>Departure: <strong id="d_dep">14:30 UTC</strong></div>
-    <div>Arrival: <strong id="d_arr">16:30 UTC</strong></div>
+    <div><span class="muted">Time en route:</span> <strong id="d_enroute">~2 hrs</strong></div>
+    <div><span class="muted">Departure:</span> <strong id="d_dep">14:30 UTC</strong></div>
+    <div><span class="muted">Arrival:</span> <strong id="d_arr">16:30 UTC</strong></div>
   </div>
 </div>
 
-<!-- ===== Frame overlay (basic) ===== -->
-<div id="screen-frame" class="frame-root">
-  <svg class="frame-svg" viewBox="0 0 1920 1080" preserveAspectRatio="none">
-    <defs>
-      <mask id="matteMask">
-        <rect x="0" y="0" width="1920" height="1080" fill="white"/>
-        <rect id="hole" x="16" y="46" width="1888" height="1018" rx="28" ry="28" fill="black"/>
-      </mask>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#FFD100"/><stop offset=".5" stop-color="#FFA500"/><stop offset="1" stop-color="#FFD100"/>
-      </linearGradient>
-    </defs>
-    <rect id="matteRect" x="0" y="0" width="1920" height="1080" fill="#1d1f22" mask="url(#matteMask)"/>
-    <rect id="borderRect" x="16" y="46" width="1888" height="1018" rx="28" ry="28" fill="none" stroke="url(#g)" stroke-width="8"/>
-    <rect id="hairRect"   x="26" y="56" width="1868" height="998"  rx="22" ry="22" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2"/>
-  </svg>
-  <div class="frame-logo"><img src="logo192.png" alt="">CrabbyFlight</div>
-  <div id="wc" class="wc"></div>
-</div>
-
-<!-- ===== URLs modal ===== -->
+<!-- URLs Modal -->
 <div id="url_modal" class="modal" aria-hidden="true">
   <div class="backdrop" id="url_modal_bg"></div>
-  <div class="sheet">
-    <h3>Your OBS overlay URLs</h3>
-    <div class="url-row"><code>Info</code><input id="url_info" readonly><button id="copy_info">Copy</button></div>
-    <div class="url-row"><code>Departures</code><input id="url_dep" readonly><button id="copy_dep">Copy</button></div>
-    <div class="url-row"><code>Frame</code><input id="url_frame" readonly><button id="copy_frame">Copy</button></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="url_title">
+    <h3 id="url_title">Your OBS overlay URLs</h3>
+    <div class="url-row">
+      <code>Info</code>
+      <input id="url_info" readonly>
+      <button id="copy_info">Copy</button>
+    </div>
+    <div class="url-row">
+      <code>Departures</code>
+      <input id="url_dep" readonly>
+      <button id="copy_dep">Copy</button>
+    </div>
+    <div class="url-row">
+      <code>Frame</code>
+      <input id="url_frame" readonly>
+      <button id="copy_frame">Copy</button>
+    </div>
+    <div class="modal-actions">
+      <button id="close_modal">Close</button>
+    </div>
+    <div class="hint">Tip: you can add <code>?x</code>, <code>?y</code>, <code>?scale</code> to these in OBS.</div>
   </div>
 </div>
 
 <script type="module">
-  // Firebase
-  const firebaseConfig={apiKey:"AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",authDomain:"crabbyflight.firebaseapp.com",databaseURL:"https://crabbyflight-default-rtdb.firebaseio.com",projectId:"crabbyflight",storageBucket:"crabbyflight.firebasestorage.app",messagingSenderId:"741648861487",appId:"1:741648861487:web:583ec0887f5ac3dce079da",measurementId:"G-8PZNG3Y1CE"};
+  // Firebase init
+  const firebaseConfig = {
+    apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
+    authDomain: "crabbyflight.firebaseapp.com",
+    databaseURL: "https://crabbyflight-default-rtdb.firebaseio.com",
+    projectId: "crabbyflight",
+    storageBucket: "crabbyflight.firebasestorage.app",
+    messagingSenderId: "741648861487",
+    appId: "1:741648861487:web:583ec0887f5ac3dce079da",
+    measurementId: "G-8PZNG3Y1CE"
+  };
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  const app=initializeApp(firebaseConfig); const db=getDatabase(app); const auth=getAuth(app);
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-  if(!location.hash) location.replace('#editor:crabroom');
-  const parseHash=()=>{const raw=(location.hash||'').replace(/^#/,'');const[a,b]=raw.split(':');return{mode:(a||'editor').toLowerCase(),room:b||'crabroom'}};
-  let {mode,room}=parseHash();
-  const applyMode=()=>{document.body.classList.remove('editor','info','departures','frame');document.body.classList.add(mode)}; applyMode();
-  addEventListener('hashchange',()=>{({mode,room}=parseHash());applyMode();bind()});
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+  const auth = getAuth(app);
 
-  const FIELDS=["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live"];
-  const DEFAULTS={from:"Oslo (ENGM)",to:"Liverpool (EGGP)",flight:"POR9392",callsign:"WALL13",gate:"B12",status:"on-time",status_custom:"",dep_utc:"14:30 UTC",arr_utc:"16:30 UTC",aircraft:"A320neo",cruise:"35,000ft",enroute:"~2hrs",live:"on"};
+  // Routing / mode
+  if (!location.hash) location.replace('#editor:crabroom');
+  function parseHash(){
+    const raw = (location.hash||'').replace(/^#/, '');
+    const [mode, room] = raw.split(':');
+    return { mode: (mode||'editor').toLowerCase(), room: room||'crabroom' };
+  }
+  let { mode, room } = parseHash();
+  function applyMode(){
+    document.body.classList.remove('editor','info','departures','frame');
+    document.body.classList.add(mode);
+  }
+  applyMode();
 
-  // editor binding (saves only if authed)
-  let editorBound=false, dbUnsub=null, signedInUser=null;
+  let dbUnsub = null;
+  let firstPaint = false;
+  let editorBound = false;
+  let signedInUser = null;
+
+  addEventListener('hashchange', ()=>{
+    ({mode, room}=parseHash());
+    document.body.classList.remove('ready','require-auth');
+    firstPaint = false;
+    applyMode();
+    bind();
+  });
+
+  // Constants
+  const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
+                  "wc_preset","wc_w","wc_h","wc_corner","wc_margin"];
+  const DEFAULTS = {
+    from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
+    status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
+    aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
+    wc_preset:"1280x720", wc_w:"", wc_h:"", wc_corner:"bl", wc_margin:"24"
+  };
+
+  // Helper: parse WxH string -> [w,h]
+  function parsePresetWH(p){
+    if(!p) return [0,0];
+    const m = /^(\d+)x(\d+)$/.exec(String(p).trim());
+    if(!m) return [0,0];
+    return [parseInt(m[1],10), parseInt(m[2],10)];
+  }
+
+  // Editor binding (only when authed)
   function bindEditor(){
-    if(editorBound) return; editorBound=true;
-    const g=id=>document.getElementById(id);
-    const els=Object.fromEntries(FIELDS.map(id=>[id,g(id)]));
-    const statusEl=els['status'], customRow=document.getElementById('customRow');
-    const read=()=>{const d={};for(const k of FIELDS){d[k]=(els[k]?.value||'').trim()}return d};
-    let t=null; function save(){ if(!signedInUser) return; clearTimeout(t); t=setTimeout(()=>set(ref(db,`rooms/${room}`),read()).catch(console.error),200)}
-    for(const k of FIELDS){const el=els[k]; if(!el) continue; el.addEventListener('input',save); el.addEventListener('change',save)}
-    const toggle=()=>{if(customRow) customRow.style.display=(statusEl?.value==='custom')?'grid':'none'}; statusEl?.addEventListener('change',toggle); toggle();
+    if (editorBound) return;
+    editorBound = true;
 
-    // open buttons + URLs
-    const url=(tag)=>`#${tag}:${signedInUser?.uid||room}${location.search}`;
-    g('openInfo').onclick =()=>open(url('info'),'_blank');
-    g('openDep').onclick  =()=>open(url('departures'),'_blank');
-    g('openFrame').onclick=()=>open(url('frame'),'_blank');
-    document.getElementById('copyUrls').onclick=()=>openUrlModal();
+    const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
+    const statusEl = els['status'];
+    const customRow = document.getElementById('customRow');
 
-    // frame basic → URL
-    const preset=g('wc_preset'), wcX=g('opt_wcX'), wcY=g('opt_wcY');
-    const qs=()=>new URLSearchParams(location.search);
-    const setQS=(p)=>{const u=new URL(location.href);u.search=p.toString();history.replaceState(null,'',u)};
-    function write(){const p=qs();const [w,h]=preset.value.split('x').map(Number);p.set('wcW',w);p.set('wcH',h);p.set('wcX',wcX.value||0);p.set('wcY',wcY.value||0);setQS(p)}
-    preset.addEventListener('change',write); wcX.addEventListener('input',write); wcY.addEventListener('input',write);
+    function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
+
+    // Debounced write; only if authenticated.
+    let t=null;
+    function save(){
+      if (!signedInUser) return; // why: avoid writes without token
+      clearTimeout(t);
+      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 220);
+    }
+    for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
+
+    function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
+    if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
+
+    // Webcam custom size row toggle
+    const wcPresetEl = els['wc_preset'];
+    const wcCustomRow = document.getElementById('wc_custom_row');
+    function toggleWcCustom(){ if(wcCustomRow) wcCustomRow.style.display = (wcPresetEl?.value==='custom') ? 'grid' : 'none'; }
+    if (wcPresetEl){ wcPresetEl.addEventListener('change', toggleWcCustom); toggleWcCustom(); }
+
+    const infoUrl = ()=> `#info:${signedInUser?.uid || room}${location.search}`;
+    const depUrl  = ()=> `#departures:${signedInUser?.uid || room}${location.search}`;
+    const frameUrl= ()=> `#frame:${signedInUser?.uid || room}${location.search}`;
+    document.getElementById('openInfo').onclick  = ()=> window.open(infoUrl(), '_blank');
+    document.getElementById('openDep').onclick   = ()=> window.open(depUrl(), '_blank');
+    document.getElementById('openFrame').onclick = ()=> window.open(frameUrl(), '_blank');
+
+    const urlsBtn = document.getElementById('copyUrls');
+    if (urlsBtn) urlsBtn.onclick = ()=> openUrlModal();
+
+    const btnOut = document.getElementById('btn_signout');
+    if (btnOut) btnOut.onclick = ()=> signOut(auth).catch(e=>setStatus(e.message));
   }
 
-  // overlays render
-  const setT=(id,val)=>{const el=document.getElementById(id); if(el) el.textContent=val};
-  function renderInfo(d){const v=(k,def='')=>(d?.[k]||'').trim()||def; setT('i_from',v('from',DEFAULTS.from));setT('i_to',v('to',DEFAULTS.to));setT('i_flight',v('flight',DEFAULTS.flight));setT('i_callsign',v('callsign',DEFAULTS.callsign));setT('i_aircraft',v('aircraft',DEFAULTS.aircraft));setT('i_cruise',v('cruise',DEFAULTS.cruise));setT('i_enroute',v('enroute',DEFAULTS.enroute));document.getElementById('i_live_block').style.display=v('live','on')==='on'?'inline-flex':'none'}
-  function renderDepartures(d){const v=(k,def='')=>(d?.[k]||'').trim()||def; setT('d_from',v('from',DEFAULTS.from));setT('d_to',v('to',DEFAULTS.to));setT('d_flight',v('flight',DEFAULTS.flight));setT('d_gate',v('gate',DEFAULTS.gate));setT('d_dep',v('dep_utc',DEFAULTS.dep_utc));setT('d_arr',v('arr_utc',DEFAULTS.arr_utc));setT('d_enroute',v('enroute',DEFAULTS.enroute));setT('d_time',v('dep_utc',DEFAULTS.dep_utc).replace(' UTC',''));const st=v('status','on-time');const lbl={'on-time':'ON TIME','boarding':'BOARDING','delayed':'DELAYED','cancelled':'CANCELLED','sideways':'SIDEWAYS'};const node=document.getElementById('d_status');node.className='status '+(st==='custom'?'custom':st);setT('d_status_text',st==='custom'?v('status_custom','STATUS'):lbl[st]||st.toUpperCase())}
+  // Render helpers
+  function renderInfoTo(rootSel, d){
+    const root = document.querySelector(rootSel);
+    if(!root) return;
+    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    const safeSet = (sel, val)=>{ const el = root.querySelector(sel); if(el) el.textContent = val; };
+    // ids in #screen-info; classes in #screen-frame
+    if(rootSel==='#screen-info'){
+      safeSet('#i_from',   v('from',DEFAULTS.from));
+      safeSet('#i_to',     v('to',DEFAULTS.to));
+      safeSet('#i_flight', v('flight',DEFAULTS.flight));
+      safeSet('#i_callsign',v('callsign',DEFAULTS.callsign));
+      safeSet('#i_aircraft',v('aircraft',DEFAULTS.aircraft));
+      safeSet('#i_cruise', v('cruise',DEFAULTS.cruise));
+      safeSet('#i_enroute',v('enroute',DEFAULTS.enroute));
+      const live = v('live','on')==='on'; const blk=root.querySelector('#i_live_block'); if(blk) blk.style.display = live?'inline-flex':'none';
+    } else {
+      safeSet('.i_from',   v('from',DEFAULTS.from));
+      safeSet('.i_to',     v('to',DEFAULTS.to));
+      safeSet('.i_flight', v('flight',DEFAULTS.flight));
+      safeSet('.i_callsign',v('callsign',DEFAULTS.callsign));
+      safeSet('.i_aircraft',v('aircraft',DEFAULTS.aircraft));
+      safeSet('.i_cruise', v('cruise',DEFAULTS.cruise));
+      safeSet('.i_enroute',v('enroute',DEFAULTS.enroute));
+      const live = v('live','on')==='on'; const blk=root.querySelector('.i_live_block'); if(blk) blk.style.display = live?'inline-flex':'none';
+    }
+  }
+  function renderInfo(d){ renderInfoTo('#screen-info', d); }
+  function renderFrame(d){
+    // info text
+    renderInfoTo('#screen-frame', d);
 
-  // subscribe
+    // webcam rect
+    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    let preset = v('wc_preset', DEFAULTS.wc_preset);
+    let w=0,h=0;
+    if (preset && preset !== 'custom') [w,h]=parsePresetWH(preset);
+    if (!w || !h) {
+      w = parseInt(v('wc_w',''),10) || 1280;
+      h = parseInt(v('wc_h',''),10) || 720;
+    }
+    const corner = v('wc_corner', DEFAULTS.wc_corner);
+    const margin = parseInt(v('wc_margin', DEFAULTS.wc_margin),10) || 0;
+
+    const node = document.getElementById('wc_frame');
+    if(node){
+      node.style.width  = `${w}px`;
+      node.style.height = `${h}px`;
+      node.style.left   = (corner.includes('l')) ? `${margin}px` : 'auto';
+      node.style.right  = (corner.includes('r')) ? `${margin}px` : 'auto';
+      node.style.top    = (corner.includes('t')) ? `${margin}px` : 'auto';
+      node.style.bottom = (corner.includes('b')) ? `${margin}px` : 'auto';
+    }
+  }
+  function renderDepartures(d){
+    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    setT('d_from',v('from',DEFAULTS.from)); setT('d_to',v('to',DEFAULTS.to));
+    setT('d_flight',v('flight',DEFAULTS.flight)); setT('d_gate',v('gate',DEFAULTS.gate));
+    setT('d_dep',v('dep_utc',DEFAULTS.dep_utc)); setT('d_arr',v('arr_utc',DEFAULTS.arr_utc)); setT('d_enroute',v('enroute',DEFAULTS.enroute));
+    setT('d_time',v('dep_utc',DEFAULTS.dep_utc).replace(' UTC',''));
+
+    const st=v('status','on-time'); const node=document.getElementById('d_status');
+    if(st==='custom'){ if(node) node.className='status custom'; const txt=v('status_custom','STATUS');
+      const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=txt; return; }
+    const labels={ 'on-time':'ON TIME','boarding':'BOARDING','delayed':'DELAYED','cancelled':'CANCELLED','sideways':'SIDEWAYS' };
+    if(node) node.className='status '+st;
+    const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=labels[st]||st.toUpperCase();
+  }
+
+  // Subscriptions
   function subscribe(){
-    if(dbUnsub){try{dbUnsub()}catch{} dbUnsub=null}
-    dbUnsub=onValue(ref(db,`rooms/${room}`),(snap)=>{const data=snap.val()||DEFAULTS; if(mode==='info') renderInfo(data); if(mode==='departures') renderDepartures(data); if(mode==='editor'){ for(const k of FIELDS){const el=document.getElementById(k); if(el && typeof data[k]==='string') el.value=data[k]} }});
+    if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
+    const r = ref(db, `rooms/${room}`);
+    dbUnsub = onValue(r, snap=>{
+      const data = snap.val() || DEFAULTS;
+      if (mode==='info') renderInfo(data);
+      if (mode==='frame') renderFrame(data);
+      if (mode==='departures') renderDepartures(data);
+      if (mode==='editor') {
+        for(const k of FIELDS){
+          const el=document.getElementById(k);
+          if(el && typeof data[k]==='string'){ el.value=data[k]; }
+        }
+        const statusEl=document.getElementById('status');
+        const customRow=document.getElementById('customRow');
+        if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
+
+        const wcPresetEl=document.getElementById('wc_preset');
+        const wcCustomRow=document.getElementById('wc_custom_row');
+        if(wcPresetEl && wcCustomRow) wcCustomRow.style.display = (wcPresetEl.value==='custom') ? 'grid':'none';
+      }
+      if (!firstPaint) {
+        document.body.classList.add('ready');
+        firstPaint = true;
+        const s = document.getElementById('inapp-splash');
+        if (s) setTimeout(()=>{ s.remove(); }, 400);
+      }
+    }, err=>{
+      setStatus(`Live data failed: ${err.message}`);
+    });
   }
 
-  // frame positioning
+  // Overlay placement
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
-    if(mode==='frame'){const wc=document.getElementById('wc');const x=parseFloat(usp.get('wcX')||'32');const y=parseFloat(usp.get('wcY')||'700');const w=parseFloat(usp.get('wcW')||'640');const h=parseFloat(usp.get('wcH')||'480');wc.style.left=x+'px';wc.style.top=y+'px';wc.style.width=w+'px';wc.style.height=h+'px'}
+    const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
+    const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
+      if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
+    if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
+    if (mode==='departures') place(document.getElementById('screen-departures'));
+    if (mode==='frame') place(document.getElementById('screen-frame'));
+    if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
+      document.querySelectorAll('.table .tr').forEach(tr=>{ if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')) tr.style.display='none'; });
+    }
   }
 
-  // URLs modal
-  function computeUrls(){const target= signedInUser?.uid||room; const base=location.href.split('#')[0]; const qs=location.search||''; return{info:`${base}#info:${target}${qs}`,dep:`${base}#departures:${target}${qs}`,frame:`${base}#frame:${target}${qs}`}}
-  function openUrlModal(){const u=computeUrls();document.getElementById('url_info').value=u.info;document.getElementById('url_dep').value=u.dep;document.getElementById('url_frame').value=u.frame;document.getElementById('url_modal').classList.add('open')}
-  document.getElementById('url_modal_bg')?.addEventListener('click',()=>document.getElementById('url_modal').classList.remove('open'));
-  document.getElementById('copy_info')?.addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('url_info').value));
-  document.getElementById('copy_dep') ?.addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('url_dep').value));
-  document.getElementById('copy_frame')?.addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('url_frame').value));
+  // Auth UI helpers
+  function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
+  function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
 
+  function bindAuthUI(){
+    const emailEl = document.getElementById('auth_email');
+    const passEl  = document.getElementById('auth_password');
+    document.getElementById('btn_signin').onclick = async ()=>{
+      setStatus(''); try { await signInWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
+      catch(e){ setStatus(e.message); }
+    };
+    document.getElementById('btn_signup').onclick = async ()=>{
+      setStatus(''); try { await createUserWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
+      catch(e){ setStatus(e.message); }
+    };
+  }
+  bindAuthUI();
+
+  // network badge
+  function updateNetBadge(){
+    const b = document.getElementById('net_badge');
+    if(!b) return;
+    if (navigator.onLine){ b.textContent='Status: online'; b.className='pill ok'; }
+    else { b.textContent='Status: offline (changes won’t sync)'; b.className='pill warn'; }
+  }
+  addEventListener('online',  updateNetBadge);
+  addEventListener('offline', updateNetBadge);
+  updateNetBadge();
+
+  // Switch to UID room & paint UID in button after login
+  function ensureUIDRoomAndBadge(){
+    const uid = signedInUser?.uid || '';
+    const inBtn = document.getElementById('uid_in_btn');
+    if (inBtn) inBtn.textContent = uid || '—';
+    const placeholder = !room || room === 'crabroom' || room === 'me';
+    if (uid && placeholder){
+      room = uid;
+      const base = location.href.split('#')[0];
+      location.hash = `${mode}:${room}`;
+      return; // hashchange will re-bind
+    }
+  }
+
+  // URLs modal logic
+  function computeUrls(){
+    const targetRoom = signedInUser?.uid || room;
+    const base = location.href.split('#')[0];
+    const qs = location.search || '';
+    return {
+      info:  `${base}#info:${targetRoom}${qs}`,
+      dep:   `${base}#departures:${targetRoom}${qs}`,
+      frame: `${base}#frame:${targetRoom}${qs}`
+    };
+  }
+  function openUrlModal(){
+    const urls = computeUrls();
+    document.getElementById('url_info').value  = urls.info;
+    document.getElementById('url_dep').value   = urls.dep;
+    document.getElementById('url_frame').value = urls.frame;
+    document.getElementById('url_modal').classList.add('open');
+  }
+  function closeUrlModal(){ document.getElementById('url_modal').classList.remove('open'); }
+  document.getElementById('url_modal_bg').onclick = closeUrlModal;
+  document.getElementById('close_modal').onclick = closeUrlModal;
+  addEventListener('keydown', e=>{ if(e.key==='Escape') closeUrlModal(); });
+  document.getElementById('copy_info').onclick  = ()=> copyFrom('url_info');
+  document.getElementById('copy_dep').onclick   = ()=> copyFrom('url_dep');
+  document.getElementById('copy_frame').onclick = ()=> copyFrom('url_frame');
+  async function copyFrom(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    try{ await navigator.clipboard.writeText(el.value); el.nextElementSibling?.classList.add('ok'); setTimeout(()=>el.nextElementSibling?.classList.remove('ok'),800); }
+    catch{ el.select(); document.execCommand('copy'); }
+  }
+
+  // Auth gate for editor; overlays always subscribe
   function bind(){
-    if(mode==='editor'){ onAuthStateChanged(auth,(user)=>{ signedInUser=user||null; bindEditor(); subscribe(); }); }
-    else { subscribe(); applyOverlayOptions(); }
+    if (mode === 'editor') {
+      onAuthStateChanged(auth, (user)=>{
+        signedInUser = user || null;
+        editorBound = false;
+        ensureUIDRoomAndBadge();
+        if (!signedInUser){
+          requireAuthUI(true);
+          // --- important: never let splash block the auth screen ---
+          document.body.classList.add('ready');
+          const s = document.getElementById('inapp-splash');
+          if (s) { try { s.remove(); } catch {} }
+          if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
+        } else {
+          requireAuthUI(false);
+          bindEditor();
+          subscribe();
+        }
+        applyOverlayOptions();
+      });
+    } else {
+      subscribe();
+      applyOverlayOptions();
+    }
   }
   bind();
 
-  // quick key back to editor
-  addEventListener('keydown',(e)=>{ if((mode==='info'||mode==='departures'||mode==='frame')&&(e.key==='e'||e.key==='E')){ const base=location.href.split('#')[0]; location.href=`${base}#editor:${room}` }});
+  // Quick jump back to editor with 'e'
+  addEventListener('keydown', (e)=>{
+    if((mode==='info'||mode==='departures'||mode==='frame') && (e.key==='e'||e.key==='E')){
+      const base=location.href.split('#')[0]; location.href = `${base}#editor:${room}`;
+    }
+  });
+
+  if (mode === 'editor') { try { history.replaceState(null, '', '/'); } catch (e) {} }
 </script>
 </body>
 </html>
