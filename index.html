@@ -61,6 +61,34 @@
   .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
   .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
 
+  /* ===== Departures board (ported from old.html) ===== */
+  .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:12px;overflow:hidden;background:#2c3036;border:1px solid #3d434b;box-shadow:var(--shadow)}
+  .header{background:#FFD100;color:#000;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;padding:12px 18px;font-size:22px;position:relative;overflow:hidden}
+  .header svg{width:22px;height:22px}
+  .header::after{content:"";position:absolute;top:0;left:-45%;width:40%;height:100%;background:linear-gradient(120deg, rgba(255,209,0,0) 0%, rgba(255,209,0,.45) 50%, rgba(255,209,0,0) 100%);filter:blur(1px);animation:hdrSweep 4s linear infinite}
+  @keyframes hdrSweep{0%{transform:translateX(0)}100%{transform:translateX(250%)}}
+  .table{display:grid;grid-template-columns:96px 1fr 1fr 120px 72px 188px;column-gap:14px;padding:10px 18px 14px;font-size:17px;color:#fff}
+  .th,.tr{display:contents}
+  .th span{color:#cfcfcf;padding:8px 0 6px;border-bottom:1px solid rgba(255,255,255,.20);text-transform:uppercase;font-size:14px;letter-spacing:.8px}
+  .cell{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);min-height:44px;display:flex;align-items:center}
+  .status{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.3px;background:#31363d;border:1px solid #3f454d}
+  .dot{width:8px;height:8px;border-radius:50%;background:#999}
+  .on-time{color:#00ff90}.on-time .dot{background:#00ff90}
+  .boarding{color:#4dd2ff}.boarding .dot{background:#4dd2ff}
+  .delayed{color:#ffb84d}.delayed .dot{background:#ffb84d}
+  .cancelled{color:#ff4d4d}.cancelled .dot{background:#ff4d4d}
+  .sideways{color:#FFA500}.sideways .dot{background:#FFA500}
+  .status.custom{color:#5b9cff}.status.custom .dot{background:#5b9cff}
+  .tr.real{position:relative}
+  .tr.real .cell{background:linear-gradient(90deg,rgba(255,165,0,.12),rgba(255,165,0,0))}
+  .tr.real::before{content:"";position:absolute;left:-25%;top:0;height:100%;width:20%;background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.12), rgba(255,255,255,0));filter:blur(2px);transform:skewX(-8deg);animation:rowSheen 6s linear infinite}
+  @keyframes rowSheen{0%{transform:translateX(0) skewX(-8deg)}100%{transform:translateX(650%) skewX(-8deg)}}
+  .real .flight{color:#FFA500;font-weight:800}
+  .real .from,.real .to{color:#FFA500;font-weight:700}
+  .muted{color:#cfcfcf}
+  .footer{display:flex;justify-content:flex-end;gap:24px;padding:10px 18px 16px;color:#cfcfcf;font-size:16px;white-space:nowrap;text-shadow:2px 2px 4px rgba(0,0,0,.7)}
+  .footer strong{color:#fff}
+
   /* URL modal (editor only; hard-hidden elsewhere) */
   .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center}
   .modal.open{display:flex}
@@ -160,14 +188,59 @@
   </div>
 </div>
 
-<!-- ===== DEPARTURES (for loading scene) ===== -->
-<div id="screen-departures" class="board"><!-- your existing departures markup here --></div>
+<!-- ===== DEPARTURES (ported) ===== -->
+<div id="screen-departures" class="board">
+  <div class="header">
+    <svg viewBox="0 0 24 24" fill="black"><path d="M2.5 19h19v2h-19zM3.87 9.91l4.12 1.28 4.75-4.89 1.88.59-2.91 6.83 7.23 2.25c.53.17.87.64.87 1.2 0 .82-.79 1.41-1.17 1.17L.69 12.38l.53-1.96 2.65-.51z"/></svg>
+    DEPARTURES
+  </div>
+
+  <div class="table">
+    <div class="th">
+      <span>Time</span><span>From</span><span>To</span><span>Flight</span><span>Gate</span><span>Status</span>
+    </div>
+
+    <div class="tr">
+      <div class="cell">13:55</div><div class="cell">Springfield (SPFD)</div><div class="cell">Shelbyville (SHBY)</div><div class="cell">SPF101</div><div class="cell">A07</div>
+      <div class="cell"><span class="status on-time"><span class="dot"></span>ON TIME</span></div>
+    </div>
+    <div class="tr">
+      <div class="cell">14:05</div><div class="cell">Gotham (GTHM)</div><div class="cell">Metropolis (MTRP)</div><div class="cell">BAT247</div><div class="cell">C03</div>
+      <div class="cell"><span class="status delayed"><span class="dot"></span>DELAYED 12 MIN</span></div>
+    </div>
+
+    <div class="tr real">
+      <div class="cell" id="d_time">14:30</div>
+      <div class="cell from" id="d_from">Oslo (ENGM)</div>
+      <div class="cell to" id="d_to">Liverpool (EGGP)</div>
+      <div class="cell flight" id="d_flight">POR9392</div>
+      <div class="cell gate" id="d_gate">B12</div>
+      <div class="cell">
+        <span class="status on-time" id="d_status"><span class="dot"></span><span id="d_status_text">ON TIME</span></span>
+      </div>
+    </div>
+
+    <div class="tr">
+      <div class="cell">15:10</div><div class="cell">Area 51 (????)</div><div class="cell">Roswell (RSWL)</div><div class="cell">UFO001</div><div class="cell">X99</div>
+      <div class="cell"><span class="status boarding"><span class="dot"></span>BOARDING</span></div>
+    </div>
+    <div class="tr">
+      <div class="cell">15:25</div><div class="cell">Atlantis (ATLS)</div><div class="cell">Bermuda (BRMD)</div><div class="cell">SEA404</div><div class="cell">D21</div>
+      <div class="cell"><span class="status cancelled"><span class="dot"></span>CANCELLED</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div><span class="muted">Time en route:</span> <strong id="d_enroute">~2 hrs</strong></div>
+    <div><span class="muted">Departure:</span> <strong id="d_dep">14:30 UTC</strong></div>
+    <div><span class="muted">Arrival:</span> <strong id="d_arr">16:30 UTC</strong></div>
+  </div>
+</div>
 
 <!-- ===== FRAME (public) ===== -->
 <div id="screen-frame" class="frame-root" aria-hidden="false">
   <svg class="frame-svg" viewBox="0 0 1920 1080" preserveAspectRatio="none">
     <defs>
-      <!-- Matte mask: inner rect (hole) is transparent area -->
       <mask id="matteMask">
         <rect x="0" y="0" width="1920" height="1080" fill="white"/>
         <rect id="hole" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="black"/>
@@ -176,9 +249,7 @@
         <stop offset="0" stop-color="#FFD100"/><stop offset=".5" stop-color="#FFA500"/><stop offset="1" stop-color="#FFD100"/>
       </linearGradient>
     </defs>
-    <!-- Solid corners + top cover -->
     <rect id="matteRect" x="0" y="0" width="1920" height="1080" fill="#1d1f22" mask="url(#matteMask)"/>
-    <!-- Border -->
     <rect id="borderRect" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="none" stroke="url(#g)" stroke-width="8"/>
     <rect id="hairRect"   x="26" y="48" width="1868" height="1006" rx="22" ry="22" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2"/>
   </svg>
@@ -280,18 +351,27 @@
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||'');
     const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px'; if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
     if(mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
-    if(mode==='departures') place(document.getElementById('screen-departures'));
+    if(mode==='departures') {
+      place(document.getElementById('screen-departures'));
+      // Optional parity with old file: only show the "real" row
+      const onlyReal=usp.get('onlyReal');
+      if(onlyReal==='1'||onlyReal==='true'){
+        document.querySelectorAll('.table .tr').forEach(tr=>{
+          const isHeader = tr.previousElementSibling?.classList?.contains('th');
+          if(!tr.classList.contains('real') && !isHeader){ tr.style.display='none'; }
+        });
+      }
+    }
 
     if(mode==='frame'){
       const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
       const pad=getNum('pad',16);
-      const topH=getNum('topH',22);           // shallower cover by default
-      const logoGap=getNum('logoGap',18);     // gap between logo bottom and hole top
+      const topH=getNum('topH',22);
+      const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
       const hideLogo=(usp.get('hideLogo')==='1'), hideWC=(usp.get('hideWC')==='1'), hideInfo=(usp.get('hideInfo')==='1');
       const bCol=usp.get('bCol')||'', bTh=usp.get('bTh')||'';
 
-      // Hole geometry
       const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
       const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
       const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
@@ -300,7 +380,6 @@
       if(borderRect && bCol) borderRect.setAttribute('stroke', bCol);
       if(borderRect && bTh) borderRect.setAttribute('stroke-width', parseFloat(bTh)||8);
 
-      // Logo: keep a safe gap above the gameplay
       const lg=document.getElementById('frame_logo');
       if(lg){
         const approxLogoH=30; // why: avoid touching the sim's top UI
@@ -309,12 +388,10 @@
         lg.style.display = hideLogo ? 'none':'flex';
       }
 
-      // Webcam
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',420), wcH=getNum('wcH',236);
       if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display=hideWC?'none':'block'; if(bCol) wc.style.outlineColor=bCol; if(bTh) wc.style.outlineWidth=(parseFloat(bTh)||6)+'px'; }
 
-      // Info embed
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
       if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display=hideInfo?'none':'block'; }
