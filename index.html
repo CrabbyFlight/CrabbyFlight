@@ -221,6 +221,17 @@
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
       <div class="grid">
+        <div><label>Webcam Size</label>
+          <select id="wcPreset">
+            <option value="1920x1080">1920×1080</option>
+            <option value="1280x720">1280×720</option>
+            <option value="960x540">960×540</option>
+            <option value="640x480">640×480</option>
+            <option value="352x288">352×288</option>
+            <option value="320x240">320×240</option>
+            <option value="custom" selected>Custom…</option>
+          </select>
+        </div>
         <div><label>Webcam X</label><input id="wcX" type="number" placeholder="32"></div>
         <div><label>Webcam Y</label><input id="wcY" type="number" placeholder="700"></div>
       </div>
@@ -480,6 +491,36 @@
 
     function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
     if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
+
+    // Webcam preset dropdown ↔ width/height sync
+    (function initWcPreset(){
+      const preset = document.getElementById('wcPreset');
+      const w = els['wcW'], h = els['wcH'];
+      if (!preset || !w || !h) return;
+      const MAP = {
+        "1920x1080":[1920,1080],
+        "1280x720":[1280,720],
+        "960x540":[960,540],
+        "640x480":[640,480],
+        "352x288":[352,288],
+        "320x240":[320,240]
+      };
+      function updateSelectFromFields(){
+        const cur=`${(w.value||'').trim()}x${(h.value||'').trim()}`;
+        if (MAP[cur]) { preset.value = cur; }
+        else { preset.value = 'custom'; }
+      }
+      function applyPreset(val){
+        if (MAP[val]) { const [pw,ph]=MAP[val]; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
+      }
+      preset.addEventListener('change', ()=> applyPreset(preset.value));
+      // set initial selection
+      updateSelectFromFields();
+      // keep in sync when user edits numbers
+      w.addEventListener('input', updateSelectFromFields);
+      h.addEventListener('input', updateSelectFromFields);
+    })();
+
 
     const infoUrl = ()=> `#info:${signedInUser?.uid || room}${location.search}`;
     const depUrl  = ()=> `#departures:${signedInUser?.uid || room}${location.search}`;
