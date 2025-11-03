@@ -244,6 +244,10 @@
         <div><label>Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
       </div>
       <div class="grid">
+        <div><label>Corner Radius (px)</label><input id="wcRadius" type="number" placeholder="16"></div>
+        <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
+      </div>
+      <div class="grid">
         <div><label>Hide Logo</label>
           <select id="hideLogo"><option value="0">No</option><option value="1">Yes</option></select>
         </div>
@@ -463,11 +467,11 @@
 
   // Constants
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo"];
+    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0" };
+    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16" };
 
   // Editor binding (only when authed)
   function bindEditor(){
@@ -515,6 +519,45 @@
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
       // set initial selection
+    // Download rounded mask PNG (alpha) matching current W×H×radius
+    (function bindMaskDownload(){
+      const btn = document.getElementById('btn_download_mask');
+      if (!btn) return;
+      btn.addEventListener('click', ()=>{
+        const w = parseInt((els['wcW']?.value||'').trim(), 10);
+        const h = parseInt((els['wcH']?.value||'').trim(), 10);
+        const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
+        if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
+          alert('Please set valid webcam width and height first.'); return;
+        }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0,0,w,h);
+        // draw rounded rect into alpha channel
+        ctx.fillStyle = 'white';
+        const rr = (x,y,w,h,r)=>{
+          const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
+          ctx.beginPath();
+          ctx.moveTo(x+rad, y);
+          ctx.arcTo(x+w, y,   x+w, y+h, rad);
+          ctx.arcTo(x+w, y+h, x,   y+h, rad);
+          ctx.arcTo(x,   y+h, x,   y,   rad);
+          ctx.arcTo(x,   y,   x+w, y,   rad);
+          ctx.closePath();
+        };
+        rr(0,0,w,h,r);
+        ctx.fill();
+        // export as PNG where white->opaque area acts as alpha mask
+        c.toBlob((blob)=>{
+          const a=document.createElement('a');
+          a.download = `mask_webcam_${w}x${h}_r${r}.png`;
+          a.href = URL.createObjectURL(blob);
+          a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+        }, 'image/png');
+      });
+    })();
+
       updateSelectFromFields();
       // keep in sync when user edits numbers
       w.addEventListener('input', updateSelectFromFields);
@@ -588,7 +631,7 @@
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = hideLogo ? 'none':'flex'; }
 
     const wc=document.getElementById('wc');
-    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.outlineColor=bCol; wc.style.outlineWidth=bTh+'px'; }
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.outlineColor=bCol; wc.style.outlineWidth=bTh+'px'; wc.style.borderRadius=(parseFloat(v('wcRadius','16'))||16)+'px'; }
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
