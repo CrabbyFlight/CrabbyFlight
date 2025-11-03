@@ -141,7 +141,6 @@
   .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
 
-  input:disabled{opacity:.6}
 </style>
 </head>
 <body>
@@ -230,14 +229,15 @@
             <option value="640x480">640×480</option>
             <option value="352x288">352×288</option>
             <option value="320x240">320×240</option>
+            <option value="custom" selected>Custom…</option>
           </select>
         </div>
-        <div><label>Border X</label><input id="wcX" type="number" placeholder="32"></div>
-        <div><label>Border Y</label><input id="wcY" type="number" placeholder="700"></div>
+        <div><label>Webcam X</label><input id="wcX" type="number" placeholder="32"></div>
+        <div><label>Webcam Y</label><input id="wcY" type="number" placeholder="700"></div>
       </div>
-      <div class="grid" style="display:none">
-        <div><label>Webcam Width</label><input id="wcW" type="number" placeholder="420" disabled></div>
-        <div><label>Webcam Height</label><input id="wcH" type="number" placeholder="236" disabled></div>
+      <div class="grid">
+        <div><label>Webcam Width</label><input id="wcW" type="number" placeholder="420"></div>
+        <div><label>Webcam Height</label><input id="wcH" type="number" placeholder="236"></div>
       </div>
       <div class="grid">
         <div><label>Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
@@ -509,24 +509,53 @@
         "352x288":[352,288],
         "320x240":[320,240]
       };
-      function selectFromFieldsOrDefault(){
+      function updateSelectFromFields(){
         const cur=`${(w.value||'').trim()}x${(h.value||'').trim()}`;
         if (MAP[cur]) { preset.value = cur; }
-        else { preset.value = '640x480'; const [pw,ph]=MAP[preset.value]; w.value=pw; h.value=ph; }
-        // persist to DB
-        w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
-        // keep W/H read-only
-        w.disabled = true; h.disabled = true;
+        else { preset.value = 'custom'; }
       }
       function applyPreset(val){
-        if (MAP[val]){
-          const [pw,ph]=MAP[val];
-          w.value=pw; h.value=ph;
-          w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
-        }
+        if (MAP[val]) { const [pw,ph]=MAP[val]; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
-      selectFromFieldsOrDefault();
+      // set initial selection
+    // Download rounded mask PNG (alpha) matching current W×H×radius
+    (function bindMaskDownload(){
+      const btn = document.getElementById('btn_download_mask');
+      if (!btn) return;
+      btn.addEventListener('click', ()=>{
+        const w = parseInt((els['wcW']?.value||'').trim(), 10);
+        const h = parseInt((els['wcH']?.value||'').trim(), 10);
+        const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
+        if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
+          alert('Please set valid webcam width and height first.'); return;
+        }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0,0,w,h);
+        // draw rounded rect into alpha channel
+        ctx.fillStyle = 'white';
+        const rr = (x,y,w,h,r)=>{
+          const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
+          ctx.beginPath();
+          ctx.moveTo(x+rad, y);
+          ctx.arcTo(x+w, y,   x+w, y+h, rad);
+          ctx.arcTo(x+w, y+h, x,   y+h, rad);
+          ctx.arcTo(x,   y+h, x,   y,   rad);
+          ctx.arcTo(x,   y,   x+w, y,   rad);
+          ctx.closePath();
+        };
+        rr(0,0,w,h,r);
+        ctx.fill();
+        // export as PNG where white->opaque area acts as alpha mask
+        c.toBlob((blob)=>{
+          const a=document.createElement('a');
+          a.download = `mask_webcam_${w}x${h}_r${r}.png`;
+          a.href = URL.createObjectURL(blob);
+          a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+        }, 'image/png');
+      });
     })();
 
       updateSelectFromFields();
