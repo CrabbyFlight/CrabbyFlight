@@ -21,7 +21,7 @@
     document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     // why: avoid deadlock—don’t show splash on editor; it may never mark "ready" when signed-out
-    if (standalone && (mode === 'info' || mode === 'departures')) {
+    if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
       document.documentElement.classList.add('show-splash');
     }
   })();
@@ -33,10 +33,11 @@
     --brand:#FFD100; --accent:#FFA500; --shadow:0 8px 24px rgba(0,0,0,.28);
     --radius:14px; --gap:16px;
   }
-  #screen-editor,#screen-info,#screen-departures,#screen-auth{display:none}
+  #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
   body.editor #screen-editor{display:block}
   body.info #screen-info{display:block}
   body.departures #screen-departures{display:block}
+  body.frame #screen-frame{display:block}
   body.require-auth #screen-editor{display:none!important}
   body.require-auth #screen-auth{display:block}
 
@@ -129,6 +130,17 @@
   .url-row code{color:#cfcfcf}
   .url-row input{height:42px}
   .modal-actions{display:flex;justify-content:flex-end;margin-top:8px}
+
+  /* FRAME overlay */
+  #screen-frame{z-index:10}
+  .frame-root{position:absolute;inset:0;width:1920px;height:1080px;pointer-events:none}
+  .frame-svg{position:absolute;inset:0;pointer-events:none}
+  .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:12px;display:flex;align-items:center;gap:10px;font-weight:800;padding:8px 12px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);text-shadow:2px 2px 4px rgba(0,0,0,.9)}
+  .frame-logo img{width:22px;height:22px}
+  .embed{position:absolute;transform-origin:top left}
+  .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
+  .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
+
 </style>
 </head>
 <body>
@@ -210,6 +222,7 @@
     <div class="btns">
       <button id="openInfo">Open Info</button>
       <button id="openDep">Open Departures</button>
+      <button id="openFrame">Open Frame</button>
       <button id="copyUrls" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
       <button id="btn_signout" style="margin-left:auto">Sign out</button>
     </div>
@@ -294,6 +307,38 @@
   </div>
 </div>
 
+
+<!-- FRAME OVERLAY -->
+<div id="screen-frame" class="frame-root" aria-hidden="false">
+  <svg class="frame-svg" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <defs>
+      <mask id="matteMask">
+        <rect x="0" y="0" width="1920" height="1080" fill="white"/>
+        <rect id="hole" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="black"/>
+      </mask>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#FFD100"/><stop offset=".5" stop-color="#FFA500"/><stop offset="1" stop-color="#FFD100"/>
+      </linearGradient>
+    </defs>
+    <rect id="matteRect" x="0" y="0" width="1920" height="1080" fill="#1d1f22" mask="url(#matteMask)"/>
+    <rect id="borderRect" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="none" stroke="url(#g)" stroke-width="8"/>
+    <rect id="hairRect"   x="26" y="48" width="1868" height="1006" rx="22" ry="22" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2"/>
+  </svg>
+
+  <div class="frame-logo" id="frame_logo">
+    <img src="logo192.png" alt=""><span>CrabbyFlight</span>
+  </div>
+
+  <!-- Webcam guide frame -->
+  <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px"></div>
+
+  <!-- Info embed inside frame -->
+  <div id="embed_info" class="embed info" style="left:32px;top:80px;transform:scale(1)">
+    <iframe id="info_iframe" src="" allowtransparency="true"></iframe>
+  </div>
+</div>
+
+
 <!-- URLs Modal -->
 <div id="url_modal" class="modal" aria-hidden="true">
   <div class="backdrop" id="url_modal_bg"></div>
@@ -308,6 +353,11 @@
       <code>Departures</code>
       <input id="url_dep" readonly>
       <button id="copy_dep">Copy</button>
+    </div>
+    <div class="url-row">
+      <code>Frame</code>
+      <input id="url_frame" readonly>
+      <button id="copy_frame">Copy</button>
     </div>
     <div class="modal-actions">
       <button id="close_modal">Close</button>
@@ -345,7 +395,7 @@
   }
   let { mode, room } = parseHash();
   function applyMode(){
-    document.body.classList.remove('editor','info','departures');
+    document.body.classList.remove('editor','info','departures','frame');
     document.body.classList.add(mode);
   }
   applyMode();
@@ -394,8 +444,10 @@
 
     const infoUrl = ()=> `#info:${signedInUser?.uid || room}${location.search}`;
     const depUrl  = ()=> `#departures:${signedInUser?.uid || room}${location.search}`;
+    const frameUrl= ()=> `#frame:${signedInUser?.uid || room}${location.search}`;
     document.getElementById('openInfo').onclick = ()=> window.open(infoUrl(), '_blank');
     document.getElementById('openDep').onclick  = ()=> window.open(depUrl(), '_blank');
+    const of = document.getElementById('openFrame'); if(of) of.onclick = ()=> window.open(frameUrl(), '_blank');
 
     const urlsBtn = document.getElementById('copyUrls');
     if (urlsBtn) urlsBtn.onclick = ()=> openUrlModal();
@@ -468,6 +520,38 @@
     if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
       document.querySelectorAll('.table .tr').forEach(tr=>{ if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')) tr.style.display='none'; });
     }
+
+    if (mode==='frame'){
+      const usp=new URLSearchParams(location.search);
+      const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
+      const pad=getNum('pad',16);
+      const topH=getNum('topH',22);
+      const logoGap=getNum('logoGap',18);
+      const matte= usp.get('matte') || '#1d1f22';
+      const hideLogo=(usp.get('hideLogo')==='1'), hideWC=(usp.get('hideWC')==='1'), hideInfo=(usp.get('hideInfo')==='1');
+      const bCol=usp.get('bCol')||'', bTh=usp.get('bTh')||'';
+
+      const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
+      const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
+      const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
+      [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
+      if(matteRect) matteRect.setAttribute('fill', matte);
+      if(borderRect && bCol) borderRect.setAttribute('stroke', bCol);
+      if(borderRect && bTh) borderRect.setAttribute('stroke-width', parseFloat(bTh)||8);
+
+      const lg=document.getElementById('frame_logo');
+      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = hideLogo ? 'none':'flex'; }
+
+      const wc=document.getElementById('wc');
+      const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',420), wcH=getNum('wcH',236);
+      if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display=hideWC?'none':'block'; if(bCol) wc.style.outlineColor=bCol; if(bTh) wc.style.outlineWidth=(parseFloat(bTh)||6)+'px'; }
+
+      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display=hideInfo?'none':'block'; }
+      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+    }
+
   }
 
   // Auth UI helpers
@@ -520,13 +604,15 @@
     const qs = location.search || '';
     return {
       info: `${base}#info:${targetRoom}${qs}`,
-      dep:  `${base}#departures:${targetRoom}${qs}`
+      dep:  `${base}#departures:${targetRoom}${qs}`,
+      frame:`${base}#frame:${targetRoom}${qs}`
     };
   }
   function openUrlModal(){
     const urls = computeUrls();
     document.getElementById('url_info').value = urls.info;
     document.getElementById('url_dep').value  = urls.dep;
+    const uf = document.getElementById('url_frame'); if(uf) uf.value = urls.frame;
     document.getElementById('url_modal').classList.add('open');
   }
   function closeUrlModal(){ document.getElementById('url_modal').classList.remove('open'); }
@@ -535,6 +621,7 @@
   addEventListener('keydown', e=>{ if(e.key==='Escape') closeUrlModal(); });
   document.getElementById('copy_info').onclick = ()=> copyFrom('url_info');
   document.getElementById('copy_dep').onclick  = ()=> copyFrom('url_dep');
+  const cfr = document.getElementById('copy_frame'); if(cfr) cfr.onclick = ()=> copyFrom('url_frame');
   async function copyFrom(id){
     const el = document.getElementById(id);
     if(!el) return;
