@@ -367,6 +367,18 @@
 </div>
 
 <script type="module">
+
+  // --- Cleanup any legacy frame add-ons to prevent duplicates ---
+  (function cleanupLegacyFrame(){
+    try{
+      document.querySelectorAll('#frame-toggle, #frame-banner').forEach(n=>n.remove());
+      const frames = document.querySelectorAll('#screen-frame');
+      if (frames.length > 1){
+        frames.forEach((n,i)=>{ if(i>0) n.remove(); });
+      }
+    }catch(e){ /* ignore */ }
+  })();
+
   // Firebase init
   const firebaseConfig = {
     apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
