@@ -243,18 +243,8 @@
         <div><label>Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
         <div><label>Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
       </div>
-      <div class="grid">
-        <div><label>Corner Radius (px)</label><input id="wcRadius" type="number" placeholder="16"></div>
-        <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
-      </div>
-      <div class="grid">
-        <div><label>Hide Logo</label>
-          <select id="hideLogo"><option value="0">No</option><option value="1">Yes</option></select>
-        </div>
-        <div><label>Hide Info Embed</label>
-          <select id="hideInfo"><option value="0">No</option><option value="1">Yes</option></select>
-        </div>
-      </div>
+      
+      
       <div class="hint">These settings save per room. The Frame overlay URL can stay simply <code>#frame:&lt;room&gt;</code>.</div>
     </div>
 </div>
@@ -467,11 +457,11 @@
 
   // Constants
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius"];
+    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16" };
+    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6",};
 
   // Editor binding (only when authed)
   function bindEditor(){
@@ -519,46 +509,7 @@
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
       // set initial selection
-    // Download rounded mask PNG (alpha) matching current W×H×radius
-    (function bindMaskDownload(){
-      const btn = document.getElementById('btn_download_mask');
-      if (!btn) return;
-      btn.addEventListener('click', ()=>{
-        const w = parseInt((els['wcW']?.value||'').trim(), 10);
-        const h = parseInt((els['wcH']?.value||'').trim(), 10);
-        const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
-        if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
-          alert('Please set valid webcam width and height first.'); return;
-        }
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
-        const ctx = c.getContext('2d');
-        ctx.clearRect(0,0,w,h);
-        // draw rounded rect into alpha channel
-        ctx.fillStyle = 'white';
-        const rr = (x,y,w,h,r)=>{
-          const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
-          ctx.beginPath();
-          ctx.moveTo(x+rad, y);
-          ctx.arcTo(x+w, y,   x+w, y+h, rad);
-          ctx.arcTo(x+w, y+h, x,   y+h, rad);
-          ctx.arcTo(x,   y+h, x,   y,   rad);
-          ctx.arcTo(x,   y,   x+w, y,   rad);
-          ctx.closePath();
-        };
-        rr(0,0,w,h,r);
-        ctx.fill();
-        // export as PNG where white->opaque area acts as alpha mask
-        c.toBlob((blob)=>{
-          const a=document.createElement('a');
-          a.download = `mask_webcam_${w}x${h}_r${r}.png`;
-          a.href = URL.createObjectURL(blob);
-          a.click();
-          setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-        }, 'image/png');
-      });
-    })();
-
-      updateSelectFromFields();
+    updateSelectFromFields();
       // keep in sync when user edits numbers
       w.addEventListener('input', updateSelectFromFields);
       h.addEventListener('input', updateSelectFromFields);
@@ -611,8 +562,6 @@
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',420), wcH=num('wcH',236);
     const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
-    const hideLogo = v('hideLogo','0')==='1', hideInfo = v('hideInfo','0')==='1';
-
     // Allow URL params to override (optional)
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
@@ -628,7 +577,7 @@
     if(borderRect) { const bc = usp.get('bCol') || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); }
 
     const lg=document.getElementById('frame_logo');
-    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = hideLogo ? 'none':'flex'; }
+    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top=top+'px'; lg.style.display='flex'; }
 
     const wc=document.getElementById('wc');
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.outlineColor=bCol; wc.style.outlineWidth=bTh+'px'; wc.style.borderRadius=(parseFloat(v('wcRadius','16'))||16)+'px'; }
@@ -687,7 +636,6 @@
       const topH=getNum('topH',22);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
-      const hideLogo=(usp.get('hideLogo')==='1'), hideWC=(usp.get('hideWC')==='1'), hideInfo=(usp.get('hideInfo')==='1');
       const bCol=usp.get('bCol')||'', bTh=usp.get('bTh')||'';
 
       const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
@@ -699,7 +647,7 @@
       if(borderRect && bTh) borderRect.setAttribute('stroke-width', parseFloat(bTh)||8);
 
       const lg=document.getElementById('frame_logo');
-      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = hideLogo ? 'none':'flex'; }
+      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top=top+'px'; lg.style.display='flex'; }
 
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',420), wcH=getNum('wcH',236);
