@@ -141,6 +141,7 @@
   .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
 
+  input:disabled{opacity:.6}
 </style>
 </head>
 <body>
@@ -232,12 +233,12 @@
             <option value="custom" selected>Custom…</option>
           </select>
         </div>
-        <div><label>Webcam X</label><input id="wcX" type="number" placeholder="32"></div>
-        <div><label>Webcam Y</label><input id="wcY" type="number" placeholder="700"></div>
+        <div><label>Border X</label><input id="wcX" type="number" placeholder="32"></div>
+        <div><label>Border Y</label><input id="wcY" type="number" placeholder="700"></div>
       </div>
       <div class="grid">
-        <div><label>Webcam Width</label><input id="wcW" type="number" placeholder="420"></div>
-        <div><label>Webcam Height</label><input id="wcH" type="number" placeholder="236"></div>
+        <div><label>Webcam Width</label><input id="wcW" type="number" placeholder="420" disabled></div>
+        <div><label>Webcam Height</label><input id="wcH" type="number" placeholder="236" disabled></div>
       </div>
       <div class="grid">
         <div><label>Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
@@ -509,6 +510,22 @@
         "352x288":[352,288],
         "320x240":[320,240]
       };
+
+      function setWHEnabled(on){
+        const dis = !on;
+        w.disabled = dis; h.disabled = dis;
+      }
+      function updateSelectFromFields(){
+        const cur=`${(w.value||'').trim()}x${(h.value||'').trim()}`;
+        if (MAP[cur]) { preset.value = cur; setWHEnabled(false); }
+        else { preset.value = 'custom'; setWHEnabled(true); }
+      }
+      function applyPreset(val){
+        if (MAP[val]) { const [pw,ph]=MAP[val]; w.value=pw; h.value=ph; setWHEnabled(false); w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
+        else { setWHEnabled(true); }
+      }
+      // initialize enabled/disabled state from current selection
+      setWHEnabled(preset.value === 'custom');
       function updateSelectFromFields(){
         const cur=`${(w.value||'').trim()}x${(h.value||'').trim()}`;
         if (MAP[cur]) { preset.value = cur; }
