@@ -215,7 +215,7 @@
     
     <div class="grid">
       <div><label>SimBrief User ID</label><input id="simbrief_userid" placeholder="e.g. 1234567"></div>
-      <div><label>&nbsp;</label><input disabled value="Auto-imports and saves to room"></div>
+      <div><label>&nbsp;</label><button id="simbrief_fetch" type="button">Import latest from SimBrief</button></div>
     </div>
 <div class="grid">
       <div><label>Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
@@ -832,7 +832,8 @@
 </script>
 
 
-<!-- SimBrief import (read-only; no overlay/layout changes) -->
+
+<!-- SimBrief import (read-only; manual import button; HH:MM formatting) -->
 <script>
 (function(){
   const BASE = "https://www.simbrief.com/api/xml.fetcher.php";
@@ -857,17 +858,36 @@
     el.dispatchEvent(new Event("change", {bubbles:true}));
   }
 
-  function minutesDiff(a,b){
-    const parseHM=(s)=>{
-      if(!s) return null;
-      const m=String(s).match(/^(\d{1,2}):(\d{2})/);
-      if(m){ const d=new Date(); d.setUTCHours(+m[1],+m[2],0,0); return d; }
-      const d=new Date(s); return isNaN(d)?null:d;
-    };
-    const A=parseHM(a), B=parseHM(b); if(!A||!B) return null;
-    return Math.round((B-A)/60000);
+  function toHHMM(s){
+    if(!s) return "";
+    if (typeof s === "number" && Number.isFinite(s)) {
+      const h = Math.floor(s/60), m = Math.round(s%60);
+      return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+    }
+    const str = String(s).trim();
+    let m = str.match(/^(\d{1,2}):(\d{2})/);
+    if(m) return m[1].padStart(2,"0")+":"+m[2];
+    m = str.match(/^(\d{2})(\d{2})Z?$/);
+    if(m) return m[1]+":"+m[2];
+    const d = new Date(str);
+    if(!isNaN(d)) return String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0");
+    return str;
   }
-  function fmtEte(mins){ if(mins==null) return ""; const h=Math.floor(mins/60), m=mins%60; return (h? h+"h ":"")+String(m).padStart(2,"0")+"m"; }
+
+  function hmToMinutes(hm){
+    const m = String(hm||"").match(/^(\d{1,2}):(\d{2})/);
+    if(!m) return null;
+    return (+m[1])*60 + (+m[2]);
+  }
+
+  function minutesDiffHHMM(a,b){
+    const A = hmToMinutes(toHHMM(a));
+    const B = hmToMinutes(toHHMM(b));
+    if(A==null || B==null) return null;
+    let diff = B - A;
+    if (diff < 0) diff += 24*60;
+    return diff;
+  }
 
   async function fetchOfpByUserId(userId){
     const j = await fetch(`${BASE}?userid=${encodeURIComponent(userId)}&json=1`);
@@ -882,6 +902,8 @@
   function norm(ofp, kind){
     if(kind==="json"){
       const g=ofp.general||{}, a=ofp.aircraft||{}, atc=ofp.atc||{}, o=ofp.origin||{}, d=ofp.destination||{}, t=ofp.times||{};
+      const dep = g.deptime || t.deptime || t.sched_out || t.est_out || t.out;
+      const arr = g.arrtime || t.arrtime || t.sched_in  || t.est_in  || t.in;
       return {
         from: o.name || o.icao_code || o.icao || "",
         to: d.name || d.icao_code || d.icao || "",
@@ -889,12 +911,14 @@
         callsign: atc.callsign || g.callsign || "",
         aircraft: a.icao_code || a.icao || a.type || "",
         airframe: a.reg || a.registration || "",
-        dep_utc: g.deptime || g.etd || t.deptime || "",
-        arr_utc: g.arrtime || g.eta || t.arrtime || "",
-        enroute: t.enroute_time || t.ete || t.block_time || ""
+        dep_utc: toHHMM(dep),
+        arr_utc: toHHMM(arr),
+        enroute: toHHMM(t.enroute_time || t.ete || t.block_time)
       };
     } else {
       const q=(s)=> ofp.querySelector(s)?.textContent?.trim() || "";
+      const dep = q("general deptime") || q("times deptime") || q("times sched_out") || q("times est_out") || q("times out");
+      const arr = q("general arrtime") || q("times arrtime") || q("times sched_in")  || q("times est_in")  || q("times in");
       return {
         from: q("origin name") || q("origin icao_code") || q("origin icao"),
         to: q("destination name") || q("destination icao_code") || q("destination icao"),
@@ -902,18 +926,23 @@
         callsign: q("atc callsign") || q("general callsign"),
         aircraft: q("aircraft icao_code") || q("aircraft icao") || q("aircraft type"),
         airframe: q("aircraft reg") || q("aircraft registration"),
-        dep_utc: q("general deptime") || q("general etd") || q("times deptime"),
-        arr_utc: q("general arrtime") || q("general eta") || q("times arrtime"),
-        enroute: q("times enroute_time") || q("times ete") || q("times block_time")
+        dep_utc: toHHMM(dep),
+        arr_utc: toHHMM(arr),
+        enroute: toHHMM(q("times enroute_time") || q("times ete") || q("times block_time"))
       };
     }
   }
 
-  async function apply(userId){
-    if(!userId) throw new Error("Missing SimBrief user id");
+  async function runImport(){
+    const idEl = document.getElementById("simbrief_userid");
+    const userId = (idEl && idEl.value || "").trim();
+    if(!userId){ alert("Enter SimBrief User ID"); return; }
     const {kind, ofp} = await fetchOfpByUserId(userId);
     const data = norm(ofp, kind);
-    if(!data.enroute){ const mins = minutesDiff(data.dep_utc, data.arr_utc); if(mins!=null) data.enroute = fmtEte(mins); }
+    if(!data.enroute){
+      const mins = minutesDiffHHMM(data.dep_utc, data.arr_utc);
+      if(mins!=null) data.enroute = toHHMM(mins);
+    }
     setValue(ELS.from, data.from);
     setValue(ELS.to, data.to);
     setValue(ELS.flight, data.flight);
@@ -926,17 +955,16 @@
     return data;
   }
 
-  window.CrabbyFlightSimbrief = { apply };
+  window.CrabbyFlightSimbrief = { importLatest: runImport };
 
   document.addEventListener("DOMContentLoaded", function(){
-    const el = document.getElementById("simbrief_userid");
-    if(el){
-      const handler = ()=>{ const v=(el.value||'').trim(); if(v) { apply(v).catch(console.warn); } };
-      el.addEventListener('change', handler);
-      el.addEventListener('blur', handler);
-    }
+    const btn = document.getElementById("simbrief_fetch");
+    if(btn){ btn.addEventListener("click", ()=>{
+      runImport().catch(e=>alert("SimBrief import failed: " + (e && e.message || e)));
+    }); }
   });
 })();
 </script>
+
 </body>
 </html>
