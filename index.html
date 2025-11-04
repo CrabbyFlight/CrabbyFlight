@@ -219,11 +219,11 @@
       <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
     </div>
     
-    <div style="font-size:12px; opacity:.7; margin-top:-8px; margin-bottom:8px">
+    <div style="font-size:12px; opacity:.7; margin: -6px 0 8px 0">
       <span id="simbrief_debug_dep"></span>
       <span id="simbrief_debug_arr" style="margin-left:12px"></span>
     </div>
-<div class="grid">
+    <div class="grid">
       <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
       <div><label for="cruise">Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
@@ -544,47 +544,101 @@
   };
 
   function getUtcTime(doc, kind){
-  // UTC-only extraction; prefer SimBrief <general> *_time_utc (matches OFP header), then <times> variants
-  const candidates = (kind==='dep')
-    ? ['general dep_time_utc','general dep_time_zulu','times sched_out_zulu','times sched_out_utc','times sched_out_gmt','times out_zulu','times out_utc','times out_gmt']
-    : ['general arr_time_utc','general arr_time_zulu','times sched_in_zulu','times sched_in_utc','times sched_in_gmt','times in_zulu','times in_utc','times in_gmt'];
-  let matched='', raw='';
-  const all = [];
-  for (const sel of candidates){
-    const n = doc.querySelector(sel);
-    const v = n?.textContent?.trim() || '';
-    all.push([sel, v]);
-    if (!matched && v) { matched = sel; raw = v; }
+    // UTC-only: prefer SimBrief's OFP header UTC, then <times> Zulu/UTC/GMT; never convert offsets
+    const candidates = (kind==='dep')
+      ? ['general dep_time_utc','general dep_time_zulu','times sched_out_zulu','times sched_out_utc','times out_zulu','times out_utc','times sched_out_gmt','times out_gmt']
+      : ['general arr_time_utc','general arr_time_zulu','times sched_in_zulu','times sched_in_utc','times in_zulu','times in_utc','times sched_in_gmt','times in_gmt'];
+    let matched='', raw='';
+    for (const sel of candidates){
+      const n = doc.querySelector(sel);
+      const v = n?.textContent?.trim();
+      if (v){ matched = sel; raw = v; break; }
+    }
+    const label = parseTimeUTC(raw);
+    return { label: (label||''), source: (label ? `simbrief:${matched}` : 'missing') };
   }
-  const label = parseTimeUTC(raw);
-  return { label: (label||''), source: (label ? `simbrief:${matched}` : 'missing'), debug:{matched, raw, all} };
-}
+
+    const localRaw = pickText(doc, localSelectors);
+    const offRaw   = pickText(doc, offSelectors);
+    if(localRaw){
+      const hm = parseHHMM(localRaw);
+      if(hm){
+        const offMin = parseOffsetToMinutes(offRaw);
+        if(offMin!==null){
+          const utcHM = addMinutesHM(hm.h, hm.m, -offMin); // local -> UTC
+          return { label: hmToLabel(utcHM.h, utcHM.m), source: (offRaw?`local+offset(${offRaw})`:'local') };
+        }
+        return { label: hmToLabel(hm.h, hm.m), source: 'local(no offset)' };
+      }
+    }
+    const any = pickText(doc, [...utcSelectors, ...localSelectors]);
+    return { label: parseTimeUTC(any), source: 'fallback' };
+  }
+
+  async function importFromSimBrief(pilotOrUser){
+    const urls = [
+      `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(pilotOrUser)}`,
+      `https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(pilotOrUser)}`
+    ];
+    let xmlText=null, lastErr=null;
+    for(const u of urls){
+      try{
+        const res=await fetch(u,{cache:'no-store'});
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const t=await res.text();
+        if(t && !/^\s*<\/?html/i.test(t)){ xmlText=t; break; }
+      }catch(e){ lastErr=e; }
+    }
+    if(!xmlText) throw lastErr||new Error('No XML');
+
+    const doc=new DOMParser().parseFromString(xmlText,'application/xml');
+    if(doc.querySelector('parsererror')) throw new Error('XML parse error');
+
+    const fromIcao = pickText(doc,'OFP origin icao_code','origin icao_code','general orig_icao');
+    const fromName = pickText(doc,'OFP origin name','origin name','general orig_name','origin city');
+    const toIcao   = pickText(doc,'OFP destination icao_code','destination icao_code','general dest_icao');
+    const toName   = pickText(doc,'OFP destination name','destination name','general dest_name','destination city');
+
+    const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
+    const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
+    let callsign = pickText(doc,'OFP general callsign','general callsign','general atc_callsign');
+    callsign = (callsign||'').toUpperCase().replace(/\s+/g,'');
+    const aircraft = pickText(doc,'OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
+    const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
+    const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
+
+    const dep = getUtcTime(doc,'dep');
+    const arr = getUtcTime(doc,'arr');
+
+    const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
+    const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:''):'';
+
+    return {
+      patch: {
+        from: fmtLoc(fromName, fromIcao),
+        to:   fmtLoc(toName, toIcao),
+        flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
+        callsign: callsign||'',
+        dep_utc: dep.label,
+        arr_utc: arr.label,
+        aircraft: (aircraft||'').toUpperCase(),
+        cruise: fmtCruise(cruiseFt),
+        enroute: formatEte(eteRaw)
+      },
+      meta: {depSource:dep.source, arrSource:arr.source}
+    };
+  }
+
   
-  // ---- SimBrief debug rendering ----
-  
-  // ---- SimBrief debug rendering ----
+  // SimBrief debug (shows which XML fields were used for UTC times)
   function showSimbriefDebug(meta){
     try{
       const d = document.getElementById('simbrief_debug_dep');
       const a = document.getElementById('simbrief_debug_arr');
-      if(!d || !a || !meta) return;
-      const fmt = (dbg)=>{
-        if(!dbg) return '';
-        const items = (dbg.all||[]).filter(([k,v])=>v).map(([k,v])=>`${k}="${v}"`).join('  ·  ');
-        return items ? items : (dbg.matched ? `[${dbg.matched}: "${dbg.raw}"]` : '');
-      };
-      d.textContent = 'DEP ' + fmt(meta.depDebug);
-      a.textContent = 'ARR ' + fmt(meta.arrDebug);
-    }catch(e){}
-  }
-
-    try{
-      const d = document.getElementById('simbrief_debug_dep');
-      const a = document.getElementById('simbrief_debug_arr');
-      if(!d || !a || !meta) return;
-      const dep = meta.depDebug, arr = meta.arrDebug;
-      if(dep?.matched) d.textContent = `[DEP ${dep.matched}: "${dep.raw}"]`;
-      if(arr?.matched) a.textContent = `[ARR ${arr.matched}: "${arr.raw}"]`;
+      if (!d || !a || !meta) return;
+      const dep = meta.depSource || ''; const arr = meta.arrSource || '';
+      d.textContent = dep ? `DEP ${dep}` : '';
+      a.textContent = arr ? `ARR ${arr}` : '';
     }catch(e){}
   }
 
@@ -668,12 +722,12 @@
 
         Object.entries(patch).forEach(([k,val])=>{
           const el = els[k];
-          if (el) el.value = (val || '');
+          if (el && val) el.value = val;
         });
-        showSimbriefDebug(meta);
 
         sanitizeUTCField(els['dep_utc']);
         sanitizeUTCField(els['arr_utc']);
+        showSimbriefDebug(meta);
 
         if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','cruise','enroute']
           .forEach(k => els[k]?.dispatchEvent(new Event('input')));
