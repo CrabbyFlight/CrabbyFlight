@@ -539,42 +539,16 @@
   };
 
   function getUtcTime(doc, kind){
-    const utcSelectors = kind==='dep'
-      ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
-      : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
+  // UTC-only: read SimBrief UTC/Zulu fields and do no offset math
+  const utcSelectors = (kind==='dep')
+    ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
+    : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
+  const utcRaw = pickText(doc, utcSelectors);
+  const label = parseTimeUTC(utcRaw);
+  return { label: (label||''), source: (label ? 'simbrief:utc' : 'missing') };
+}
 
-    const localSelectors = kind==='dep'
-      ? ['times sched_out','general dep_time']
-      : ['times sched_in','general arr_time'];
-
-    const offSelectors = kind==='dep'
-      ? ['origin utc_offset','origin gmt_offset','origin tz_offset','general orig_utc_offset','general orig_timezone']
-      : ['destination utc_offset','destination gmt_offset','destination tz_offset','general dest_utc_offset','general dest_timezone'];
-
-    const utcRaw = pickText(doc, utcSelectors);
-    if(utcRaw){
-      const label = parseTimeUTC(utcRaw);
-      return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc' };
-    }
-
-    const localRaw = pickText(doc, localSelectors);
-    const offRaw   = pickText(doc, offSelectors);
-    if(localRaw){
-      const hm = parseHHMM(localRaw);
-      if(hm){
-        const offMin = parseOffsetToMinutes(offRaw);
-        if(offMin!==null){
-          const utcHM = addMinutesHM(hm.h, hm.m, -offMin); // local -> UTC
-          return { label: hmToLabel(utcHM.h, utcHM.m), source: (offRaw?`local+offset(${offRaw})`:'local') };
-        }
-        return { label: hmToLabel(hm.h, hm.m), source: 'local(no offset)' };
-      }
-    }
-    const any = pickText(doc, [...utcSelectors, ...localSelectors]);
-    return { label: parseTimeUTC(any), source: 'fallback' };
-  }
-
-  async function importFromSimBrief(pilotOrUser){
+async function importFromSimBrief(pilotOrUser){
     const urls = [
       `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(pilotOrUser)}`,
       `https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(pilotOrUser)}`
@@ -600,7 +574,8 @@
 
     const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
     const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
-    const callsign = pickText(doc,'OFP general callsign','general callsign');
+    let callsign = pickText(doc,'OFP general callsign','general callsign','general atc_callsign');
+    callsign = (callsign||'').toUpperCase().replace(/\s+/g,'');
     const aircraft = pickText(doc,'OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
     const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
