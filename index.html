@@ -807,5 +807,95 @@
   if (mode === 'editor') { try { history.replaceState(null, '', '/'); } catch (e) {} }
 </script>
 
+<!-- ROOM ROUTER PATCH (routing-only, prefers UID; neutral to auth implementation) -->
+<script type="module">
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+  const auth = (() => {
+    // Reuse existing Firebase app if present.
+    try { return getAuth(); } catch { return null; }
+  })();
+
+  const MODES = ["editor","info","departures","frame"];
+
+  function parseHash() {
+    const raw = (location.hash || "").slice(1);
+    let [mode, room] = raw.split(":");
+    if (!mode || !MODES.includes(mode)) mode = "editor";
+    return { mode, room: room || null };
+  }
+
+  function setHashRoom(room) {
+    const { mode } = parseHash();
+    const target = `#${mode}:${room}`;
+    if (location.hash !== target) location.replace(target);
+  }
+
+  function updateOverlayTargets(room) {
+    const sel = ['a[href^="#info:"]','a[href^="#departures:"]','a[href^="#frame:"]'].join(',');
+    document.querySelectorAll(sel).forEach(a => {
+      const path = a.getAttribute("href").split(":")[0]; // "#info", "#departures", "#frame"
+      a.setAttribute("href", `${path}:${room}`);
+    });
+    const f = document.querySelector('#screen-frame');
+    if (f && f.src) {
+      const u = new URL(f.src, location.href);
+      const frag = u.hash || "#departures";
+      const path = frag.split(":")[0];
+      f.src = `${path.replace(/^#/, "./")}:${room}`;
+    }
+  }
+
+  function disableOverlayTargets(disabled) {
+    document.querySelectorAll('[data-overlay-link], a[href^="#info"], a[href^="#departures"], a[href^="#frame"]').forEach(el => {
+      try { el.toggleAttribute('disabled', !!disabled); } catch {}
+    });
+  }
+
+  // Ensure we don't boot into a placeholder; force simple #editor on empty hash.
+  if (!location.hash) location.replace("#editor");
+
+  // Prevent accidental clicks before room is known.
+  disableOverlayTargets(true);
+
+  let resolvedRoom = null;
+
+  function adoptRoom(room) {
+    if (!room) return;
+    resolvedRoom = room;
+    localStorage.setItem("lastRoom", room);
+    setHashRoom(room);
+    updateOverlayTargets(room);
+    disableOverlayTargets(false);
+  }
+
+  // Fallback before auth restores: try to keep user's lastRoom to preserve iPhone PWA UX.
+  const last = localStorage.getItem("lastRoom");
+  if (last) {
+    adoptRoom(last);
+  }
+
+  // Prefer UID once available.
+  if (auth) {
+    onAuthStateChanged(auth, (user) => {
+      if (user?.uid && user.uid !== resolvedRoom) {
+        adoptRoom(user.uid);
+      } else if (!user && !resolvedRoom) {
+        // No user: keep hash mode, no room suffix.
+        const { mode } = parseHash();
+        location.replace(`#${mode}`);
+        disableOverlayTargets(true);
+      }
+    });
+  }
+
+  // Keep same room on mode switches.
+  window.addEventListener("hashchange", () => {
+    const { room } = parseHash();
+    if (resolvedRoom && room !== resolvedRoom) setHashRoom(resolvedRoom);
+  });
+</script>
+<!-- END ROOM ROUTER PATCH -->
+
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
   "name": "CrabbyFlight",
   "short_name": "CrabbyFlight",
-  "start_url": "./#editor:me",
+  "start_url": "./#editor",
   "display": "standalone",
   "background_color": "#1d1f22",
   "theme_color": "#FFD100",
