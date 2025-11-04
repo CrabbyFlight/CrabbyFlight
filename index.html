@@ -834,7 +834,8 @@
 
 
 
-<!-- SimBrief import (read-only; manual import button; strict HH:MM formatting) -->
+
+<!-- SimBrief import (read-only; manual import button; strict HH:MM mapping priorities) -->
 <script>
 (function(){
   const BASE = "https://www.simbrief.com/api/xml.fetcher.php";
@@ -859,63 +860,45 @@
     el.dispatchEvent(new Event("change", {bubbles:true}));
   }
 
-  // --- Time helpers (all return HH:MM) ---
   function pad2(n){ return String(n).padStart(2, "0"); }
-
   function isNumericLike(s){
     if (typeof s === "number") return Number.isFinite(s);
     if (typeof s !== "string") return false;
     return /^[+-]?\d+(\.\d+)?$/.test(s.trim());
   }
 
-  // For clock times: interpret numbers as epoch (sec/ms), strings as HH:MM/HHMM/ISO
   function toClockHHMM(v){
     if (v == null || v === "") return "";
-    // Numeric → epoch
     if (isNumericLike(v)) {
       const n = Number(v);
-      if (n >= 1e12) {                       // epoch millis
-        const d = new Date(n);
-        if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
-      } else if (n >= 1e9) {                 // epoch seconds
-        const d = new Date(n * 1000);
-        if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
-      } else if (n >= 0 && n < 24*60) {      // minutes since midnight (fallback)
-        const h = Math.floor(n/60), m = Math.round(n%60);
-        return pad2(h)+":"+pad2(m);
-      }
+      if (n >= 1e12) { const d=new Date(n); if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes()); }
+      else if (n >= 1e9) { const d=new Date(n*1000); if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes()); }
+      else if (n >= 0 && n < 24*60) { const h=Math.floor(n/60), m=n%60; return pad2(h)+":"+pad2(m); }
       v = String(v);
     }
-
     const s = String(v).trim();
-    let m = s.match(/^(\d{1,2}):(\d{2})/);        // HH:MM or HH:MMZ
+    let m = s.match(/^(\d{1,2}):(\d{2})/);
     if (m) return pad2(+m[1])+":"+pad2(+m[2]);
-    m = s.match(/^(\d{2})(\d{2})Z?$/);            // HHMM/HHMMZ
+    m = s.match(/^(\d{2})(\d{2})Z?$/);
     if (m) return m[1]+":"+m[2];
-
-    const d = new Date(s);                          // ISO-ish
+    const d = new Date(s);
     if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
     return s;
   }
 
-  // For durations: interpret numbers as minutes; strings HH:MM → HH:MM
   function toDurationHHMM(v){
     if (v == null || v === "") return "";
     if (isNumericLike(v)) {
       const mins = Math.max(0, Math.round(Number(v)));
-      const h = Math.floor(mins/60), m = mins%60;
-      return pad2(h)+":"+pad2(m);
+      return pad2(Math.floor(mins/60))+":"+pad2(mins%60);
     }
     const s = String(v).trim();
-    let m = s.match(/^(\d{1,2}):(\d{2})$/);       // HH:MM
+    let m = s.match(/^(\d{1,2}):(\d{2})$/);
     if (m) return pad2(+m[1])+":"+pad2(+m[2]);
-    m = s.match(/^(\d{2})(\d{2})$/);              // HHMM
+    m = s.match(/^(\d{2})(\d{2})$/);
     if (m) return m[1]+":"+m[2];
-    m = s.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);   // ISO 8601 duration
-    if (m) {
-      const h = +(m[1]||0), mm = +(m[2]||0);
-      return pad2(h)+":"+pad2(mm);
-    }
+    m = s.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);
+    if (m) return pad2(+(m[1]||0))+":"+pad2(+(m[2]||0));
     return s;
   }
 
@@ -930,11 +913,10 @@
     const B = hmToMinutes(toClockHHMM(b));
     if(A==null || B==null) return null;
     let diff = B - A;
-    if (diff < 0) diff += 24*60; // cross-midnight
+    if (diff < 0) diff += 24*60;
     return diff;
   }
 
-  // --- SimBrief fetch/normalize ---
   async function fetchOfpByUserId(userId){
     const j = await fetch(`${BASE}?userid=${encodeURIComponent(userId)}&json=1`);
     if(j.ok){ const ofp = await j.json().catch(()=>null); if(ofp) return {kind:"json", ofp}; }
@@ -948,8 +930,12 @@
   function norm(ofp, kind){
     if(kind==="json"){
       const g=ofp.general||{}, a=ofp.aircraft||{}, atc=ofp.atc||{}, o=ofp.origin||{}, d=ofp.destination||{}, t=ofp.times||{};
-      const dep = g.deptime ?? t.deptime ?? t.sched_out ?? t.est_out ?? t.out;
-      const arr = g.arrtime ?? t.arrtime ?? t.sched_in  ?? t.est_in  ?? t.in;
+      // Priorities tightened to match SimBrief UI:
+      // dep/arr → general.deptime/arrtime > times.deptime/arrtime > times.sched_out/in > times.est_out/in > times.out/in
+      const dep = g.deptime ?? t.deptime ?? t.arrdep ?? t.sched_out ?? t.est_out ?? t.out ?? null;
+      const arr = g.arrtime ?? t.arrtime ?? t.sched_in  ?? t.est_in  ?? t.in  ?? null;
+      // airtime → prefer air_time > enroute_time > ete (never block_time)
+      const air = t.air_time ?? t.enroute_time ?? t.ete ?? null;
       return {
         from: o.name || o.icao_code || o.icao || "",
         to: d.name || d.icao_code || d.icao || "",
@@ -959,12 +945,13 @@
         airframe: a.reg || a.registration || "",
         dep_utc: toClockHHMM(dep),
         arr_utc: toClockHHMM(arr),
-        enroute: toDurationHHMM(t.enroute_time ?? t.ete ?? t.block_time)
+        enroute: toDurationHHMM(air)
       };
     } else {
       const q=(s)=> ofp.querySelector(s)?.textContent?.trim() || "";
-      const dep = q("general deptime") || q("times deptime") || q("times sched_out") || q("times est_out") || q("times out");
-      const arr = q("general arrtime") || q("times arrtime") || q("times sched_in")  || q("times est_in")  || q("times in");
+      const dep = q("general deptime") || q("times deptime") || q("times sched_out") || q("times est_out") || q("times out") || "";
+      const arr = q("general arrtime") || q("times arrtime") || q("times sched_in")  || q("times est_in")  || q("times in")  || "";
+      const air = q("times air_time") || q("times enroute_time") || q("times ete") || "";
       return {
         from: q("origin name") || q("origin icao_code") || q("origin icao"),
         to: q("destination name") || q("destination icao_code") || q("destination icao"),
@@ -974,7 +961,7 @@
         airframe: q("aircraft reg") || q("aircraft registration"),
         dep_utc: toClockHHMM(dep),
         arr_utc: toClockHHMM(arr),
-        enroute: toDurationHHMM(q("times enroute_time") || q("times ete") || q("times block_time"))
+        enroute: toDurationHHMM(air)
       };
     }
   }
@@ -985,6 +972,7 @@
     if(!userId){ alert("Enter SimBrief User ID"); return; }
     const {kind, ofp} = await fetchOfpByUserId(userId);
     const data = norm(ofp, kind);
+    // Only compute enroute if not present at all:
     if(!data.enroute){
       const mins = minutesDiffHHMM(data.dep_utc, data.arr_utc);
       if(mins!=null) data.enroute = toDurationHHMM(mins);
@@ -1011,6 +999,7 @@
   });
 })();
 </script>
+
 
 
 </body>
