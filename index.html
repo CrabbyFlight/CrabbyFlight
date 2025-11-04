@@ -230,6 +230,7 @@
       </div>
     </div>
 
+    <!-- Frame (Webcam) Settings) -->
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
 
@@ -450,7 +451,7 @@
   let firstPaint = false;
   let editorBound = false;
   let signedInUser = null;
-  let canSave = false; // why: prevent overwriting DB on first load
+  let canSave = false;
 
   addEventListener('hashchange', ()=>{
     ({mode, room}=parseHash());
@@ -468,6 +469,62 @@
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
 
+  // ---------- Helpers: UTC + ETE ----------
+  function normalizeHM(h, m){
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    if (m >= 60){ h += Math.floor(m/60); m = m % 60; }
+    h = ((h % 24) + 24) % 24;
+    return { h, m };
+  }
+  function parseTimeUTC(val){
+    if (!val) return '';
+    const s = String(val).trim();
+    // Prefer HH:MM
+    let m = s.match(/(\d{2}):(\d{2})/);
+    if (!m){
+      // Try pure HHMM inside any string (e.g., '20251104 1762Z')
+      const digits = s.replace(/\D+/g,'');
+      if (digits.length >= 4){
+        const last4 = digits.slice(-4);
+        m = [null, last4.slice(0,2), last4.slice(2)];
+      }
+    }
+    if (!m) return '';
+    const hm = normalizeHM(parseInt(m[1],10), parseInt(m[2],10));
+    if (!hm) return '';
+    return `${String(hm.h).padStart(2,'0')}:${String(hm.m).padStart(2,'0')} UTC`;
+  }
+  function formatEte(val){
+    const raw = (val||'').toString().trim();
+    if (!raw) return '';
+    let m = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (m){
+      const hm = normalizeHM(parseInt(m[1],10), parseInt(m[2],10));
+      return `~${hm.h}h${hm.m?` ${hm.m}m`:''}`;
+    }
+    if (/^\d+$/.test(raw)){
+      const num = parseInt(raw,10);
+      if (raw.length === 4 && num <= 2359){
+        const hm = normalizeHM(Math.floor(num/100), num%100);
+        return `~${hm.h}h${hm.m?` ${hm.m}m`:''}`;
+      }
+      const mins = num > 600 ? Math.round(num/60) : num;
+      const h = Math.floor(mins/60), mm = mins%60;
+      return h ? `~${h}h${mm?` ${mm}m`:''}` : `~${mm}m`;
+    }
+    return raw;
+  }
+  // sanitize an input field in place (used for editor + import)
+  function sanitizeUTCField(el){
+    if (!el) return;
+    const fixed = parseTimeUTC(el.value);
+    if (fixed){
+      const changed = el.value !== fixed;
+      el.value = fixed;
+      if (changed) el.dispatchEvent(new Event('input'));
+    }
+  }
+
   function bindEditor(){
     if (editorBound) return;
     editorBound = true;
@@ -482,13 +539,23 @@
       return d;
     }
 
-    let t=null; // debounce saves
+    let t=null;
     function save(){
       if (!signedInUser || !canSave) return;
       clearTimeout(t);
       t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
     }
     for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
+
+    // Sanitize UTC fields on blur/change (fix any hand edits or legacy values)
+    ['dep_utc','arr_utc'].forEach(id=>{
+      const el = els[id]; if(!el) return;
+      const onBlur = ()=> sanitizeUTCField(el);
+      el.addEventListener('blur', onBlur);
+      el.addEventListener('change', onBlur);
+      // one-time cleanup
+      sanitizeUTCField(el);
+    });
 
     function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
     if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
@@ -497,38 +564,14 @@
       const preset = document.getElementById('wcPreset');
       const w = els['wcW'], h = els['wcH'];
       if (!preset || !w || !h) return;
-
-      const MAP = {
-        "1920x1080":[1920,1080],
-        "1280x720":[1280,720],
-        "960x540":[960,540],
-        "640x480":[640,480],
-        "352x288":[352,288],
-        "320x240":[320,240]
-      };
-
-      function setWH(pVal){
-        const pair = MAP[pVal];
-        if (!pair) return;
-        const [pw,ph]=pair;
-        w.value=pw; h.value=ph;
-        w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
-      }
-
-      function updatePresetFromWH(){
-        const key = `${w.value}x${h.value}`;
-        if (MAP[key]) preset.value = key;
-      }
-
-      preset.addEventListener('change', ()=>{
-        els['wcPreset'].value = preset.value;
-        setWH(preset.value);
-      });
-
+      const MAP = {"1920x1080":[1920,1080],"1280x720":[1280,720],"960x540":[960,540],"640x480":[640,480],"352x288":[352,288],"320x240":[320,240]};
+      function setWH(pVal){ const pair = MAP[pVal]; if (!pair) return; const [pw,ph]=pair; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
+      function updatePresetFromWH(){ const key = `${w.value}x${h.value}`; if (MAP[key]) preset.value = key; }
+      preset.addEventListener('change', ()=>{ els['wcPreset'].value = preset.value; setWH(preset.value); });
       Object.assign(initWcPreset, {updatePresetFromWH});
     })();
 
-    // ===== BUTTON BINDINGS =====
+    // ===== Buttons =====
     const byId = (id)=>document.getElementById(id);
     const openInNew = (url)=> window.open(url, '_blank', 'noopener');
     const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.onclick = fn; };
@@ -539,85 +582,13 @@
     bindIf('copyUrls',  ()=> openUrlModal());
     bindIf('btn_signout', ()=> signOut(auth).catch(e=>setStatus(e.message)));
     bindIf('btn_download_mask', ()=>{
-      // why: generate rounded-rect alpha mask matching 16px radius
-      const w=512, h=512;
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      const ctx=c.getContext('2d');
-      ctx.fillStyle='black'; ctx.fillRect(0,0,w,h);
-      ctx.save();
-      ctx.globalCompositeOperation='destination-out';
-      const pad=32, rr=32;
-      const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
-      ctx.beginPath();
-      ctx.moveTo(rx+rr, ry);
-      ctx.arcTo(rx+rw, ry, rx+rw, ry+rh, rr);
-      ctx.arcTo(rx+rw, ry+rh, rx, ry+rh, rr);
-      ctx.arcTo(rx, ry+rh, rx, ry, rr);
-      ctx.arcTo(rx, ry, rx+rw, ry, rr);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-      const a=document.createElement('a');
-      a.href=c.toDataURL('image/png');
-      a.download='crabbyflight-rounded-mask.png';
-      a.click();
+      const w=512, h=512; const c=document.createElement('canvas'); c.width=w; c.height=h;
+      const ctx=c.getContext('2d'); ctx.fillStyle='black'; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalCompositeOperation='destination-out';
+      const pad=32, rr=32; const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
+      ctx.beginPath(); ctx.moveTo(rx+rr, ry); ctx.arcTo(rx+rw, ry, rx+rw, ry+rh, rr); ctx.arcTo(rx+rw, ry+rh, rx, ry+rh, rr);
+      ctx.arcTo(rx, ry+rh, rx, ry, rr); ctx.arcTo(rx, ry, rx+rw, ry, rr); ctx.closePath(); ctx.fill(); ctx.restore();
+      const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='crabbyflight-rounded-mask.png'; a.click();
     });
-
-    // === helpers: robust time + ETE parsing ===
-    function normalizeHM(h, m){
-      if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
-      if (m >= 60){ h += Math.floor(m/60); m = m % 60; }
-      h = ((h % 24) + 24) % 24; // day wrap
-      return { h, m };
-    }
-    function parseTimeUTC(s){
-      if (!s) return '';
-      const str = String(s).trim();
-      // Prefer HH:MM
-      let m = str.match(/(\d{2}):(\d{2})/);
-      if (!m){
-        // HHMM anywhere (optionally after date + space, optionally ending with Z)
-        m = str.match(/(?:\b|\D)(\d{2})(\d{2})(?:Z)?\b/);
-      }
-      if (!m) return '';
-      const hm = normalizeHM(parseInt(m[1],10), parseInt(m[2],10));
-      if (!hm) return '';
-      const hh = String(hm.h).padStart(2,'0');
-      const mm = String(hm.m).padStart(2,'0');
-      return `${hh}:${mm} UTC`;
-    }
-    function formatEte(val){
-      const raw = (val||'').toString().trim();
-      if (!raw) return '';
-      // "HH:MM"
-      let m = raw.match(/^(\d{1,2}):(\d{2})$/);
-      if (m){
-        let h = parseInt(m[1],10), mins = parseInt(m[2],10);
-        const nm = normalizeHM(h, mins);
-        return `~${nm.h}h${nm.m?` ${nm.m}m`:''}`.trim();
-      }
-      // numeric only
-      if (/^\d+$/.test(raw)){
-        const num = parseInt(raw,10);
-        // 4 digits & looks like HHMM
-        if (raw.length === 4 && num <= 2359){
-          const h = Math.floor(num/100), mins = num%100;
-          const nm = normalizeHM(h, mins);
-          return `~${nm.h}h${nm.m?` ${nm.m}m`:''}`;
-        }
-        // Heuristic: large numbers are seconds; small numbers are minutes
-        if (num > 600){ // >10 minutes ⇒ most SimBrief "general.ete" are seconds
-          const totalMins = Math.round(num/60);
-          const h = Math.floor(totalMins/60), mins = totalMins%60;
-          return `~${h}h${mins?` ${mins}m`:''}`;
-        }
-        // minutes
-        const h = Math.floor(num/60), mins = num%60;
-        return h ? `~${h}h${mins?` ${mins}m`:''}` : `~${mins}m`;
-      }
-      // Fallback: leave as-is
-      return raw;
-    }
 
     // === SimBrief import ===
     bindIf('btn_import_sb', async ()=>{
@@ -664,23 +635,12 @@
         const aircraft = pick('OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
         const cruiseFt = pick('OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
 
-        // Prefer "times" (usually HHMM) and normalize
         const depZulu  = pick('OFP times sched_out','times sched_out','general dep_time','times dep_time');
         const arrZulu  = pick('OFP times sched_in','times sched_in','general arr_time','times arr_time');
-
-        // ETE priority: HHMM if available, else general.ete which can be seconds
         const eteRaw   = pick('OFP times est_time_enroute','times est_time_enroute','general ete');
 
-        const fmtCruise = (a)=>{
-          const n = parseInt((a||'').replace(/\D/g,''),10);
-          return Number.isFinite(n) && n>0 ? n.toLocaleString()+'ft' : (a||'');
-        };
-        const fmtLoc = (name, icao)=>{
-          if (!icao && !name) return '';
-          const lab = name || icao;
-          const code = icao ? ` (${icao.toUpperCase()})` : '';
-          return lab + code;
-        };
+        const fmtCruise = (a)=>{ const n = parseInt((a||'').replace(/\D/g,''),10); return Number.isFinite(n) && n>0 ? n.toLocaleString()+'ft' : (a||''); };
+        const fmtLoc = (name, icao)=> (name||icao) ? (name || icao) + (icao?` (${icao.toUpperCase()})`:'') : '';
 
         const patch = {
           from: fmtLoc(fromName, fromIcao) || els['from']?.value || '',
@@ -698,7 +658,12 @@
           const el = els[k];
           if (el && val) el.value = val;
         });
-        if (canSave) Object.keys(patch).forEach(k => els[k]?.dispatchEvent(new Event('input')));
+
+        // Final normalize + save
+        sanitizeUTCField(els['dep_utc']);
+        sanitizeUTCField(els['arr_utc']);
+        if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','cruise','enroute']
+          .forEach(k => els[k]?.dispatchEvent(new Event('input')));
 
         setSb('Imported ✓', false, true);
       }catch(err){
@@ -712,27 +677,30 @@
       b.textContent = msg || '';
       b.className = 'pill ' + (warn ? 'warn' : ok ? 'ok' : '');
     }
-    // ===== END BINDINGS =====
   }
 
   function renderInfo(d){
-    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
-    setT('i_from',v('from',DEFAULTS.from)); setT('i_to',v('to',DEFAULTS.to));
-    setT('i_flight',v('flight',DEFAULTS.flight)); setT('i_callsign',v('callsign',DEFAULTS.callsign));
-    setT('i_aircraft',v('aircraft',DEFAULTS.aircraft)); setT('i_cruise',v('cruise',DEFAULTS.cruise)); setT('i_enroute',v('enroute',DEFAULTS.enroute));
-    const live = v('live','on')==='on'; const blk=document.getElementById('i_live_block'); if(blk) blk.style.display = live?'inline-flex':'none';
+    setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
+    setT('i_flight',val('flight',DEFAULTS.flight)); setT('i_callsign',val('callsign',DEFAULTS.callsign));
+    setT('i_aircraft',val('aircraft',DEFAULTS.aircraft)); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
+    // No time fields in info panel body, so nothing else here
+    const live = val('live','on')==='on'; const blk=document.getElementById('i_live_block'); if(blk) blk.style.display = live?'inline-flex':'none';
   }
   function renderDepartures(d){
-    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
-    setT('d_from',v('from',DEFAULTS.from)); setT('d_to',v('to',DEFAULTS.to));
-    setT('d_flight',v('flight',DEFAULTS.flight)); setT('d_gate',v('gate',DEFAULTS.gate));
-    setT('d_dep',v('dep_utc',DEFAULTS.dep_utc)); setT('d_arr',v('arr_utc',DEFAULTS.arr_utc)); setT('d_enroute',v('enroute',DEFAULTS.enroute));
-    setT('d_time',v('dep_utc',DEFAULTS.dep_utc).replace(' UTC',''));
+    setT('d_from',val('from',DEFAULTS.from)); setT('d_to',val('to',DEFAULTS.to));
+    setT('d_flight',val('flight',DEFAULTS.flight)); setT('d_gate',val('gate',DEFAULTS.gate));
 
-    const st=v('status','on-time'); const node=document.getElementById('d_status');
-    if(st==='custom'){ if(node) node.className='status custom'; const txt=v('status_custom','STATUS');
+    const depDisp = parseTimeUTC(val('dep_utc',DEFAULTS.dep_utc)) || DEFAULTS.dep_utc;
+    const arrDisp = parseTimeUTC(val('arr_utc',DEFAULTS.arr_utc)) || DEFAULTS.arr_utc;
+    setT('d_dep',depDisp); setT('d_arr',arrDisp); setT('d_enroute',val('enroute',DEFAULTS.enroute));
+    setT('d_time',(depDisp||'').replace(' UTC',''));
+
+    const st=val('status','on-time'); const node=document.getElementById('d_status');
+    if(st==='custom'){ if(node) node.className='status custom'; const txt=val('status_custom','STATUS');
       const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=txt; return; }
     const labels={ 'on-time':'ON TIME','boarding':'BOARDING','delayed':'DELAYED','cancelled':'CANCELLED','sideways':'SIDEWAYS' };
     if(node) node.className='status '+st;
@@ -787,6 +755,10 @@
           const val = (typeof data[k]==='string') ? data[k] : DEFAULTS[k];
           if (typeof val !== 'undefined') el.value = val;
         }
+        // one-time cleanup for old rooms having 17:62, etc.
+        sanitizeUTCField(document.getElementById('dep_utc'));
+        sanitizeUTCField(document.getElementById('arr_utc'));
+
         const presetEl = document.getElementById('wcPreset');
         const wEl = document.getElementById('wcW'); const hEl = document.getElementById('wcH');
         const savedPreset = data.wcPreset;
@@ -940,7 +912,7 @@
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
         } else {
           requireAuthUI(false);
-          bindEditor();        // wires buttons + SimBrief
+          bindEditor();
           subscribe();
         }
         applyOverlayOptions();
