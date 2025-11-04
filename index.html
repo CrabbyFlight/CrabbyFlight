@@ -254,7 +254,7 @@
     </div>
     <div class="grid">
       <div><label for="simbrief_pid">SimBrief Pilot ID</label><input id="simbrief_pid" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="123456"></div>
-      <div><label>&nbsp;</label><button type="button" id="simbrief_import_btn">Import from SimBrief</button></div>
+      <div><label>&nbsp;</label><button type="button" id="simbrief_import_btn">Import from SimBrief</button> <span id="simbrief_status" style="font-size:12px;opacity:.8"></span></div>
     </div>
 
 
@@ -909,7 +909,7 @@
       // Load PID from room
       onValue(ref(db, `rooms/${room}/simbrief/pid`), (snap) => {
         const v = snap.val();
-        if (v && (!pidEl.value || pidEl.value !== String(v))) pidEl.value = String(v);
+        if (v && (!pidEl.value || pidEl.value !== String(v))) { pidEl.value = String(v); if(statusEl) statusEl.textContent = '• loaded from room'; console.log('[SimBrief] loaded PID from room:', v);}
       }, { onlyOnce: true });
 
       // Persist PID on change
@@ -931,12 +931,12 @@
           if (Object.keys(patch).length === 0) throw new Error('OFP missing fields');
           await update(ref(db, `rooms/${room}`), patch);
           await update(ref(db, `rooms/${room}/simbrief`), { pid, lastImportAt: Date.now() });
-          importBtn.textContent = 'Imported ✓';
-          setTimeout(()=>{ importBtn.textContent = oldLabel; }, 1200);
+          importBtn.textContent = 'Imported ✓'; if(statusEl) statusEl.textContent='• wrote to room';
+          setTimeout(()=>{ importBtn.textContent = oldLabel; if(statusEl) statusEl.textContent='• failed'; }, 1200);
         } catch (e) {
           console.error(e);
-          importBtn.textContent = 'Failed: ' + (e.message||'Unknown error'); setTimeout(()=>{ importBtn.textContent = oldLabel; }, 1800);
-          importBtn.textContent = oldLabel;
+          importBtn.textContent = 'Failed: ' + (e.message||'Unknown error'); setTimeout(()=>{ importBtn.textContent = oldLabel; if(statusEl) statusEl.textContent='• failed'; }, 1800);
+          importBtn.textContent = oldLabel; if(statusEl) statusEl.textContent='• failed';
         } finally {
           importBtn.disabled = false;
         }
