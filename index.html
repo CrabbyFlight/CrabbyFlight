@@ -173,6 +173,22 @@
 <!-- EDITOR -->
 <div id="screen-editor" class="wrap">
   <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
+
+  <!-- SimBrief Import -->
+  <div class="card" id="simbrief_card">
+    <div class="grid">
+      <div>
+        <label for="sb_pilot">SimBrief Pilot ID</label>
+        <input id="sb_pilot" placeholder="e.g. 123456 (VATSIM/IVAO user ID)">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="btn_sb_import" type="button">Import from SimBrief</button>
+      </div>
+    </div>
+    <div class="hint" id="sb_status">Paste your SimBrief pilot ID, then click import. We’ll pull your latest OFP.</div>
+  </div>
+
   <div class="card">
     <div class="grid">
       <div><label for="from">From</label><input id="from" placeholder="Oslo (ENGM)"></div>
@@ -520,6 +536,101 @@
 
       Object.assign(initWcPreset, {updatePresetFromWH});
     })();
+
+    // ===== NEW: SimBrief bindings =====
+    const sbPilot = document.getElementById('sb_pilot');
+    const sbBtn   = document.getElementById('btn_sb_import');
+    const sbStatus= document.getElementById('sb_status');
+
+    // why: keep pilot ID locally; not part of shared room data
+    try { sbPilot.value = localStorage.getItem('sbPilotId') || ''; } catch {}
+
+    function setField(id, val){
+      const el = document.getElementById(id);
+      if (!el || val == null || val === '') return;
+      el.value = String(val);
+      el.dispatchEvent(new Event('input', {bubbles:true})); // persist to DB
+    }
+
+    function first(...candidates){
+      for(const k of candidates){ if(k!=null && k!=='' && k!==0) return k; }
+      return '';
+    }
+
+    function fmtFromTo(name, icao){
+      const n = (name||'').trim();
+      const i = (icao||'').trim().toUpperCase();
+      if (n && i) return `${n} (${i})`;
+      if (i) return `(${i})`;
+      return n || '';
+    }
+
+    function timeToUTCLabel(val){
+      // supports "1430Z" or "14:30Z" or "2025-10-02 14:30Z"
+      if(!val) return '';
+      const m = String(val).match(/(\d{2}):?(\d{2})Z$/) || String(val).match(/ (\d{2}):(\d{2})Z$/);
+      if (m) return `${m[1]}:${m[2]} UTC`;
+      return '';
+    }
+
+    async function importSimBrief(){
+      const id = (sbPilot.value||'').trim();
+      if (!id){ sbStatus.textContent='Enter a SimBrief Pilot ID.'; sbStatus.className='hint warn'; return; }
+
+      sbBtn.disabled = true;
+      sbStatus.textContent = 'Importing from SimBrief…';
+      sbStatus.className = 'hint';
+
+      try {
+        const url = `https://www.simbrief.com/api/xml.fetcher.php?json=1&userid=${encodeURIComponent(id)}`;
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const ofp = data?.ofp || data || {};
+
+        // map
+        const from = fmtFromTo(
+          first(ofp.orig_name, ofp.origin_name, ofp.orig_city, ofp.origin),
+          first(ofp.origin_icao, ofp.orig_icao, ofp.orig, ofp.origin_icao_code)
+        );
+        const to = fmtFromTo(
+          first(ofp.dest_name, ofp.destination_name, ofp.dest_city, ofp.destination),
+          first(ofp.destination_icao, ofp.dest_icao, ofp.dest, ofp.destination_icao_code)
+        );
+
+        const flight = first(ofp.flight_number, ofp.flightnum, ofp.fltno);
+        const callsign = first(ofp.callsign, ofp.atc_callsign, ofp.icao_airline && flight && (ofp.icao_airline + flight));
+        const aircraft = first(ofp.aircraft_name, ofp.icao_aircraft, ofp.aircraft, ofp.aircraft_icao);
+        const cruise = first(ofp.initial_altitude, ofp.cruise_altitude, ofp.cruise_fl);
+        const enroute = first(ofp.enroute_time_formatted, ofp.eet_formatted, ofp.eet, ofp.enroute_time);
+
+        const depUTC = timeToUTCLabel(first(ofp.deptime, ofp.deptime_zulu, ofp.etd));
+        const arrUTC = timeToUTCLabel(first(ofp.arrtime, ofp.arrtime_zulu, ofp.eta));
+
+        setField('from', from);
+        setField('to', to);
+        setField('flight', flight);
+        setField('callsign', callsign);
+        setField('aircraft', aircraft);
+        setField('cruise', cruise ? (String(cruise).match(/^\d+$/) ? `${cruise}ft` : cruise) : '');
+        setField('enroute', enroute || '');
+        setField('dep_utc', depUTC || '');
+        setField('arr_utc', arrUTC || '');
+
+        try { localStorage.setItem('sbPilotId', id); } catch {}
+        sbStatus.textContent = 'Imported from SimBrief.';
+        sbStatus.className = 'hint ok';
+      } catch (e) {
+        // why: SimBrief blocks some origins; surface actionable hint
+        sbStatus.textContent = `Import failed (${e.message}). If this is a CORS issue, fetch via a small proxy (e.g. Cloudflare Worker) or allowlist your origin.`;
+        sbStatus.className = 'hint warn';
+      } finally {
+        sbBtn.disabled = false;
+      }
+    }
+
+    if (sbBtn) sbBtn.onclick = importSimBrief;
+    // ===== END SimBrief bindings =====
 
     // ===== NEW: BUTTON BINDINGS =====
     const byId = (id)=>document.getElementById(id);
