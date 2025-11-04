@@ -872,6 +872,7 @@
     setHashRoom(room);
     updateOverlayTargets(room);
     disableOverlayTargets(false);
+    try { bindSimbriefUI(); } catch(e){}
   }
 
   // Fallback before auth restores: try to keep user's lastRoom to preserve iPhone PWA UX.
@@ -900,6 +901,7 @@
 
   function bindSimbriefUI(){
     try {
+      if (!document.body.classList.contains('editor')) return;
       const pidEl = document.getElementById('simbrief_pid');
       const importBtn = document.getElementById('simbrief_import_btn');
       if (!pidEl || !importBtn) return;
