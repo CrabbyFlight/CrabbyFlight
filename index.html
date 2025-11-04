@@ -703,11 +703,11 @@ async function importFromSimBrief(pilotOrUser){
         setSb('Fetching…');
         const {patch, meta} = await importFromSimBrief(id);
 
-        Object.entries(patch.fields).forEach(([k,val])=>{
+        Object.entries(patch).forEach(([k,val])=>{
           const el = els[k];
           if (el) el.value = (val || '');
         });
-        showSimbriefDebug(patch.meta);
+        showSimbriefDebug(meta);
 
         sanitizeUTCField(els['dep_utc']);
         sanitizeUTCField(els['arr_utc']);
