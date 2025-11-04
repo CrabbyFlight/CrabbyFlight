@@ -417,17 +417,24 @@
   };
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+    createUserWithEmailAndPassword, signOut,
+    setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
   const auth = getAuth(app);
 
-  if (!location.hash) location.replace('#editor:crabroom');
+  const LS_KEY='cf:lastRoom';
+  if (!location.hash) {
+    const stored = localStorage.getItem(LS_KEY);
+    location.replace(`#editor:${stored||'me'}`);
+  }
   function parseHash(){
     const raw = (location.hash||'').replace(/^#/, '');
     const [mode, room] = raw.split(':');
-    return { mode: (mode||'editor').toLowerCase(), room: room||'crabroom' };
+    return { mode: (mode||'editor').toLowerCase(), room: room||'me' };
   }
   let { mode, room } = parseHash();
   function applyMode(){
@@ -435,6 +442,9 @@
     document.body.classList.add(mode);
   }
   applyMode();
+
+  // resolves 'me' -> uid for DB/URLs
+  const resolveRoom = () => (room === 'me' ? (signedInUser?.uid || null) : room);
 
   let dbUnsub = null;
   let firstPaint = false;
@@ -444,6 +454,7 @@
 
   addEventListener('hashchange', ()=>{
     ({mode, room}=parseHash());
+    localStorage.setItem(LS_KEY, room);
     document.body.classList.remove('ready','require-auth');
     firstPaint = false;
     canSave = false;
@@ -477,7 +488,7 @@
     function save(){
       if (!signedInUser || !canSave) return;
       clearTimeout(t);
-      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
+      t=setTimeout(()=>(()=>{const r=resolveRoom(); if(!r) return Promise.resolve(); return set(ref(db, `rooms/${r}`), read());})().catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
     }
     for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
 
@@ -612,12 +623,12 @@
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
     if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; }
-    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${resolveRoom()||room}`; }
   }
 
   function subscribe(){
     if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
-    const r = ref(db, `rooms/${room}`);
+    const rr = resolveRoom(); if(!rr){ if (mode!=='editor') setStatus('Sign in to resolve room “me”.'); return; } const r = ref(db, `rooms/${rr}`);
     dbUnsub = onValue(r, snap=>{
       const data = snap.val() || DEFAULTS;
 
@@ -696,7 +707,7 @@
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
       if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; }
-      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${resolveRoom()||room}`; }
     }
   }
 
@@ -731,17 +742,11 @@
     const uid = signedInUser?.uid || '';
     const inBtn = document.getElementById('uid_in_btn');
     if (inBtn) inBtn.textContent = uid || '—';
-    const placeholder = !room || room === 'crabroom' || room === 'me';
-    if (uid && placeholder){
-      room = uid;
-      const base = location.href.split('#')[0];
-      location.hash = `${mode}:${room}`;
-      return;
-    }
+    /* keep hash stable; just show uid */
   }
 
   function computeUrls(){
-    const targetRoom = signedInUser?.uid || room;
+    const targetRoom = resolveRoom() || room;
     const base = location.href.split('#')[0];
     const qs = location.search || '';
     return {
@@ -772,6 +777,7 @@
   }
 
   function bind(){
+    try { setPersistence(auth, browserLocalPersistence); } catch {}
     if (mode === 'editor') {
       onAuthStateChanged(auth, (user)=>{
         signedInUser = user || null;
@@ -804,7 +810,7 @@
     }
   });
 
-  if (mode === 'editor') { try { history.replaceState(null, '', '/'); } catch (e) {} }
+  // keep URL stable; do not rewrite path
 </script>
 
 </body>
