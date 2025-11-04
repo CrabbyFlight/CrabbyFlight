@@ -21,5 +21,6 @@ The creator is not responsible for any loss, damage, or liability arising from i
 
 For permission requests, collaboration inquiries, or integration discussions, contact the project owner through GitHub or the official website.
 
+E-mail: info@ridgwaygroup.net
 Website: https://www.crabbyflight.co.uk  
 GitHub: https://github.com/CrabbyFlight
