@@ -84,6 +84,7 @@ It may be used freely by end users but may not be redistributed, modified, or re
 
 ## Contact
 
+e-mail: info@ridgwaygroup.net
 Website: [https://www.crabbyflight.co.uk](https://www.crabbyflight.co.uk)  
 GitHub: [https://github.com/CrabbyFlight](https://github.com/CrabbyFlight)  
 Creator: njridgway
