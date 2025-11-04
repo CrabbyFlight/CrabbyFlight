@@ -518,10 +518,47 @@
         setWH(preset.value);
       });
 
-      // No auto-apply default here; we let subscribe() populate and then sync:
-      // updatePresetFromWH() will be called after DB snapshot is applied.
       Object.assign(initWcPreset, {updatePresetFromWH});
     })();
+
+    // ===== NEW: BUTTON BINDINGS =====
+    const byId = (id)=>document.getElementById(id);
+    const openInNew = (url)=> window.open(url, '_blank', 'noopener');
+
+    const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.onclick = fn; };
+
+    bindIf('openInfo',  ()=> openInNew(computeUrls().info));   // why: open overlay route in new tab
+    bindIf('openDep',   ()=> openInNew(computeUrls().dep));
+    bindIf('openFrame', ()=> openInNew(computeUrls().frame));
+    bindIf('copyUrls',  ()=> openUrlModal());
+    bindIf('btn_signout', ()=> signOut(auth).catch(e=>setStatus(e.message)));
+    bindIf('btn_download_mask', ()=>{
+      // why: generate rounded-rect alpha mask matching 16px radius
+      const w=512, h=512, r=16*2; // scale up slightly for better edges
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      const ctx=c.getContext('2d');
+      ctx.fillStyle='black'; ctx.fillRect(0,0,w,h);
+      ctx.save();
+      ctx.globalCompositeOperation='destination-out';
+      const pad=32;
+      const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
+      const rr=16*2;
+      ctx.beginPath();
+      // rounded rect path
+      ctx.moveTo(rx+rr, ry);
+      ctx.arcTo(rx+rw, ry, rx+rw, ry+rh, rr);
+      ctx.arcTo(rx+rw, ry+rh, rx, ry+rh, rr);
+      ctx.arcTo(rx, ry+rh, rx, ry, rr);
+      ctx.arcTo(rx, ry, rx+rw, ry, rr);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      const a=document.createElement('a');
+      a.href=c.toDataURL('image/png');
+      a.download='crabbyflight-rounded-mask.png';
+      a.click();
+    });
+    // ===== END NEW: BUTTON BINDINGS =====
   }
 
   function renderInfo(d){
@@ -604,9 +641,7 @@
         const key = `${wEl?.value||''}x${hEl?.value||''}`;
         if (presetEl){
           presetEl.value = savedPreset || key;
-          // if the value doesn't exist (data older), try to map via W×H
           if (![...presetEl.options].some(o=>o.value===presetEl.value)) presetEl.value = key;
-          // reflect the final value into hidden input so it saves
           const presetHidden = document.getElementById('wcPreset');
           if (presetHidden) presetHidden.value = presetEl.value;
         }
@@ -752,7 +787,7 @@
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
         } else {
           requireAuthUI(false);
-          bindEditor();
+          bindEditor();        // now wires buttons
           subscribe();
         }
         applyOverlayOptions();
