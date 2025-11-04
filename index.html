@@ -177,12 +177,12 @@
   <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
   <div class="card">
     <div class="grid">
-      <div><label>Origin</label><input id="from" placeholder="Oslo (ENGM)"></div>
-      <div><label>Destination</label><input id="to" placeholder="Liverpool (EGGP)"></div>
+      <div><label>Origin</label><input id="from" placeholder="Oslo (ENGM)" name="origin"></div>
+      <div><label>Destination</label><input id="to" placeholder="Liverpool (EGGP)" name="destination"></div>
     </div>
     <div class="grid">
-      <div><label>Flight Number</label><input id="flight" placeholder="POR9392"></div>
-      <div><label>Callsign</label><input id="callsign" placeholder="WALL13"></div>
+      <div><label>Flight Number</label><input id="flight" placeholder="POR9392" name="flight_number"></div>
+      <div><label>Callsign</label><input id="callsign" placeholder="WALL13" name="callsign"></div>
     </div>
     <div class="grid">
       <div><label>Gate (Departures)</label><input id="gate" placeholder="B12"></div>
@@ -205,11 +205,11 @@
     </div>
 
     <div class="grid">
-      <div><label>Deptime (Z)</label><input id="dep_utc" placeholder="14:30 UTC"></div>
-      <div><label>Arrtime (Z)</label><input id="arr_utc" placeholder="16:30 UTC"></div>
+      <div><label>Deptime (Z)</label><input id="dep_utc" placeholder="14:30 UTC" name="deptime"></div>
+      <div><label>Arrtime (Z)</label><input id="arr_utc" placeholder="16:30 UTC" name="arrtime"></div>
     </div>
     <div class="grid">
-      <div><label>Aircraft Type (ICAO)</label><input id="aircraft" placeholder="A320neo"></div>
+      <div><label>Aircraft Type (ICAO)</label><input id="aircraft" placeholder="A320neo" name="aircraft_icao"></div>
       <div><label>Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
     
@@ -218,7 +218,7 @@
       <div><label>&nbsp;</label><button id="simbrief_fetch" type="button">Import latest from SimBrief</button></div>
     </div>
 <div class="grid">
-      <div><label>Air Time (EET)</label><input id="enroute" placeholder="~2hrs"></div>
+      <div><label>Air Time (EET)</label><input id="enroute" placeholder="~2hrs" name="air_time"></div>
       <div><label>LIVE</label>
         <select id="live"><option value="on">On</option><option value="off">Off</option></select>
       </div>
@@ -835,20 +835,26 @@
 
 
 
-<!-- SimBrief import (read-only; manual import button; strict HH:MM mapping priorities) -->
+
+<!-- SimBrief import (read-only; manual import; canonical SimBrief names bound via name="...") -->
 <script>
 (function(){
   const BASE = "https://www.simbrief.com/api/xml.fetcher.php";
+
+  // Prefer elements by SimBrief canonical names; fallback to legacy IDs
+  const pick = (name, legacyId) =>
+    document.querySelector(`[name="${name}"]`) || document.getElementById(legacyId);
+
   const ELS = {
-    from:    document.getElementById("from"),
-    to:      document.getElementById("to"),
-    flight:  document.getElementById("flight"),
-    callsign:document.getElementById("callsign"),
-    aircraft:document.getElementById("aircraft"),
-    airframe:document.getElementById("airframe") || null,
-    enroute: document.getElementById("enroute"),
-    dep_utc: document.getElementById("dep_utc"),
-    arr_utc: document.getElementById("arr_utc"),
+    origin:       pick("origin", "from"),
+    destination:  pick("destination", "to"),
+    flight_number:pick("flight_number", "flight"),
+    callsign:     pick("callsign", "callsign"),
+    aircraft_icao:pick("aircraft_icao", "aircraft"),
+    registration: pick("registration", "airframe"),
+    air_time:     pick("air_time", "enroute"),
+    deptime:      pick("deptime", "dep_utc"),
+    arrtime:      pick("arrtime", "arr_utc"),
   };
 
   function setValue(el, v){
@@ -860,63 +866,36 @@
     el.dispatchEvent(new Event("change", {bubbles:true}));
   }
 
-  function pad2(n){ return String(n).padStart(2, "0"); }
-  function isNumericLike(s){
-    if (typeof s === "number") return Number.isFinite(s);
-    if (typeof s !== "string") return false;
-    return /^[+-]?\d+(\.\d+)?$/.test(s.trim());
-  }
-
+  // ---- Time helpers (return HH:MM) ----
+  const pad2 = (n)=> String(n).padStart(2,"0");
+  const isNumLike = (s)=> (typeof s==="number" && isFinite(s)) || (typeof s==="string" && /^[-+]?\d+(\.\d+)?$/.test(s.trim()));
   function toClockHHMM(v){
     if (v == null || v === "") return "";
-    if (isNumericLike(v)) {
+    if (isNumLike(v)){
       const n = Number(v);
-      if (n >= 1e12) { const d=new Date(n); if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes()); }
-      else if (n >= 1e9) { const d=new Date(n*1000); if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes()); }
-      else if (n >= 0 && n < 24*60) { const h=Math.floor(n/60), m=n%60; return pad2(h)+":"+pad2(m); }
-      v = String(v);
+      if (n >= 1e12){ const d = new Date(n); if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes()); }
+      else if (n >= 1e9){ const d = new Date(n*1000); if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes()); }
+      else if (n >= 0 && n < 24*60){ const h=Math.floor(n/60), m=n%60; return pad2(h)+":"+pad2(m); }
     }
     const s = String(v).trim();
-    let m = s.match(/^(\d{1,2}):(\d{2})/);
-    if (m) return pad2(+m[1])+":"+pad2(+m[2]);
-    m = s.match(/^(\d{2})(\d{2})Z?$/);
-    if (m) return m[1]+":"+m[2];
-    const d = new Date(s);
-    if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
+    let m = s.match(/^(\d{1,2}):(\d{2})/); if(m) return pad2(+m[1])+":"+pad2(+m[2]);
+    m = s.match(/^(\d{2})(\d{2})Z?$/);     if(m) return m[1]+":"+m[2];
+    const d = new Date(s);                   if(!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
     return s;
   }
-
   function toDurationHHMM(v){
     if (v == null || v === "") return "";
-    if (isNumericLike(v)) {
-      const mins = Math.max(0, Math.round(Number(v)));
-      return pad2(Math.floor(mins/60))+":"+pad2(mins%60);
-    }
-    const s = String(v).trim();
-    let m = s.match(/^(\d{1,2}):(\d{2})$/);
-    if (m) return pad2(+m[1])+":"+pad2(+m[2]);
-    m = s.match(/^(\d{2})(\d{2})$/);
-    if (m) return m[1]+":"+m[2];
-    m = s.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);
-    if (m) return pad2(+(m[1]||0))+":"+pad2(+(m[2]||0));
+    if (isNumLike(v)){ const mins=Math.max(0,Math.round(Number(v))); return pad2(Math.floor(mins/60))+":"+pad2(mins%60); }
+    const s=String(v).trim();
+    let m=s.match(/^(\d{1,2}):(\d{2})$/); if(m) return pad2(+m[1])+":"+pad2(+m[2]);
+    m=s.match(/^(\d{2})(\d{2})$/);        if(m) return m[1]+":"+m[2];
+    m=s.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i); if(m) return pad2(+(m[1]||0))+":"+pad2(+(m[2]||0));
     return s;
   }
+  function hmToMin(hm){ const m=String(hm||"").match(/^(\d{1,2}):(\d{2})$/); return m? (+m[1])*60+(+m[2]) : null; }
+  function diffHHMM(a,b){ const A=hmToMin(toClockHHMM(a)), B=hmToMin(toClockHHMM(b)); if(A==null||B==null) return null; let d=B-A; if(d<0)d+=1440; return d; }
 
-  function hmToMinutes(hm){
-    const m = String(hm||"").match(/^(\d{1,2}):(\d{2})$/);
-    if(!m) return null;
-    return (+m[1])*60 + (+m[2]);
-  }
-
-  function minutesDiffHHMM(a,b){
-    const A = hmToMinutes(toClockHHMM(a));
-    const B = hmToMinutes(toClockHHMM(b));
-    if(A==null || B==null) return null;
-    let diff = B - A;
-    if (diff < 0) diff += 24*60;
-    return diff;
-  }
-
+  // ---- Fetch/normalize ----
   async function fetchOfpByUserId(userId){
     const j = await fetch(`${BASE}?userid=${encodeURIComponent(userId)}&json=1`);
     if(j.ok){ const ofp = await j.json().catch(()=>null); if(ofp) return {kind:"json", ofp}; }
@@ -930,22 +909,19 @@
   function norm(ofp, kind){
     if(kind==="json"){
       const g=ofp.general||{}, a=ofp.aircraft||{}, atc=ofp.atc||{}, o=ofp.origin||{}, d=ofp.destination||{}, t=ofp.times||{};
-      // Priorities tightened to match SimBrief UI:
-      // dep/arr → general.deptime/arrtime > times.deptime/arrtime > times.sched_out/in > times.est_out/in > times.out/in
       const dep = g.deptime ?? t.deptime ?? t.arrdep ?? t.sched_out ?? t.est_out ?? t.out ?? null;
       const arr = g.arrtime ?? t.arrtime ?? t.sched_in  ?? t.est_in  ?? t.in  ?? null;
-      // airtime → prefer air_time > enroute_time > ete (never block_time)
       const air = t.air_time ?? t.enroute_time ?? t.ete ?? null;
       return {
-        from: o.name || o.icao_code || o.icao || "",
-        to: d.name || d.icao_code || d.icao || "",
-        flight: g.flight_number || g.icao_airline || "",
+        origin: o.name || o.icao_code || o.icao || "",
+        destination: d.name || d.icao_code || d.icao || "",
+        flight_number: g.flight_number || g.icao_airline || "",
         callsign: atc.callsign || g.callsign || "",
-        aircraft: a.icao_code || a.icao || a.type || "",
-        airframe: a.reg || a.registration || "",
-        dep_utc: toClockHHMM(dep),
-        arr_utc: toClockHHMM(arr),
-        enroute: toDurationHHMM(air)
+        aircraft_icao: a.icao_code || a.icao || a.type || "",
+        registration: a.reg || a.registration || "",
+        deptime: toClockHHMM(dep),
+        arrtime: toClockHHMM(arr),
+        air_time: toDurationHHMM(air),
       };
     } else {
       const q=(s)=> ofp.querySelector(s)?.textContent?.trim() || "";
@@ -953,15 +929,15 @@
       const arr = q("general arrtime") || q("times arrtime") || q("times sched_in")  || q("times est_in")  || q("times in")  || "";
       const air = q("times air_time") || q("times enroute_time") || q("times ete") || "";
       return {
-        from: q("origin name") || q("origin icao_code") || q("origin icao"),
-        to: q("destination name") || q("destination icao_code") || q("destination icao"),
-        flight: q("general flight_number") || q("general icao_airline"),
+        origin: q("origin name") || q("origin icao_code") || q("origin icao"),
+        destination: q("destination name") || q("destination icao_code") || q("destination icao"),
+        flight_number: q("general flight_number") || q("general icao_airline"),
         callsign: q("atc callsign") || q("general callsign"),
-        aircraft: q("aircraft icao_code") || q("aircraft icao") || q("aircraft type"),
-        airframe: q("aircraft reg") || q("aircraft registration"),
-        dep_utc: toClockHHMM(dep),
-        arr_utc: toClockHHMM(arr),
-        enroute: toDurationHHMM(air)
+        aircraft_icao: q("aircraft icao_code") || q("aircraft icao") || q("aircraft type"),
+        registration: q("aircraft reg") || q("aircraft registration"),
+        deptime: toClockHHMM(dep),
+        arrtime: toClockHHMM(arr),
+        air_time: toDurationHHMM(air),
       };
     }
   }
@@ -972,20 +948,22 @@
     if(!userId){ alert("Enter SimBrief User ID"); return; }
     const {kind, ofp} = await fetchOfpByUserId(userId);
     const data = norm(ofp, kind);
-    // Only compute enroute if not present at all:
-    if(!data.enroute){
-      const mins = minutesDiffHHMM(data.dep_utc, data.arr_utc);
-      if(mins!=null) data.enroute = toDurationHHMM(mins);
-    }
-    setValue(ELS.from, data.from);
-    setValue(ELS.to, data.to);
-    setValue(ELS.flight, data.flight);
+
+    setValue(ELS.origin, data.origin);
+    setValue(ELS.destination, data.destination);
+    setValue(ELS.flight_number, data.flight_number);
     setValue(ELS.callsign, data.callsign);
-    setValue(ELS.aircraft, data.aircraft);
-    setValue(ELS.airframe, data.airframe);
-    setValue(ELS.enroute, data.enroute);
-    setValue(ELS.dep_utc, data.dep_utc);
-    setValue(ELS.arr_utc, data.arr_utc);
+    setValue(ELS.aircraft_icao, data.aircraft_icao);
+    setValue(ELS.registration, data.registration);
+    setValue(ELS.deptime, data.deptime);
+    setValue(ELS.arrtime, data.arrtime);
+    // air_time may be absent—compute only if both times present
+    let air = data.air_time;
+    if(!air && data.deptime && data.arrtime){
+      const mins = diffHHMM(data.deptime, data.arrtime);
+      if(mins!=null) air = toDurationHHMM(mins);
+    }
+    setValue(ELS.air_time, air);
     return data;
   }
 
@@ -999,6 +977,7 @@
   });
 })();
 </script>
+
 
 
 
