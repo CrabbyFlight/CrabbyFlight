@@ -59,6 +59,7 @@
   input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
   input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)} /* preset + X + Y */
   .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
   button{border:1px solid #454b54;background:#373c43;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;transition:background .15s ease,transform .02s ease}
   button:hover{background:#3f454d} button:active{transform:translateY(1px)}
@@ -220,8 +221,11 @@
     <!-- Frame (Webcam) Settings -->
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
-      <div class="grid">
-        <div><label for="wcPreset">Webcam Size</label>
+
+      <!-- Preset + X + Y on the same line -->
+      <div class="grid-3">
+        <div>
+          <label for="wcPreset">Webcam Size</label>
           <select id="wcPreset">
             <option value="1920x1080">1920×1080</option>
             <option value="1280x720" selected>1280×720</option>
@@ -234,10 +238,11 @@
         <div><label for="wcX">Webcam X</label><input id="wcX" type="number" placeholder="32"></div>
         <div><label for="wcY">Webcam Y</label><input id="wcY" type="number" placeholder="700"></div>
       </div>
-      <div class="grid">
-        <div><label for="wcW">Webcam Width (preset)</label><input id="wcW" type="number" placeholder="1280" readonly></div>
-        <div><label for="wcH">Webcam Height (preset)</label><input id="wcH" type="number" placeholder="720" readonly></div>
-      </div>
+
+      <!-- Hidden width/height (kept for data binding) -->
+      <input id="wcW" type="hidden" value="1280">
+      <input id="wcH" type="hidden" value="720">
+
       <div class="grid">
         <div><label for="wcBorderColor">Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
         <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
@@ -246,7 +251,7 @@
         <div><label>Rounded mask (fixed 16px)</label></div>
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
       </div>
-      <div class="hint">Webcam size must be one of the presets. Logo and Info are always visible.</div>
+      <div class="hint">Webcam size is selected via preset. Width & height auto-apply; logo and info always visible.</div>
     </div>
 
     <div class="btns">
@@ -445,7 +450,7 @@
     bind();
   });
 
-  // removed: hideLogo, hideInfo, wcRadius (now fixed at 16)
+  // No hideLogo/hideInfo/wcRadius fields
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
     "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
@@ -463,7 +468,7 @@
 
     function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
 
-    let t=null; // why: debounce + only on-auth
+    let t=null; // debounce
     function save(){
       if (!signedInUser) return;
       clearTimeout(t);
@@ -494,8 +499,6 @@
         }
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
-      // lock width/height to presets only
-      w.readOnly = true; h.readOnly = true;
       applyPreset(preset.value || "1280x720");
 
       // Download rounded mask PNG (fixed radius 16)
@@ -650,7 +653,6 @@
       const topH=getNum('topH',22);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
-      // ignore hideLogo/hideInfo flags entirely
 
       const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
       const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
@@ -677,6 +679,7 @@
 
   function bindAuthUI(){
     const emailEl = document.getElementById('auth_email');
+    aconst = 1; // no-op to keep line numbers stable if diffing
     const passEl  = document.getElementById('auth_password');
     document.getElementById('btn_signin').onclick = async ()=>{
       setStatus(''); try { await signInWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
