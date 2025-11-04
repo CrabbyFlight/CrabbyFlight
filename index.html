@@ -228,7 +228,7 @@
           <label for="wcPreset">Webcam Size</label>
           <select id="wcPreset">
             <option value="1920x1080">1920×1080</option>
-            <option value="1280x720" selected>1280×720</option>
+            <option value="1280x720">1280×720</option>
             <option value="960x540">960×540</option>
             <option value="640x480">640×480</option>
             <option value="352x288">352×288</option>
@@ -251,7 +251,7 @@
         <div><label>Rounded mask (fixed 16px)</label></div>
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
       </div>
-      <div class="hint">Webcam size is selected via preset. Width & height auto-apply; logo and info always visible.</div>
+      <div class="hint">Preset persists across refreshes. Width & height follow the preset; logo and info always visible.</div>
     </div>
 
     <div class="btns">
@@ -441,22 +441,24 @@
   let firstPaint = false;
   let editorBound = false;
   let signedInUser = null;
+  let canSave = false; // why: prevent overwriting DB on first load
 
   addEventListener('hashchange', ()=>{
     ({mode, room}=parseHash());
     document.body.classList.remove('ready','require-auth');
     firstPaint = false;
+    canSave = false;
     applyMode();
     bind();
   });
 
-  // No hideLogo/hideInfo/wcRadius fields
+  // Include wcPreset so the user's choice persists
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
 
   function bindEditor(){
     if (editorBound) return;
@@ -466,13 +468,17 @@
     const statusEl = els['status'];
     const customRow = document.getElementById('customRow');
 
-    function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
+    function read(){
+      const d={};
+      for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); }
+      return d;
+    }
 
-    let t=null; // debounce
+    let t=null; // debounce saves
     function save(){
-      if (!signedInUser) return;
+      if (!signedInUser || !canSave) return;
       clearTimeout(t);
-      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 220);
+      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
     }
     for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
 
@@ -483,6 +489,7 @@
       const preset = document.getElementById('wcPreset');
       const w = els['wcW'], h = els['wcH'];
       if (!preset || !w || !h) return;
+
       const MAP = {
         "1920x1080":[1920,1080],
         "1280x720":[1280,720],
@@ -491,66 +498,30 @@
         "352x288":[352,288],
         "320x240":[320,240]
       };
-      function applyPreset(val){
-        if (MAP[val]) {
-          const [pw,ph]=MAP[val];
-          w.value=pw; h.value=ph;
-          w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
-        }
+
+      function setWH(pVal){
+        const pair = MAP[pVal];
+        if (!pair) return;
+        const [pw,ph]=pair;
+        w.value=pw; h.value=ph;
+        // trigger save when allowed
+        w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
       }
-      preset.addEventListener('change', ()=> applyPreset(preset.value));
-      applyPreset(preset.value || "1280x720");
 
-      // Download rounded mask PNG (fixed radius 16)
-      (function bindMaskDownload(){
-        const btn = document.getElementById('btn_download_mask');
-        if (!btn) return;
-        btn.addEventListener('click', ()=>{
-          const wv = parseInt((w.value||'').trim(), 10);
-          const hv = parseInt((h.value||'').trim(), 10);
-          const r = 16;
-          if (!Number.isFinite(wv) || !Number.isFinite(hv) || wv<=0 || hv<=0){
-            alert('Please select a webcam size first.'); return;
-          }
-          const c = document.createElement('canvas'); c.width = wv; c.height = hv;
-          const ctx = c.getContext('2d');
-          ctx.clearRect(0,0,wv,hv);
-          ctx.fillStyle = 'white';
-          const rr = (x,y,w2,h2,r2)=>{
-            const rad = Math.min(r2, Math.floor(Math.min(w2,h2)/2));
-            ctx.beginPath();
-            ctx.moveTo(x+rad, y);
-            ctx.arcTo(x+w2, y,   x+w2, y+h2, rad);
-            ctx.arcTo(x+w2, y+h2, x,   y+h2, rad);
-            ctx.arcTo(x,   y+h2, x,   y,   rad);
-            ctx.arcTo(x,   y,   x+w2, y,   rad);
-            ctx.closePath();
-          };
-          rr(0,0,wv,hv,r);
-          ctx.fill();
-          c.toBlob((blob)=>{
-            const a=document.createElement('a');
-            a.download = `mask_webcam_${wv}x${hv}_r${r}.png`;
-            a.href = URL.createObjectURL(blob);
-            a.click();
-            setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-          }, 'image/png');
-        });
-      })();
+      function updatePresetFromWH(){
+        const key = `${w.value}x${h.value}`;
+        if (MAP[key]) preset.value = key;
+      }
+
+      preset.addEventListener('change', ()=>{
+        els['wcPreset'].value = preset.value;
+        setWH(preset.value);
+      });
+
+      // No auto-apply default here; we let subscribe() populate and then sync:
+      // updatePresetFromWH() will be called after DB snapshot is applied.
+      Object.assign(initWcPreset, {updatePresetFromWH});
     })();
-
-    const infoUrl = ()=> `#info:${signedInUser?.uid || room}${location.search}`;
-    const depUrl  = ()=> `#departures:${signedInUser?.uid || room}${location.search}`;
-    const frameUrl= ()=> `#frame:${signedInUser?.uid || room}${location.search}`;
-    document.getElementById('openInfo').onclick = ()=> window.open(infoUrl(), '_blank');
-    document.getElementById('openDep').onclick  = ()=> window.open(depUrl(), '_blank');
-    const of = document.getElementById('openFrame'); if(of) of.onclick = ()=> window.open(frameUrl(), '_blank');
-
-    const urlsBtn = document.getElementById('copyUrls');
-    if (urlsBtn) urlsBtn.onclick = ()=> openUrlModal();
-
-    const btnOut = document.getElementById('btn_signout');
-    if (btnOut) btnOut.onclick = ()=> signOut(auth).catch(e=>setStatus(e.message));
   }
 
   function renderInfo(d){
@@ -613,21 +584,42 @@
     const r = ref(db, `rooms/${room}`);
     dbUnsub = onValue(r, snap=>{
       const data = snap.val() || DEFAULTS;
+
       if (mode==='info') renderInfo(data);
       if (mode==='departures') renderDepartures(data);
       if (mode==='frame') renderFrame(data);
+
       if (mode==='editor') {
+        // populate fields from DB
         for(const k of FIELDS){
           const el=document.getElementById(k);
-          if(el && typeof data[k]==='string'){ el.value=data[k]; }
+          if(!el) continue;
+          const val = (typeof data[k]==='string') ? data[k] : DEFAULTS[k];
+          if (typeof val !== 'undefined') el.value = val;
         }
+        // sync preset dropdown to DB or current W×H
+        const presetEl = document.getElementById('wcPreset');
+        const wEl = document.getElementById('wcW'); const hEl = document.getElementById('wcH');
+        const savedPreset = data.wcPreset;
+        const key = `${wEl?.value||''}x${hEl?.value||''}`;
+        if (presetEl){
+          presetEl.value = savedPreset || key;
+          // if the value doesn't exist (data older), try to map via W×H
+          if (![...presetEl.options].some(o=>o.value===presetEl.value)) presetEl.value = key;
+          // reflect the final value into hidden input so it saves
+          const presetHidden = document.getElementById('wcPreset');
+          if (presetHidden) presetHidden.value = presetEl.value;
+        }
+
         const statusEl=document.getElementById('status');
         const customRow=document.getElementById('customRow');
         if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
       }
+
       if (!firstPaint) {
         document.body.classList.add('ready');
         firstPaint = true;
+        canSave = true; // allow saves only after first snapshot
         const s = document.getElementById('inapp-splash');
         if (s) setTimeout(()=>{ s.remove(); }, 400);
       }
@@ -679,7 +671,6 @@
 
   function bindAuthUI(){
     const emailEl = document.getElementById('auth_email');
-    aconst = 1; // no-op to keep line numbers stable if diffing
     const passEl  = document.getElementById('auth_password');
     document.getElementById('btn_signin').onclick = async ()=>{
       setStatus(''); try { await signInWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
@@ -751,6 +742,7 @@
       onAuthStateChanged(auth, (user)=>{
         signedInUser = user || null;
         editorBound = false;
+        canSave = false;
         ensureUIDRoomAndBadge();
         if (!signedInUser){
           requireAuthUI(true);
