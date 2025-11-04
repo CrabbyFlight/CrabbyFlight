@@ -544,77 +544,40 @@
   };
 
   function getUtcTime(doc, kind){
-  // Robust UTC-only extraction from SimBrief <times> block
-  const cand = (kind==='dep')
-    ? ['times sched_out_zulu','times sched_out_utc','times sched_out_gmt','times out_zulu','times out_utc','times out_gmt','general dep_time_utc','general dep_time_zulu']
-    : ['times sched_in_zulu','times sched_in_utc','times sched_in_gmt','times in_zulu','times in_utc','times in_gmt','general arr_time_utc','general arr_time_zulu'];
-  let matched = '', raw='';
-  for (const sel of cand){
+  // UTC-only extraction; prefer SimBrief <general> *_time_utc (matches OFP header), then <times> variants
+  const candidates = (kind==='dep')
+    ? ['general dep_time_utc','general dep_time_zulu','times sched_out_zulu','times sched_out_utc','times sched_out_gmt','times out_zulu','times out_utc','times out_gmt']
+    : ['general arr_time_utc','general arr_time_zulu','times sched_in_zulu','times sched_in_utc','times sched_in_gmt','times in_zulu','times in_utc','times in_gmt'];
+  let matched='', raw='';
+  const all = [];
+  for (const sel of candidates){
     const n = doc.querySelector(sel);
-    if (n && n.textContent && n.textContent.trim()){
-      matched = sel; raw = n.textContent.trim(); break;
-    }
+    const v = n?.textContent?.trim() || '';
+    all.push([sel, v]);
+    if (!matched && v) { matched = sel; raw = v; }
   }
   const label = parseTimeUTC(raw);
-  return { label: (label||''), source: (label ? `simbrief:${matched}` : 'missing'), debug:{matched, raw} };
+  return { label: (label||''), source: (label ? `simbrief:${matched}` : 'missing'), debug:{matched, raw, all} };
 }
-async function importFromSimBrief(pilotOrUser){
-    const urls = [
-      `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(pilotOrUser)}`,
-      `https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(pilotOrUser)}`
-    ];
-    let xmlText=null, lastErr=null;
-    for(const u of urls){
-      try{
-        const res=await fetch(u,{cache:'no-store'});
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        const t=await res.text();
-        if(t && !/^\s*<\/?html/i.test(t)){ xmlText=t; break; }
-      }catch(e){ lastErr=e; }
-    }
-    if(!xmlText) throw lastErr||new Error('No XML');
-
-    const doc=new DOMParser().parseFromString(xmlText,'application/xml');
-    if(doc.querySelector('parsererror')) throw new Error('XML parse error');
-
-    const fromIcao = pickText(doc,'OFP origin icao_code','origin icao_code','general orig_icao');
-    const fromName = pickText(doc,'OFP origin name','origin name','general orig_name','origin city');
-    const toIcao   = pickText(doc,'OFP destination icao_code','destination icao_code','general dest_icao');
-    const toName   = pickText(doc,'OFP destination name','destination name','general dest_name','destination city');
-
-    const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
-    const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
-    let callsign = pickText(doc,'OFP general callsign','general callsign','general atc_callsign');
-    callsign = (callsign||'').toUpperCase().replace(/\s+/g,'');
-    const aircraft = pickText(doc,'OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
-    const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
-    const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
-
-    const dep = getUtcTime(doc,'dep');
-    const arr = getUtcTime(doc,'arr');
-
-    const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
-    const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:''):'';
-
-    return {
-      patch: {
-        from: fmtLoc(fromName, fromIcao),
-        to:   fmtLoc(toName, toIcao),
-        flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
-        callsign: callsign||'',
-        dep_utc: dep.label,
-        arr_utc: arr.label,
-        aircraft: (aircraft||'').toUpperCase(),
-        cruise: fmtCruise(cruiseFt),
-        enroute: formatEte(eteRaw)
-      },
-      meta: {depSource:dep.source, arrSource:arr.source, depDebug:dep.debug, arrDebug:arr.debug}
-    };
-  }
-
+  
+  // ---- SimBrief debug rendering ----
   
   // ---- SimBrief debug rendering ----
   function showSimbriefDebug(meta){
+    try{
+      const d = document.getElementById('simbrief_debug_dep');
+      const a = document.getElementById('simbrief_debug_arr');
+      if(!d || !a || !meta) return;
+      const fmt = (dbg)=>{
+        if(!dbg) return '';
+        const items = (dbg.all||[]).filter(([k,v])=>v).map(([k,v])=>`${k}="${v}"`).join('  ·  ');
+        return items ? items : (dbg.matched ? `[${dbg.matched}: "${dbg.raw}"]` : '');
+      };
+      d.textContent = 'DEP ' + fmt(meta.depDebug);
+      a.textContent = 'ARR ' + fmt(meta.arrDebug);
+    }catch(e){}
+  }
+
     try{
       const d = document.getElementById('simbrief_debug_dep');
       const a = document.getElementById('simbrief_debug_arr');
