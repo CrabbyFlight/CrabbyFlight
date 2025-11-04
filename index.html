@@ -430,6 +430,7 @@
     return { mode: (mode||'editor').toLowerCase(), room: room||'crabroom' };
   }
   let { mode, room } = parseHash();
+  try { if (room) localStorage.setItem('lastRoom', room); } catch {}
   function applyMode(){
     document.body.classList.remove('editor','info','departures','frame');
     document.body.classList.add(mode);
@@ -734,6 +735,7 @@
     const placeholder = !room || room === 'crabroom' || room === 'me';
     if (uid && placeholder){
       room = uid;
+      try { localStorage.setItem('lastRoom', room); } catch {}
       const base = location.href.split('#')[0];
       location.hash = `${mode}:${room}`;
       return;
@@ -880,12 +882,7 @@
     onAuthStateChanged(auth, (user) => {
       if (user?.uid && user.uid !== resolvedRoom) {
         adoptRoom(user.uid);
-      } else if (!user && !resolvedRoom) {
-        // No user: keep hash mode, no room suffix.
-        const { mode } = parseHash();
-        location.replace(`#${mode}`);
-        disableOverlayTargets(true);
-      }
+
     });
   }
 
