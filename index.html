@@ -177,11 +177,11 @@
   <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
   <div class="card">
     <div class="grid">
-      <div><label>From</label><input id="from" placeholder="Oslo (ENGM)"></div>
-      <div><label>To</label><input id="to" placeholder="Liverpool (EGGP)"></div>
+      <div><label>Origin</label><input id="from" placeholder="Oslo (ENGM)"></div>
+      <div><label>Destination</label><input id="to" placeholder="Liverpool (EGGP)"></div>
     </div>
     <div class="grid">
-      <div><label>Flight</label><input id="flight" placeholder="POR9392"></div>
+      <div><label>Flight Number</label><input id="flight" placeholder="POR9392"></div>
       <div><label>Callsign</label><input id="callsign" placeholder="WALL13"></div>
     </div>
     <div class="grid">
@@ -205,11 +205,11 @@
     </div>
 
     <div class="grid">
-      <div><label>Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
-      <div><label>Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
+      <div><label>Deptime (Z)</label><input id="dep_utc" placeholder="14:30 UTC"></div>
+      <div><label>Arrtime (Z)</label><input id="arr_utc" placeholder="16:30 UTC"></div>
     </div>
     <div class="grid">
-      <div><label>Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
+      <div><label>Aircraft Type (ICAO)</label><input id="aircraft" placeholder="A320neo"></div>
       <div><label>Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
     
@@ -218,7 +218,7 @@
       <div><label>&nbsp;</label><button id="simbrief_fetch" type="button">Import latest from SimBrief</button></div>
     </div>
 <div class="grid">
-      <div><label>Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
+      <div><label>Air Time (EET)</label><input id="enroute" placeholder="~2hrs"></div>
       <div><label>LIVE</label>
         <select id="live"><option value="on">On</option><option value="off">Off</option></select>
       </div>
