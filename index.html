@@ -539,46 +539,40 @@
   };
 
   function getUtcTime(doc, kind){
-  // UTC-only extraction:
-  // 1) Prefer known UTC/Zulu nodes from SimBrief XML
-  const candidates = (kind==='dep')
-    ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
-    : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
+    const utcSelectors = kind==='dep'
+      ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
+      : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
 
-  let raw = '';
-  let matched = '';
-  for (const sel of candidates){
-    const n = doc.querySelector(sel);
-    const v = n && n.textContent && n.textContent.trim();
-    if (v){ raw = v; matched = sel; break; }
-  }
+    const localSelectors = kind==='dep'
+      ? ['times sched_out','general dep_time']
+      : ['times sched_in','general arr_time'];
 
-  // 2) Fallback: parse UTC (Z) times from OFP text blocks inside the XML
-  if (!raw) {
-    const ofpNode =
-      doc.querySelector('text_plan') ||
-      doc.querySelector('text_ofp')  ||
-      doc.querySelector('ofp_text')  ||
-      doc.querySelector('textdata')  ||
-      doc.querySelector('OFP text'); // some packs use mixed casing/tags
+    const offSelectors = kind==='dep'
+      ? ['origin utc_offset','origin gmt_offset','origin tz_offset','general orig_utc_offset','general orig_timezone']
+      : ['destination utc_offset','destination gmt_offset','destination tz_offset','general dest_utc_offset','general dest_timezone'];
 
-    const ofpText = (ofpNode && ofpNode.textContent) ? String(ofpNode.textContent) : '';
-
-    // Common patterns: "DEP 2325Z" / "ARR 0032Z" or "OUT 2325Z" / "IN 0032Z"
-    const depMatch = /\b(?:DEP(?:ARTURE)?|OUT)\s+(\d{2})(\d{2})Z\b/i.exec(ofpText);
-    const arrMatch = /\b(?:ARR(?:IVAL)?|IN)\s+(\d{2})(\d{2})Z\b/i.exec(ofpText);
-
-    const m = (kind==='dep') ? depMatch : arrMatch;
-    if (m) {
-      raw = `${m[1]}:${m[2]}`; // normalize to HH:MM
-      matched = 'ofp_text:zulu';
+    const utcRaw = pickText(doc, utcSelectors);
+    if(utcRaw){
+      const label = parseTimeUTC(utcRaw);
+      return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc' };
     }
+
+    const localRaw = pickText(doc, localSelectors);
+    const offRaw   = pickText(doc, offSelectors);
+    if(localRaw){
+      const hm = parseHHMM(localRaw);
+      if(hm){
+        const offMin = parseOffsetToMinutes(offRaw);
+        if(offMin!==null){
+          const utcHM = addMinutesHM(hm.h, hm.m, -offMin); // local -> UTC
+          return { label: hmToLabel(utcHM.h, utcHM.m), source: (offRaw?`local+offset(${offRaw})`:'local') };
+        }
+        return { label: hmToLabel(hm.h, hm.m), source: 'local(no offset)' };
+      }
+    }
+    const any = pickText(doc, [...utcSelectors, ...localSelectors]);
+    return { label: parseTimeUTC(any), source: 'fallback' };
   }
-
-  const label = parseTimeUTC(raw); // uses existing helpers -> "HH:MM UTC"
-  return { label: (label||''), source: label ? `simbrief:${matched}` : 'missing' };
-}
-
 
   async function importFromSimBrief(pilotOrUser){
     const urls = [
@@ -606,8 +600,7 @@
 
     const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
     const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
-    let callsign = pickText(doc,'OFP general callsign','general callsign','general atc_callsign');
-    callsign = (callsign || '').toUpperCase().replace(/\s+/g,'');
+    const callsign = pickText(doc,'OFP general callsign','general callsign');
     const aircraft = pickText(doc,'OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
     const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
