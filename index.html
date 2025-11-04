@@ -218,7 +218,12 @@
       <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
       <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
     </div>
-    <div class="grid">
+    
+    <div style="font-size:12px; opacity:.7; margin-top:-8px; margin-bottom:8px">
+      <span id="simbrief_debug_dep"></span>
+      <span id="simbrief_debug_arr" style="margin-left:12px"></span>
+    </div>
+<div class="grid">
       <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
       <div><label for="cruise">Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
@@ -539,14 +544,20 @@
   };
 
   function getUtcTime(doc, kind){
-  // Strict UTC-only: prefer SimBrief times/sched_*_zulu (as shown on OFP)
-  const key = (kind==='dep') ? 'sched_out_zulu' : 'sched_in_zulu';
-  const node = doc.querySelector(`times ${key}`);
-  const raw = node?.textContent?.trim() || '';
+  // Robust UTC-only extraction from SimBrief <times> block
+  const cand = (kind==='dep')
+    ? ['times sched_out_zulu','times sched_out_utc','times sched_out_gmt','times out_zulu','times out_utc','times out_gmt','general dep_time_utc','general dep_time_zulu']
+    : ['times sched_in_zulu','times sched_in_utc','times sched_in_gmt','times in_zulu','times in_utc','times in_gmt','general arr_time_utc','general arr_time_zulu'];
+  let matched = '', raw='';
+  for (const sel of cand){
+    const n = doc.querySelector(sel);
+    if (n && n.textContent && n.textContent.trim()){
+      matched = sel; raw = n.textContent.trim(); break;
+    }
+  }
   const label = parseTimeUTC(raw);
-  return { label: (label||''), source: (label ? `simbrief:${key}` : 'missing') };
+  return { label: (label||''), source: (label ? `simbrief:${matched}` : 'missing'), debug:{matched, raw} };
 }
-
 async function importFromSimBrief(pilotOrUser){
     const urls = [
       `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(pilotOrUser)}`,
@@ -597,8 +608,21 @@ async function importFromSimBrief(pilotOrUser){
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw)
       },
-      meta: {depSource:dep.source, arrSource:arr.source}
+      meta: {depSource:dep.source, arrSource:arr.source, depDebug:dep.debug, arrDebug:arr.debug}
     };
+  }
+
+  
+  // ---- SimBrief debug rendering ----
+  function showSimbriefDebug(meta){
+    try{
+      const d = document.getElementById('simbrief_debug_dep');
+      const a = document.getElementById('simbrief_debug_arr');
+      if(!d || !a || !meta) return;
+      const dep = meta.depDebug, arr = meta.arrDebug;
+      if(dep?.matched) d.textContent = `[DEP ${dep.matched}: "${dep.raw}"]`;
+      if(arr?.matched) a.textContent = `[ARR ${arr.matched}: "${arr.raw}"]`;
+    }catch(e){}
   }
 
   /* ---------- Editor binding ---------- */
@@ -679,10 +703,11 @@ async function importFromSimBrief(pilotOrUser){
         setSb('Fetching…');
         const {patch, meta} = await importFromSimBrief(id);
 
-        Object.entries(patch).forEach(([k,val])=>{
+        Object.entries(patch.fields).forEach(([k,val])=>{
           const el = els[k];
-          if (el && val) el.value = val;
+          if (el) el.value = (val || '');
         });
+        showSimbriefDebug(patch.meta);
 
         sanitizeUTCField(els['dep_utc']);
         sanitizeUTCField(els['arr_utc']);
