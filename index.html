@@ -539,20 +539,23 @@
   };
 
   function getUtcTime(doc, kind){
-  const utcSelectors = kind==='dep'
-    ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
-    : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
-  const raw = pickText(doc, utcSelectors);
-  const label = parseTimeUTC(raw);
-  let matched = '';
-  for (const s of utcSelectors){
-    const n = doc.querySelector(s);
-    const v = n && n.textContent && n.textContent.trim();
-    if (v){ matched = s; break; }
-  }
-  return { label, source: matched ? `simbrief:${matched}` : 'missing' };
-}
+    const utcSelectors = kind==='dep'
+      ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
+      : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
 
+    const localSelectors = kind==='dep'
+      ? ['times sched_out','general dep_time']
+      : ['times sched_in','general arr_time'];
+
+    const offSelectors = kind==='dep'
+      ? ['origin utc_offset','origin gmt_offset','origin tz_offset','general orig_utc_offset','general orig_timezone']
+      : ['destination utc_offset','destination gmt_offset','destination tz_offset','general dest_utc_offset','general dest_timezone'];
+
+    const utcRaw = pickText(doc, utcSelectors);
+    if(utcRaw){
+      const label = parseTimeUTC(utcRaw);
+      return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc' };
+    }
 
     const localRaw = pickText(doc, localSelectors);
     const offRaw   = pickText(doc, offSelectors);
@@ -598,13 +601,15 @@
     const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
     const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
     let callsign = pickText(doc,'OFP general callsign','general callsign','general atc_callsign');
-    callsign = (callsign || '').toUpperCase().replace(/\s+/g,'');
+    callsign = (callsign||'').toUpperCase().replace(/\s+/g,'');
     const aircraft = pickText(doc,'OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
     const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
 
-    const dep = getUtcTime(doc,'dep');
-    const arr = getUtcTime(doc,'arr');
+    const depRaw = pickText(doc,['general dep_time_utc','general dep_time_zulu','times sched_out_zulu','times sched_out_utc']);
+    const arrRaw = pickText(doc,['general arr_time_utc','general arr_time_zulu','times sched_in_zulu','times sched_in_utc']);
+    const dep = { label: parseTimeUTC(depRaw), source: depRaw? 'simbrief:utc' : 'missing' };
+    const arr = { label: parseTimeUTC(arrRaw), source: arrRaw? 'simbrief:utc' : 'missing' };
 
     const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
     const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:''):'';
