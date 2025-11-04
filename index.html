@@ -20,7 +20,6 @@
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
     document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    // why: avoid deadlock—don’t show splash on editor; it may never mark "ready" when signed-out
     if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
       document.documentElement.classList.add('show-splash');
     }
@@ -155,7 +154,6 @@
   <div class="auth-wrap">
     <div class="card" style="text-align:center">
       <div class="auth-logo">
-        <!-- why: show brand; graceful fallback -->
         <img src="logo.png" alt="CrabbyFlight" onerror="this.onerror=null; this.src='logo192.png'">
       </div>
       <label>Email</label><input id="auth_email" type="email" inputmode="email" autocomplete="username" placeholder="you@example.com">
@@ -219,7 +217,7 @@
       </div>
     </div>
 
-    <!-- SimBrief section (editor-only; minimal UI change) -->
+    <!-- SimBrief -->
     <div class="grid" style="margin-top:10px">
       <div>
         <label>SimBrief User ID</label>
@@ -423,7 +421,6 @@
 
 <script type="module">
 
-  // --- Cleanup any legacy frame add-ons to prevent duplicates ---
   (function cleanupLegacyFrame(){
     try{
       document.querySelectorAll('#frame-toggle, #frame-banner').forEach(n=>n.remove());
@@ -431,10 +428,9 @@
       if (frames.length > 1){
         frames.forEach((n,i)=>{ if(i>0) n.remove(); });
       }
-    }catch(e){ /* ignore */ }
+    }catch(e){}
   })();
 
-  // Firebase init
   const firebaseConfig = {
     apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
     authDomain: "crabbyflight.firebaseapp.com",
@@ -453,7 +449,6 @@
   const db  = getDatabase(app);
   const auth = getAuth(app);
 
-  // Routing / mode
   if (!location.hash) location.replace('#editor:crabroom');
   function parseHash(){
     const raw = (location.hash||'').replace(/^#/, '');
@@ -480,7 +475,6 @@
     bind();
   });
 
-  // Constants
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
     "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius","simbriefUserId"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
@@ -489,7 +483,6 @@
     wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16",
     simbriefUserId:"" };
 
-  // Editor binding (only when authed)
   function bindEditor(){
     if (editorBound) return;
     editorBound = true;
@@ -501,10 +494,9 @@
 
     function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
 
-    // Debounced write; only if authenticated.
     let t=null;
     function save(){
-      if (!signedInUser) return; // why: avoid writes without token
+      if (!signedInUser) return;
       clearTimeout(t);
       t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 220);
     }
@@ -513,7 +505,6 @@
     function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
     if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
 
-    // Webcam preset dropdown ↔ width/height sync
     (function initWcPreset(){
       const preset = document.getElementById('wcPreset');
       const w = els['wcW'], h = els['wcH'];
@@ -536,7 +527,6 @@
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
 
-      // Download rounded mask PNG (alpha) matching current W×H×radius
       (function bindMaskDownload(){
         const btn = document.getElementById('btn_download_mask');
         if (!btn) return;
@@ -550,7 +540,6 @@
           const c = document.createElement('canvas'); c.width = w; c.height = h;
           const ctx = c.getContext('2d');
           ctx.clearRect(0,0,w,h);
-          // draw rounded rect into alpha channel
           ctx.fillStyle = 'white';
           const rr = (x,y,w,h,r)=>{
             const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
@@ -564,7 +553,6 @@
           };
           rr(0,0,w,h,r);
           ctx.fill();
-          // export as PNG where white->opaque area acts as alpha mask
           c.toBlob((blob)=>{
             const a=document.createElement('a');
             a.download = `mask_webcam_${w}x${h}_r${r}.png`;
@@ -576,12 +564,11 @@
       })();
 
       updateSelectFromFields();
-      // keep in sync when user edits numbers
       w.addEventListener('input', updateSelectFromFields);
       h.addEventListener('input', updateSelectFromFields);
     })();
 
-    // --- SimBrief Importer (editor only) ---
+    // --- SimBrief Importer ---
     (function bindSimBrief(){
       const btn = document.getElementById('btn_simbrief');
       if (!btn) return;
@@ -595,18 +582,32 @@
       function text(doc, selectors){
         for (const s of selectors){
           const n = doc.querySelector(s);
-          if (n && n.textContent && n.textContent.trim()) return n.textContent.trim();
+          const v = n?.textContent?.trim();
+          if (v) return v;
         }
         return '';
       }
 
-      function toHHMM(v){ // accepts "20240105 1430", "1430", "14:30Z", "14:30"
-        if(!v) return '';
-        const m = v.match(/(\d{2}):?(\d{2})/);
-        if (!m) return '';
-        const hh = m[1].padStart(2,'0');
-        const mm = m[2].padStart(2,'0');
-        return `${hh}:${mm}`;
+      // strict HH:MM (24h). Accepts '15:10', '1510', '...15:10Z'
+      function toHHMMStrict(raw){
+        if (!raw) return '';
+        const s = String(raw);
+        const m1 = s.match(/(\d{2}):(\d{2})Z?/);
+        if (m1) {
+          const hh = m1[1], mm = m1[2];
+          if (parseInt(mm,10) < 60) return `${hh}:${mm}`;
+        }
+        const m2 = s.match(/\b(\d{2})(\d{2})\b/);
+        if (m2) {
+          const hh = m2[1], mm = m2[2];
+          if (parseInt(mm,10) < 60) return `${hh}:${mm}`;
+        }
+        const m3 = s.match(/T?(\d{2}):(\d{2})Z?/);
+        if (m3) {
+          const hh = m3[1], mm = m3[2];
+          if (parseInt(mm,10) < 60) return `${hh}:${mm}`;
+        }
+        return '';
       }
 
       function fmtCruiseFeetAndFL(feetStr){
@@ -614,7 +615,7 @@
         if (!Number.isFinite(n) || n<=0) return '';
         const feet = n.toLocaleString();
         const fl = Math.round(n/100);
-        return `${feet}ft (FL${fl})`; // why: readable for stream overlay
+        return `${feet}ft (FL${fl})`; // why: stream-friendly
       }
 
       async function runImport(){
@@ -623,45 +624,57 @@
 
         try{
           setSbStatus('Fetching OFP…');
-          // SimBrief "latest OFP" XML endpoint (no auth; user-id scoped)
           const url = `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(uid)}&json=0`;
           const res = await fetch(url, { mode: 'cors' });
           if(!res.ok){ throw new Error(`HTTP ${res.status}`); }
           const xml = await res.text();
           const doc = new DOMParser().parseFromString(xml, 'text/xml');
 
-          // Parse fields with tolerant selectors (SimBrief variants)
           const origIcao = text(doc, ['origin icao_code','origin icao','general orig_icao','airports origin icao_code']);
           const origName = text(doc, ['origin name','airports origin name','general orig_name']);
           const destIcao = text(doc, ['destination icao_code','destination icao','general dest_icao','airports destination icao_code']);
           const destName = text(doc, ['destination name','airports destination name','general dest_name']);
 
           const airline = text(doc, ['general icao_airline','general airline_icao','general airline']);
-          const fnum    = text(doc, ['general flight_number','general ofp_flight_number']);
+          const fnum    = text(doc, ['general flight_number','general ofp_flight_number','general flightnum','general ofp_flightnum']);
           const callsign= text(doc, ['general atc_callsign','general callsign','general atc_id']);
 
           const typeIcao= text(doc, ['aircraft icao_type','aircraft type','general aircraft_icao','general airframe_icao']);
-
           const cruiseFt= text(doc, ['general cruise_altitude','general crz_alt','profile cruise_altitude']);
-          const ete      = text(doc, ['times est_time_enroute','times enroute_time','times ete','general enroute_time']); // HH:MM
 
-          const schedOut = text(doc, ['times sched_out','times dep_time','times sched_departure_local','times sched_departure_utc','general dep_time_utc']);
-          const schedIn  = text(doc, ['times sched_in','times arr_time','times sched_arrival_local','times sched_arrival_utc','general arr_time_utc']);
+          // enroute = AIR TIME
+          const airTime  = text(doc, ['times air_time','times air_time_formatted']);
+          const ete      = text(doc, ['times est_time_enroute','times enroute_time','times ete']);
+
+          // Prefer explicit UTC fields
+          const schedOut = text(doc, [
+            'times sched_out_utc', 'times dep_time_utc',
+            'times sched_out', 'times dep_time',
+            'times sched_departure_utc', 'general dep_time_utc'
+          ]);
+          const schedIn  = text(doc, [
+            'times sched_in_utc', 'times arr_time_utc',
+            'times sched_in', 'times arr_time',
+            'times sched_arrival_utc', 'general arr_time_utc'
+          ]);
 
           const from = (origName && origIcao) ? `${origName} (${origIcao})` : (origIcao||origName||'');
           const to   = (destName && destIcao) ? `${destName} (${destIcao})` : (destIcao||destName||'');
 
           let flight = '';
-          if (airline && fnum) flight = `${airline}${fnum}`;
-          else flight = fnum || text(doc, ['general ofp_flightnum','general flightnum']);
+          if (airline && fnum) flight = `${airline}${fnum}`; else flight = fnum;
 
           const aircraft = typeIcao || '';
           const cruise = fmtCruiseFeetAndFL(cruiseFt) || '';
-          const dep_utc = (toHHMM(schedOut) ? `${toHHMM(schedOut)} UTC` : '');
-          const arr_utc = (toHHMM(schedIn)  ? `${toHHMM(schedIn)} UTC`  : '');
-          const enroute = (ete && /^\d{1,2}:\d{2}$/.test(ete)) ? ete : toHHMM(ete);
 
-          // Apply to inputs and trigger save via existing mechanism.
+          const depCore = toHHMMStrict(schedOut);
+          const arrCore = toHHMMStrict(schedIn);
+          const dep_utc = depCore ? `${depCore} UTC` : '';
+          const arr_utc = arrCore ? `${arrCore} UTC` : '';
+
+          const enrCore = toHHMMStrict(airTime) || toHHMMStrict(ete);
+          const enroute = enrCore || '';
+
           const updates = { from,to,flight,callsign,aircraft,cruise,dep_utc,arr_utc,enroute };
           Object.entries(updates).forEach(([k,v])=>{
             if (!v) return;
@@ -693,7 +706,6 @@
     if (btnOut) btnOut.onclick = ()=> signOut(auth).catch(e=>setStatus(e.message));
   }
 
-  // Renders
   function renderInfo(d){
     const v=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
@@ -719,14 +731,12 @@
   }
 
   function renderFrame(d){
-    // Values from DB (strings) with numeric coercion
     const v=(k,def)=>{ const raw=(d?.[k]??"").toString().trim(); return raw===''?def:raw; };
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',420), wcH=num('wcH',236);
     const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
     const hideLogo = v('hideLogo','0')==='1', hideInfo = v('hideInfo','0')==='1';
 
-    // Allow URL params to override (optional)
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
     const orStr=(k,cur)=> usp.get(k) ?? cur;
@@ -752,7 +762,6 @@
     if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
-  // Subscriptions
   function subscribe(){
     if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
     const r = ref(db, `rooms/${room}`);
@@ -781,7 +790,6 @@
     });
   }
 
-  // Overlay placement
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
@@ -826,7 +834,6 @@
 
   }
 
-  // Auth UI helpers
   function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
   function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
 
@@ -844,7 +851,6 @@
   }
   bindAuthUI();
 
-  // network badge
   function updateNetBadge(){
     const b = document.getElementById('net_badge');
     if(!b) return;
@@ -855,7 +861,6 @@
   addEventListener('offline', updateNetBadge);
   updateNetBadge();
 
-  // Switch to UID room & paint UID in button after login
   function ensureUIDRoomAndBadge(){
     const uid = signedInUser?.uid || '';
     const inBtn = document.getElementById('uid_in_btn');
@@ -865,11 +870,10 @@
       room = uid;
       const base = location.href.split('#')[0];
       location.hash = `${mode}:${room}`;
-      return; // hashchange will re-bind
+      return;
     }
   }
 
-  // URLs modal logic
   function computeUrls(){
     const targetRoom = signedInUser?.uid || room;
     const base = location.href.split('#')[0];
@@ -890,7 +894,7 @@
   function closeUrlModal(){ document.getElementById('url_modal').classList.remove('open'); }
   document.getElementById('url_modal_bg').onclick = closeUrlModal;
   document.getElementById('close_modal').onclick = closeUrlModal;
-  addEventListener('keydown', e=>{ if(e.key==='Escape') closeUrlModal(); });
+  addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeUrlModal(); });
   document.getElementById('copy_info').onclick = ()=> copyFrom('url_info');
   document.getElementById('copy_dep').onclick  = ()=> copyFrom('url_dep');
   const cfr = document.getElementById('copy_frame'); if(cfr) cfr.onclick = ()=> copyFrom('url_frame');
@@ -901,7 +905,6 @@
     catch{ el.select(); document.execCommand('copy'); }
   }
 
-  // Auth gate for editor; overlays always subscribe
   function bind(){
     if (mode === 'editor') {
       onAuthStateChanged(auth, (user)=>{
@@ -910,8 +913,7 @@
         ensureUIDRoomAndBadge();
         if (!signedInUser){
           requireAuthUI(true);
-          // --- important: never let splash block the auth screen ---
-          document.body.classList.add('ready');
+          document.body.classList.add('ready'); // why: avoid splash blocking auth
           const s = document.getElementById('inapp-splash');
           if (s) { try { s.remove(); } catch {} }
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
@@ -929,7 +931,6 @@
   }
   bind();
 
-  // Quick jump back to editor with 'e'
   addEventListener('keydown', (e)=>{
     if((mode==='info'||mode==='departures') && (e.key==='e'||e.key==='E')){
       const base=location.href.split('#')[0]; location.href = `${base}#editor:${room}`;
