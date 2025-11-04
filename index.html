@@ -212,7 +212,12 @@
       <div><label>Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
       <div><label>Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
+    
     <div class="grid">
+      <div><label>SimBrief User ID</label><input id="simbrief_userid" placeholder="e.g. 1234567"></div>
+      <div><label>&nbsp;</label><input disabled value="Auto-imports and saves to room"></div>
+    </div>
+<div class="grid">
       <div><label>Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
       <div><label>LIVE</label>
         <select id="live"><option value="on">On</option><option value="off">Off</option></select>
@@ -467,11 +472,11 @@
 
   // Constants
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius"];
+    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius","simbrief_userid"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16" };
+    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16" , simbrief_userid:""};
 
   // Editor binding (only when authed)
   function bindEditor(){
@@ -827,7 +832,7 @@
 </script>
 
 
-<!-- SimBrief import (read-only; no layout changes) -->
+<!-- SimBrief import (read-only; no overlay/layout changes) -->
 <script>
 (function(){
   const BASE = "https://www.simbrief.com/api/xml.fetcher.php";
@@ -921,7 +926,16 @@
     return data;
   }
 
-  window.CrabbyFlightSimbrief = { apply }; // call with: CrabbyFlightSimbrief.apply("USER_ID");
+  window.CrabbyFlightSimbrief = { apply };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    const el = document.getElementById("simbrief_userid");
+    if(el){
+      const handler = ()=>{ const v=(el.value||'').trim(); if(v) { apply(v).catch(console.warn); } };
+      el.addEventListener('change', handler);
+      el.addEventListener('blur', handler);
+    }
+  });
 })();
 </script>
 </body>
