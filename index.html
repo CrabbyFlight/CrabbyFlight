@@ -1,320 +1,811 @@
+<!-- /index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CrabbyFlight — Editor & Overlays</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CrabbyFlight — Live Overlay (Firebase)</title>
 
-  <link rel="icon" type="image/png" sizes="192x192" href="logo192.png">
-  <link rel="apple-touch-icon" href="logo192.png">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1d1f22">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" sizes="32x32" href="logo192.png">
+<link rel="apple-touch-icon" href="logo192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d1f22">
+<meta name="apple-mobile-web-app-title" content="CrabbyFlight">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-  <style>
-    :root { --bg:#0f1115; --fg:#e5e7eb; --muted:#9aa0aa; --brand:#ffd100; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; }
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    header{ display:flex; align-items:center; gap:.75rem; padding:12px 16px; border-bottom:1px solid #1b1e25; position:sticky; top:0; background:rgba(15,17,21,.9); backdrop-filter:saturate(120%) blur(6px); }
-    header img{ height:28px; }
-    header .title{ font-weight:700; letter-spacing:.2px; }
-    header .pill{ margin-left:auto; font-size:12px; padding:4px 8px; border-radius:999px; background:#1b1e25; color:var(--muted); }
-    header .pill.ok{ color:#0a2; }
-    header .pill.warn{ color:#a60; }
-    header .pill.bad{ color:#a00; }
-    main{ padding:16px; max-width:1100px; margin:0 auto; }
-    .grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-    .row{ display:grid; grid-template-columns:180px 1fr; align-items:center; gap:8px; padding:8px 10px; background:#12151b; border:1px solid #1b1e25; border-radius:10px; }
-    input,select,button,textarea{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #252a33; background:#0f131a; color:var(--fg); outline:none; }
-    button.primary{ background:var(--brand); color:#111; border:none; font-weight:700; }
-    .actions{ display:flex; flex-wrap:wrap; gap:10px; margin:12px 0 4px; }
-    .muted{ color:var(--muted); font-size:12px; }
-    .section{ margin-top:16px; padding-top:8px; border-top:1px dashed #1b1e25; }
-    .overlay{ display:none; }
-    body.info .overlay.info,
-    body.departures .overlay.departures,
-    body.frame .overlay.frame{ display:block; }
-    body.editor .editor{ display:block; }
-    .editor{ }
-    .diag{ position:fixed; right:10px; bottom:10px; font-size:12px; padding:6px 10px; background:#11151c; border:1px solid #1b1e25; border-radius:10px; opacity:.9; }
-    .hidden{ display:none; }
-  </style>
+<script>
+  (function () {
+    const raw = (location.hash || '').replace(/^#/, '');
+    const mode = (raw.split(':')[0] || 'editor').toLowerCase();
+    document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
+    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
+      document.documentElement.classList.add('show-splash');
+    }
+  })();
+</script>
 
-  <script>
-    // Set body class early for quick style state
-    (function () {
-      const raw = (location.hash || '').replace(/^#/, '');
-      const mode = (raw.split(':')[0] || 'editor').toLowerCase();
-      document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
-    })();
-  </script>
+<style>
+  :root{
+    --bg:#1d1f22; --panel:#2a2d31; --ink:#f2f3f5; --muted:#b5bcc6; --line:#3a3f46;
+    --brand:#FFD100; --accent:#FFA500; --shadow:0 8px 24px rgba(0,0,0,.28);
+    --radius:14px; --gap:16px;
+  }
+  #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
+  body.editor #screen-editor{display:block}
+  body.info #screen-info{display:block}
+  body.departures #screen-departures{display:block}
+  body.frame #screen-frame{display:block}
+  body.require-auth #screen-editor{display:none!important}
+  body.require-auth #screen-auth{display:block}
+
+  #inapp-splash{position:fixed;inset:0;z-index:9999;display:none;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;transition:opacity .35s ease}
+  .show-splash #inapp-splash{display:flex}
+  #inapp-splash img{width:160px;height:160px;opacity:0;transform:scale(.95);animation:cfLogoPop .45s ease forwards .08s}
+  #inapp-splash .label{margin-top:14px;color:var(--ink);font-weight:600;opacity:.7;letter-spacing:.2px}
+  @keyframes cfLogoPop{to{opacity:1;transform:scale(1)}}
+  body.ready #inapp-splash{opacity:0;pointer-events:none}
+
+  html,body{margin:0;padding:0;height:100%;background:transparent!important;color:var(--ink);
+    font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body.editor{background:var(--bg)!important}
+  body.info,body.departures{background:transparent!important}
+
+  .wrap{max-width:980px;margin:0 auto;padding:28px;background:var(--bg)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0;box-shadow:var(--shadow)}
+  h1{margin:0 0 14px;font-size:26px;font-weight:700;letter-spacing:.2px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:6px 0 6px}
+  input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
+  input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)} /* preset + X + Y */
+  .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  button{border:1px solid #454b54;background:#373c43;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;transition:background .15s ease,transform .02s ease}
+  button:hover{background:#3f454d} button:active{transform:translateY(1px)}
+  .hint{color:var(--muted);font-size:12px}
+  .pill{display:inline-block;padding:4px 10px;font-size:12px;border-radius:999px;background:#31363d;border:1px solid #3f454d}
+  .ok{color:#00d58a} .warn{color:#ffb84d}
+
+  /* Auth */
+  #screen-auth .auth-wrap{max-width:420px;margin:64px auto;padding:0 16px}
+  .auth-logo{display:flex;justify-content:center;margin:4px 0 14px}
+  .auth-logo img{max-width:260px;max-height:120px;object-fit:contain;filter:drop-shadow(0 6px 24px rgba(0,0,0,.25))}
+  .auth-status{font-size:12px;color:#ffb4b4;min-height:18px}
+  .auth-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+
+  /* Info */
+  .container{position:absolute;top:24px;left:24px}
+  .info-box{background:rgba(44,48,54,.62);border:1px solid rgba(61,67,75,.85);border-radius:12px;box-shadow:var(--shadow);color:#fff;font-size:18px;padding:12px 18px;line-height:1.4;display:inline-block;min-width:480px;text-shadow:2px 2px 4px rgba(0,0,0,.9);backdrop-filter:blur(2px)}
+  .plane-icon{vertical-align:middle;margin:0 5px;transform:rotate(90deg);width:16px;height:16px}
+  @keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}100%{transform:scale(1);opacity:1}}
+  @keyframes flashText{0%,50%,100%{opacity:1}25%,75%{opacity:.6}}
+  .live-indicator{display:inline-flex;align-items:center;gap:5px}
+  .live-dot{width:10px;height:10px;background:red;border-radius:50%;display:inline-block;animation:pulse 1s infinite}
+  .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
+  .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
+  .top-row{display:flex;align-items:center;margin-bottom:5px}
+  .airport-info{display:flex;align-items:center;gap:5px}
+  .flight-info{display:flex;align-items:center;gap:8px}
+  .flight-label{color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
+  .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
+  .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
+
+  /* Departures */
+  .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:12px;overflow:hidden;background:#2c3036;border:1px solid #3d434b;box-shadow:var(--shadow)}
+  .header{background:#FFD100;color:#000;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;padding:12px 18px;font-size:22px;position:relative;overflow:hidden}
+  .header svg{width:22px;height:22px}
+  .header::after{content:"";position:absolute;top:0;left:-45%;width:40%;height:100%;background:linear-gradient(120deg, rgba(255,209,0,0) 0%, rgba(255,209,0,.45) 50%, rgba(255,209,0,0) 100%);filter:blur(1px);animation:hdrSweep 4s linear infinite;display:none}
+  body.ready .header::after{display:block}
+  @keyframes hdrSweep{0%{transform:translateX(0)}100%{transform:translateX(250%)}}
+  .table{display:grid;grid-template-columns:96px 1fr 1fr 120px 72px 188px;column-gap:14px;padding:10px 18px 14px;font-size:17px;color:#fff}
+  .th,.tr{display:contents}
+  .th span{color:#cfcfcf;padding:8px 0 6px;border-bottom:1px solid rgba(255,255,255,.20);text-transform:uppercase;font-size:14px;letter-spacing:.8px}
+  .cell{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);min-height:44px;display:flex;align-items:center}
+  .status{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.3px;background:#31363d;border:1px solid #3f454d}
+  .dot{width:8px;height:8px;border-radius:50%;background:#999}
+  .on-time{color:#00ff90}.on-time .dot{background:#00ff90}
+  .boarding{color:#4dd2ff}.boarding .dot{background:#4dd2ff}
+  .delayed{color:#ffb84d}.delayed .dot{background:#ffb84d}
+  .cancelled{color:#ff4d4d}.cancelled .dot{background:#ff4d4d}
+  .sideways{color:#FFA500}.sideways .dot{background:#FFA500}
+  .status.custom{color:#5b9cff}.status.custom .dot{background:#5b9cff}
+  .tr.real{position:relative}
+  .tr.real .cell{background:linear-gradient(90deg,rgba(255,165,0,.12),rgba(255,165,0,0))}
+  .tr.real::before{content:"";position:absolute;left:-25%;top:0;height:100%;width:20%;background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.12), rgba(255,255,255,0));filter:blur(2px);transform:skewX(-8deg);animation:rowSheen 6s linear infinite}
+  @keyframes rowSheen{0%{transform:translateX(0) skewX(-8deg)}100%{transform:translateX(650%) skewX(-8deg)}}
+  .real .flight{color:#FFA500;font-weight:800}
+  .real .from,.real .to{color:#FFA500;font-weight:700}
+  .muted{color:#cfcfcf}
+  .footer{display:flex;justify-content:flex-end;gap:24px;padding:10px 18px 16px;color:#cfcfcf;font-size:16px;white-space:nowrap;text-shadow:2px 2px 4px rgba(0,0,0,.7)}
+  .footer strong{color:#fff}
+
+  /* URLs modal */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center}
+  .modal.open{display:flex}
+  .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  .sheet{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:560px;max-width:92vw;padding:18px 18px 14px;box-shadow:var(--shadow)}
+  .sheet h3{margin:0 0 8px;font-size:20px}
+  .url-row{display:grid;grid-template-columns:84px 1fr auto;gap:10px;align-items:center;margin:10px 0}
+  .url-row code{color:#cfcfcf}
+  .url-row input{height:42px}
+  .modal-actions{display:flex;justify-content:flex-end;margin-top:8px}
+
+  /* FRAME overlay */
+  #screen-frame{z-index:10}
+  .frame-root{position:absolute;inset:0;width:1920px;height:1080px;pointer-events:none}
+  .frame-svg{position:absolute;inset:0;pointer-events:none}
+  .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:12px;display:flex;align-items:center;gap:10px;font-weight:800;padding:8px 12px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);text-shadow:2px 2px 4px rgba(0,0,0,.9)}
+  .frame-logo img{width:22px;height:22px}
+  .embed{position:absolute;transform-origin:top left}
+  .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
+  .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
+</style>
 </head>
-<body class="editor">
-  <header>
-    <img src="logo192.png" alt="CF">
-    <div class="title">CrabbyFlight</div>
-    <div id="net_badge" class="pill">Status: …</div>
-  </header>
+<body>
 
-  <main>
-    <div class="editor">
-      <div class="actions">
-        <button id="openInfo">Open Info</button>
-        <button id="openDep">Open Departures</button>
-        <button id="openFrame">Open Frame</button>
-        <button id="copyUrls">Copy URLs</button>
-        <button id="btn_signout">Sign out</button>
+<div id="inapp-splash" aria-hidden="true">
+  <img src="logo192.png" alt="CrabbyFlight">
+  <div class="label">CrabbyFlight</div>
+</div>
+
+<!-- AUTH -->
+<div id="screen-auth">
+  <div class="auth-wrap">
+    <div class="card" style="text-align:center">
+      <div class="auth-logo">
+        <img src="logo.png" alt="CrabbyFlight" onerror="this.onerror=null; this.src='logo192.png'">
       </div>
-
-      <div class="grid">
-        <div class="row"><label for="from">From</label><input id="from" placeholder="Oslo (ENGM)"></div>
-        <div class="row"><label for="to">To</label><input id="to" placeholder="Liverpool (EGGP)"></div>
-        <div class="row"><label for="flight">Flight</label><input id="flight" placeholder="POR9392"></div>
-        <div class="row"><label for="callsign">Callsign</label><input id="callsign" placeholder="WALL13"></div>
-        <div class="row"><label for="gate">Gate</label><input id="gate" placeholder="B12"></div>
-        <div class="row"><label for="status">Status</label>
-          <select id="status">
-            <option value="on-time">on-time</option>
-            <option value="boarding">boarding</option>
-            <option value="delayed">delayed</option>
-            <option value="cancelled">cancelled</option>
-            <option value="custom">custom</option>
-          </select>
-        </div>
-        <div id="customRow" class="row"><label for="status_custom">Custom</label><input id="status_custom" placeholder="e.g. crew rest"></div>
-        <div class="row"><label for="dep_utc">Dep (UTC)</label><input id="dep_utc" placeholder="14:30 UTC"></div>
-        <div class="row"><label for="arr_utc">Arr (UTC)</label><input id="arr_utc" placeholder="16:30 UTC"></div>
-        <div class="row"><label for="aircraft">Aircraft</label><input id="aircraft" placeholder="A320neo"></div>
-        <div class="row"><label for="cruise">Cruise</label><input id="cruise" placeholder="35,000ft"></div>
-        <div class="row"><label for="enroute">Enroute</label><input id="enroute" placeholder="~2hrs"></div>
-        <div class="row"><label for="live">Live</label><input id="live" placeholder="on"></div>
-        <div class="row"><label for="wcPreset">Preset</label>
-          <select id="wcPreset">
-            <option>1920x1080</option><option selected>1280x720</option><option>960x540</option>
-            <option>640x480</option><option>352x288</option><option>320x240</option>
-          </select>
-        </div>
-        <div class="row"><label for="wcX">Crop X</label><input id="wcX" value="32"></div>
-        <div class="row"><label for="wcY">Crop Y</label><input id="wcY" value="700"></div>
-        <div class="row"><label for="wcW">Crop W</label><input id="wcW" value="1280"></div>
-        <div class="row"><label for="wcH">Crop H</label><input id="wcH" value="720"></div>
-        <div class="row"><label for="wcBorderColor">Border</label><input id="wcBorderColor" value="#FFD100"></div>
-        <div class="row"><label for="wcBorderWidth">Border px</label><input id="wcBorderWidth" value="6"></div>
+      <label for="auth_email">Email</label><input id="auth_email" type="email" inputmode="email" autocomplete="username" placeholder="you@example.com">
+      <label for="auth_password">Password</label><input id="auth_password" type="password" autocomplete="current-password" placeholder="••••••••">
+      <div class="auth-actions">
+        <button id="btn_signin" type="button">Sign in</button>
+        <button id="btn_signup" type="button" title="Create an account for yourself">Sign up</button>
       </div>
+      <div class="auth-status" id="auth_status" role="status" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <span class="pill" id="net_badge">Status: checking…</span>
+    </div>
+  </div>
+</div>
 
-      <p class="muted section">Use the buttons above to open overlay views, or copy links for OBS.</p>
-      <div id="url_modal" class="section">
-        <div class="row"><label>Info URL</label><input id="url_info" readonly><button id="copy_info">Copy</button></div>
-        <div class="row"><label>Departures URL</label><input id="url_dep" readonly><button id="copy_dep">Copy</button></div>
-        <div class="row"><label>Frame URL</label><input id="url_frame" readonly><button id="copy_frame">Copy</button></div>
-      </div>
-
-      <div id="auth" class="section">
-        <div class="row"><label for="auth_email">Email</label><input id="auth_email" autocomplete="username" inputmode="email"></div>
-        <div class="row"><label for="auth_password">Password</label><input id="auth_password" type="password" autocomplete="current-password"></div>
-        <div class="actions">
-          <button id="btn_signin" class="primary">Sign in</button>
-          <button id="btn_signup">Create account</button>
-          <span id="auth_status" class="muted"></span>
-        </div>
+<!-- EDITOR -->
+<div id="screen-editor" class="wrap">
+  <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
+  <div class="card">
+    <div class="grid">
+      <div><label for="from">From</label><input id="from" placeholder="Oslo (ENGM)"></div>
+      <div><label for="to">To</label><input id="to" placeholder="Liverpool (EGGP)"></div>
+    </div>
+    <div class="grid">
+      <div><label for="flight">Flight</label><input id="flight" placeholder="POR9392"></div>
+      <div><label for="callsign">Callsign</label><input id="callsign" placeholder="WALL13"></div>
+    </div>
+    <div class="grid">
+      <div><label for="gate">Gate (Departures)</label><input id="gate" placeholder="B12"></div>
+      <div>
+        <label for="status">Status (Departures)</label>
+        <select id="status">
+          <option value="on-time">ON TIME</option>
+          <option value="boarding">BOARDING</option>
+          <option value="delayed">DELAYED</option>
+          <option value="cancelled">CANCELLED</option>
+          <option value="sideways">SIDEWAYS</option>
+          <option value="custom">Custom…</option>
+        </select>
       </div>
     </div>
 
-    <div class="overlay info"><h2>Info Overlay</h2><p class="muted">Connected to live data…</p></div>
-    <div class="overlay departures"><h2>Departures Overlay</h2><p class="muted">Connected to live data…</p></div>
-    <div class="overlay frame"><h2>Frame Overlay</h2><p class="muted">Connected to live data…</p></div>
-  </main>
+    <div class="grid" id="customRow" style="display:none">
+      <div><label for="status_custom">Custom status text</label><input id="status_custom" placeholder="e.g. DIVERTED TO EDI"></div>
+      <div><label>&nbsp;</label><input disabled value="Shown on the board as blue badge"></div>
+    </div>
 
-  <div id="diag" class="diag hidden"></div>
+    <div class="grid">
+      <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
+      <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
+    </div>
+    <div class="grid">
+      <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
+      <div><label for="cruise">Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
+    </div>
+    <div class="grid">
+      <div><label for="enroute">Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
+      <div>
+        <label for="live">LIVE</label>
+        <select id="live"><option value="on">On</option><option value="off">Off</option></select>
+      </div>
+    </div>
 
-  <script type="module">
-    // --- Firebase ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
-      authDomain: "crabbyflight.firebaseapp.com",
-      databaseURL: "https://crabbyflight-default-rtdb.firebaseio.com",
-      projectId: "crabbyflight",
-      storageBucket: "crabbyflight.firebasestorage.app",
-      messagingSenderId: "741648861487",
-      appId: "1:741648861487:web:583ec0887f5ac3dce079da",
-      measurementId: "G-8PZNG3Y1CE"
-    };
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-    import {
-      getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-      createUserWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    <!-- Frame (Webcam) Settings -->
+    <div class="card" style="margin-top:10px">
+      <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
 
-    const app  = initializeApp(firebaseConfig);
-    const db   = getDatabase(app);
-    const auth = getAuth(app);
+      <!-- Preset + X + Y on the same line -->
+      <div class="grid-3">
+        <div>
+          <label for="wcPreset">Webcam Size</label>
+          <select id="wcPreset">
+            <option value="1920x1080">1920×1080</option>
+            <option value="1280x720">1280×720</option>
+            <option value="960x540">960×540</option>
+            <option value="640x480">640×480</option>
+            <option value="352x288">352×288</option>
+            <option value="320x240">320×240</option>
+          </select>
+        </div>
+        <div><label for="wcX">Webcam X</label><input id="wcX" type="number" placeholder="32"></div>
+        <div><label for="wcY">Webcam Y</label><input id="wcY" type="number" placeholder="700"></div>
+      </div>
 
-    // --- Hash & room parsing ---
-    const LS_KEY = 'cf:lastRoom';
-    function initialHash() {
-      if (location.hash) return;
-      const stored = localStorage.getItem(LS_KEY);
-      location.replace(`#editor:${stored || 'me'}`);
-    }
-    initialHash();
+      <!-- Hidden width/height (kept for data binding) -->
+      <input id="wcW" type="hidden" value="1280">
+      <input id="wcH" type="hidden" value="720">
 
-    function parseHash(){
-      const raw = (location.hash||'').replace(/^#/, '');
-      const [mode, room] = raw.split(':');
-      return { mode: (mode||'editor').toLowerCase(), room: room||'me' };
-    }
-    let { mode, room } = parseHash();
-    function applyMode(){
-      document.body.classList.remove('editor','info','departures','frame');
-      document.body.classList.add(mode);
-    }
+      <div class="grid">
+        <div><label for="wcBorderColor">Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
+        <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
+      </div>
+      <div class="grid">
+        <div><label>Rounded mask (fixed 16px)</label></div>
+        <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button id="openInfo" type="button">Open Info</button>
+      <button id="openDep" type="button">Open Departures</button>
+      <button id="openFrame" type="button">Open Frame</button>
+      <button id="copyUrls" type="button" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
+      <button id="btn_signout" type="button" style="margin-left:auto">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- INFO OVERLAY -->
+<div id="screen-info" class="container">
+  <div class="info-box">
+    <div class="top-row">
+      <div class="airport-info">
+        <span class="dynamic" id="i_from">Oslo (ENGM)</span>
+        <svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
+        <span class="dynamic" id="i_to">Liverpool (EGGP)</span>
+      </div>
+      <span class="separator-diamond"></span>
+      <div class="flight-info">
+        <span class="flight-label">Flight:</span> <span class="dynamic" id="i_flight">POR9392</span> |
+        <span class="flight-label">Callsign:</span> <span class="dynamic" id="i_callsign">WALL13</span>
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320neo</span> |
+      <strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span> |
+      Time en route: <span class="dynamic" id="i_enroute">~2hrs</span>
+    </div>
+
+    <div class="bottom-row" style="margin-top:3px; gap:10px;">
+      <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
+      1080p30FPS | macOS + OneCast
+    </div>
+  </div>
+</div>
+
+<!-- DEPARTURES OVERLAY -->
+<div id="screen-departures" class="board" aria-live="polite">
+  <div class="header">
+    <svg viewBox="0 0 24 24" fill="black" aria-hidden="true"><path d="M2.5 19h19v2h-19zM3.87 9.91l4.12 1.28 4.75-4.89 1.88.59-2.91 6.83 7.23 2.25c.53.17.87.64.87 1.2 0 .82-.79 1.41-1.17 1.17L.69 12.38l.53-1.96 2.65-.51z"/></svg>
+    DEPARTURES
+  </div>
+
+  <div class="table">
+    <div class="th">
+      <span>Time</span><span>From</span><span>To</span><span>Flight</span><span>Gate</span><span>Status</span>
+    </div>
+
+    <div class="tr">
+      <div class="cell">13:55</div><div class="cell">Springfield (SPFD)</div><div class="cell">Shelbyville (SHBY)</div><div class="cell">SPF101</div><div class="cell">A07</div>
+      <div class="cell"><span class="status on-time"><span class="dot"></span>ON TIME</span></div>
+    </div>
+    <div class="tr">
+      <div class="cell">14:05</div><div class="cell">Gotham (GTHM)</div><div class="cell">Metropolis (MTRP)</div><div class="cell">BAT247</div><div class="cell">C03</div>
+      <div class="cell"><span class="status delayed"><span class="dot"></span>DELAYED 12 MIN</span></div>
+    </div>
+
+    <div class="tr real">
+      <div class="cell" id="d_time">14:30</div>
+      <div class="cell from" id="d_from">Oslo (ENGM)</div>
+      <div class="cell to" id="d_to">Liverpool (EGGP)</div>
+      <div class="cell flight" id="d_flight">POR9392</div>
+      <div class="cell gate" id="d_gate">B12</div>
+      <div class="cell">
+        <span class="status on-time" id="d_status"><span class="dot"></span><span id="d_status_text">ON TIME</span></span>
+      </div>
+    </div>
+
+    <div class="tr">
+      <div class="cell">15:10</div><div class="cell">Area 51 (????)</div><div class="cell">Roswell (RSWL)</div><div class="cell">UFO001</div><div class="cell">X99</div>
+      <div class="cell"><span class="status boarding"><span class="dot"></span>BOARDING</span></div>
+    </div>
+    <div class="tr">
+      <div class="cell">15:25</div><div class="cell">Atlantis (ATLS)</div><div class="cell">Bermuda (BRMD)</div><div class="cell">SEA404</div><div class="cell">D21</div>
+      <div class="cell"><span class="status cancelled"><span class="dot"></span>CANCELLED</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div><span class="muted">Time en route:</span> <strong id="d_enroute">~2 hrs</strong></div>
+    <div><span class="muted">Departure:</span> <strong id="d_dep">14:30 UTC</strong></div>
+    <div><span class="muted">Arrival:</span> <strong id="d_arr">16:30 UTC</strong></div>
+  </div>
+</div>
+
+<!-- FRAME OVERLAY -->
+<div id="screen-frame" class="frame-root" aria-hidden="false">
+  <svg class="frame-svg" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <defs>
+      <mask id="matteMask">
+        <rect x="0" y="0" width="1920" height="1080" fill="white"/>
+        <rect id="hole" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="black"/>
+      </mask>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#FFD100"/><stop offset=".5" stop-color="#FFA500"/><stop offset="1" stop-color="#FFD100"/>
+      </linearGradient>
+    </defs>
+    <rect id="matteRect" x="0" y="0" width="1920" height="1080" fill="#1d1f22" mask="url(#matteMask)"/>
+    <rect id="borderRect" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="none" stroke="url(#g)" stroke-width="8"/>
+    <rect id="hairRect"   x="26" y="48" width="1868" height="1006" rx="22" ry="22" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2"/>
+  </svg>
+
+  <div class="frame-logo" id="frame_logo">
+    <img src="logo192.png" alt=""><span>CrabbyFlight</span>
+  </div>
+
+  <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px"></div>
+
+  <div id="embed_info" class="embed info" style="left:32px;top:80px;transform:scale(1)">
+    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
+  </div>
+</div>
+
+<!-- URLs Modal -->
+<div id="url_modal" class="modal" aria-hidden="true">
+  <div class="backdrop" id="url_modal_bg"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="url_title">
+    <h3 id="url_title">Your OBS overlay URLs</h3>
+    <div class="url-row">
+      <code>Info</code>
+      <input id="url_info" readonly>
+      <button id="copy_info" type="button">Copy</button>
+    </div>
+    <div class="url-row">
+      <code>Departures</code>
+      <input id="url_dep" readonly>
+      <button id="copy_dep" type="button">Copy</button>
+    </div>
+    <div class="url-row">
+      <code>Frame</code>
+      <input id="url_frame" readonly>
+      <button id="copy_frame" type="button">Copy</button>
+    </div>
+    <div class="modal-actions">
+      <button id="close_modal" type="button">Close</button>
+    </div>
+    <div class="hint">Tip: you can add <code>?x</code>, <code>?y</code>, <code>?scale</code> to these in OBS.</div>
+  </div>
+</div>
+
+<script type="module">
+  (function cleanupLegacyFrame(){
+    try{
+      document.querySelectorAll('#frame-toggle, #frame-banner').forEach(n=>n.remove());
+      const frames = document.querySelectorAll('#screen-frame');
+      if (frames.length > 1){ frames.forEach((n,i)=>{ if(i>0) n.remove(); }); }
+    }catch(e){}
+  })();
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
+    authDomain: "crabbyflight.firebaseapp.com",
+    databaseURL: "https://crabbyflight-default-rtdb.firebaseio.com",
+    projectId: "crabbyflight",
+    storageBucket: "crabbyflight.firebasestorage.app",
+    messagingSenderId: "741648861487",
+    appId: "1:741648861487:web:583ec0887f5ac3dce079da",
+    measurementId: "G-8PZNG3Y1CE"
+  };
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+  const auth = getAuth(app);
+
+  if (!location.hash) location.replace('#editor:crabroom');
+  function parseHash(){
+    const raw = (location.hash||'').replace(/^#/, '');
+    const [mode, room] = raw.split(':');
+    return { mode: (mode||'editor').toLowerCase(), room: room||'crabroom' };
+  }
+  let { mode, room } = parseHash();
+  function applyMode(){
+    document.body.classList.remove('editor','info','departures','frame');
+    document.body.classList.add(mode);
+  }
+  applyMode();
+
+  let dbUnsub = null;
+  let firstPaint = false;
+  let editorBound = false;
+  let signedInUser = null;
+  let canSave = false; // why: prevent overwriting DB on first load
+
+  addEventListener('hashchange', ()=>{
+    ({mode, room}=parseHash());
+    document.body.classList.remove('ready','require-auth');
+    firstPaint = false;
+    canSave = false;
     applyMode();
+    bind();
+  });
 
-    let signedInUser = null;
-    const resolveRoom = () => (room === 'me' ? (signedInUser?.uid || null) : room);
+  // Include wcPreset so the user's choice persists
+  const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
+  const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
+    status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
+    aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
 
-    addEventListener('hashchange', ()=>{
-      ({mode, room}=parseHash());
-      localStorage.setItem(LS_KEY, room);
-      applyMode();
-      subscribe();
-      renderDiag();
-    });
+  function bindEditor(){
+    if (editorBound) return;
+    editorBound = true;
 
-    // --- Fields ---
-    const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-      "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
-    const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
-      status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-      aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-      wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
+    const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
+    const statusEl = els['status'];
+    const customRow = document.getElementById('customRow');
 
-    // --- Editor binding ---
-    let canSave=false, editorBound=false, dbUnsub=null;
-    function byId(id){ return document.getElementById(id); }
-    function setStatus(msg){ const el=byId('auth_status'); if(el) el.textContent=msg||''; }
+    function read(){
+      const d={};
+      for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); }
+      return d;
+    }
 
-    function bindEditor(){
-      if (editorBound) return;
-      editorBound = true;
-      const els = Object.fromEntries(FIELDS.map(id=>[id, byId(id)]));
+    let t=null; // debounce saves
+    function save(){
+      if (!signedInUser || !canSave) return;
+      clearTimeout(t);
+      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
+    }
+    for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
 
-      function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
+    function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
+    if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
 
-      let t=null;
-      function save(){
-        if (!signedInUser || !canSave) return;
-        const r = resolveRoom(); if (!r) return;
-        clearTimeout(t);
-        t = setTimeout(()=> set(ref(db, `rooms/${r}`), read()).catch(e=>setStatus(e.message)), 150);
+    (function initWcPreset(){
+      const preset = document.getElementById('wcPreset');
+      const w = els['wcW'], h = els['wcH'];
+      if (!preset || !w || !h) return;
+
+      const MAP = {
+        "1920x1080":[1920,1080],
+        "1280x720":[1280,720],
+        "960x540":[960,540],
+        "640x480":[640,480],
+        "352x288":[352,288],
+        "320x240":[320,240]
+      };
+
+      function setWH(pVal){
+        const pair = MAP[pVal];
+        if (!pair) return;
+        const [pw,ph]=pair;
+        w.value=pw; h.value=ph;
+        // trigger save when allowed
+        w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
       }
-      for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input',save); el.addEventListener('change',save); }
 
-      const statusEl = els['status']; const customRow = byId('customRow');
-      function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
-      if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
+      function updatePresetFromWH(){
+        const key = `${w.value}x${h.value}`;
+        if (MAP[key]) preset.value = key;
+      }
 
-      byId('openInfo').onclick = ()=> window.open(computeUrls().info, '_blank','noopener');
-      byId('openDep').onclick  = ()=> window.open(computeUrls().dep, '_blank','noopener');
-      byId('openFrame').onclick= ()=> window.open(computeUrls().frame, '_blank','noopener');
-      byId('copyUrls').onclick = ()=> openUrlModal();
-      byId('btn_signout').onclick = ()=> signOut(auth).catch(e=>setStatus(e.message));
-      byId('copy_info').onclick = ()=> copyFrom('url_info');
-      byId('copy_dep').onclick  = ()=> copyFrom('url_dep');
-      byId('copy_frame').onclick= ()=> copyFrom('url_frame');
-    }
+      preset.addEventListener('change', ()=>{
+        els['wcPreset'].value = preset.value;
+        setWH(preset.value);
+      });
 
-    async function copyFrom(id){
-      const el=byId(id); if(!el) return;
-      try{ await navigator.clipboard.writeText(el.value); }catch{ el.select(); document.execCommand('copy'); }
-    }
+      Object.assign(initWcPreset, {updatePresetFromWH});
+    })();
 
-    function computeUrls(){
-      const r = resolveRoom();
-      const base = location.href.split('#')[0];
-      const qs = location.search || '';
-      return {
-        info: `${base}#info:${r}${qs}`,
-        dep:  `${base}#departures:${r}${qs}`,
-        frame:`${base}#frame:${r}${qs}`
-      };
-    }
+    // ===== NEW: BUTTON BINDINGS =====
+    const byId = (id)=>document.getElementById(id);
+    const openInNew = (url)=> window.open(url, '_blank', 'noopener');
 
-    function openUrlModal(){
-      const urls = computeUrls();
-      byId('url_info').value = urls.info;
-      byId('url_dep').value  = urls.dep;
-      byId('url_frame').value= urls.frame;
-    }
+    const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.onclick = fn; };
 
-    // --- Subscribe & render ---
-    function subscribe(){
-      if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
-      const r = resolveRoom();
-      if (!r) { setStatus('Sign in to resolve room “me”.'); return; }
-      dbUnsub = onValue(ref(db, `rooms/${r}`), snap=>{
-        const data = snap.val() || DEFAULTS;
-        if (mode==='editor'){
-          for(const k of FIELDS){ const el=byId(k); if(el && typeof data[k] !== 'undefined') el.value = data[k]; }
-          canSave = true;
-          const urls = computeUrls();
-          byId('url_info').value = urls.info;
-          byId('url_dep').value  = urls.dep;
-          byId('url_frame').value= urls.frame;
+    bindIf('openInfo',  ()=> openInNew(computeUrls().info));   // why: open overlay route in new tab
+    bindIf('openDep',   ()=> openInNew(computeUrls().dep));
+    bindIf('openFrame', ()=> openInNew(computeUrls().frame));
+    bindIf('copyUrls',  ()=> openUrlModal());
+    bindIf('btn_signout', ()=> signOut(auth).catch(e=>setStatus(e.message)));
+    bindIf('btn_download_mask', ()=>{
+      // why: generate rounded-rect alpha mask matching 16px radius
+      const w=512, h=512, r=16*2; // scale up slightly for better edges
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      const ctx=c.getContext('2d');
+      ctx.fillStyle='black'; ctx.fillRect(0,0,w,h);
+      ctx.save();
+      ctx.globalCompositeOperation='destination-out';
+      const pad=32;
+      const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
+      const rr=16*2;
+      ctx.beginPath();
+      // rounded rect path
+      ctx.moveTo(rx+rr, ry);
+      ctx.arcTo(rx+rw, ry, rx+rw, ry+rh, rr);
+      ctx.arcTo(rx+rw, ry+rh, rx, ry+rh, rr);
+      ctx.arcTo(rx, ry+rh, rx, ry, rr);
+      ctx.arcTo(rx, ry, rx+rw, ry, rr);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      const a=document.createElement('a');
+      a.href=c.toDataURL('image/png');
+      a.download='crabbyflight-rounded-mask.png';
+      a.click();
+    });
+    // ===== END NEW: BUTTON BINDINGS =====
+  }
+
+  function renderInfo(d){
+    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    setT('i_from',v('from',DEFAULTS.from)); setT('i_to',v('to',DEFAULTS.to));
+    setT('i_flight',v('flight',DEFAULTS.flight)); setT('i_callsign',v('callsign',DEFAULTS.callsign));
+    setT('i_aircraft',v('aircraft',DEFAULTS.aircraft)); setT('i_cruise',v('cruise',DEFAULTS.cruise)); setT('i_enroute',v('enroute',DEFAULTS.enroute));
+    const live = v('live','on')==='on'; const blk=document.getElementById('i_live_block'); if(blk) blk.style.display = live?'inline-flex':'none';
+  }
+  function renderDepartures(d){
+    const v=(k,def='')=>(d?.[k]||'').trim()||def;
+    const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    setT('d_from',v('from',DEFAULTS.from)); setT('d_to',v('to',DEFAULTS.to));
+    setT('d_flight',v('flight',DEFAULTS.flight)); setT('d_gate',v('gate',DEFAULTS.gate));
+    setT('d_dep',v('dep_utc',DEFAULTS.dep_utc)); setT('d_arr',v('arr_utc',DEFAULTS.arr_utc)); setT('d_enroute',v('enroute',DEFAULTS.enroute));
+    setT('d_time',v('dep_utc',DEFAULTS.dep_utc).replace(' UTC',''));
+
+    const st=v('status','on-time'); const node=document.getElementById('d_status');
+    if(st==='custom'){ if(node) node.className='status custom'; const txt=v('status_custom','STATUS');
+      const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=txt; return; }
+    const labels={ 'on-time':'ON TIME','boarding':'BOARDING','delayed':'DELAYED','cancelled':'CANCELLED','sideways':'SIDEWAYS' };
+    if(node) node.className='status '+st;
+    const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=labels[st]||st.toUpperCase();
+  }
+
+  function renderFrame(d){
+    const v=(k,def)=>{ const raw=(d?.[k]??"").toString().trim(); return raw===''?def:raw; };
+    const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
+    const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',1280), wcH=num('wcH',720);
+    const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
+
+    const usp=new URLSearchParams(location.search);
+    const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
+    const orStr=(k,cur)=> usp.get(k) ?? cur;
+    const pad = orNum('pad',16), topH = orNum('topH',22), logoGap = orNum('logoGap',18);
+    const matte = orStr('matte','#1d1f22');
+
+    const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
+    const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
+    const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
+    [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
+    if(matteRect) matteRect.setAttribute('fill', matte);
+    if(borderRect) { const bc = usp.get('bCol') || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); }
+
+    const lg=document.getElementById('frame_logo');
+    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
+
+    const wc=document.getElementById('wc');
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.outlineColor=bCol; wc.style.outlineWidth=bTh+'px'; wc.style.borderRadius='16px'; }
+
+    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
+    if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; }
+    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+  }
+
+  function subscribe(){
+    if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
+    const r = ref(db, `rooms/${room}`);
+    dbUnsub = onValue(r, snap=>{
+      const data = snap.val() || DEFAULTS;
+
+      if (mode==='info') renderInfo(data);
+      if (mode==='departures') renderDepartures(data);
+      if (mode==='frame') renderFrame(data);
+
+      if (mode==='editor') {
+        // populate fields from DB
+        for(const k of FIELDS){
+          const el=document.getElementById(k);
+          if(!el) continue;
+          const val = (typeof data[k]==='string') ? data[k] : DEFAULTS[k];
+          if (typeof val !== 'undefined') el.value = val;
         }
-        renderDiag();
-      }, err=> setStatus(err.message));
+        // sync preset dropdown to DB or current W×H
+        const presetEl = document.getElementById('wcPreset');
+        const wEl = document.getElementById('wcW'); const hEl = document.getElementById('wcH');
+        const savedPreset = data.wcPreset;
+        const key = `${wEl?.value||''}x${hEl?.value||''}`;
+        if (presetEl){
+          presetEl.value = savedPreset || key;
+          if (![...presetEl.options].some(o=>o.value===presetEl.value)) presetEl.value = key;
+          const presetHidden = document.getElementById('wcPreset');
+          if (presetHidden) presetHidden.value = presetEl.value;
+        }
+
+        const statusEl=document.getElementById('status');
+        const customRow=document.getElementById('customRow');
+        if(statusEl && customRow) customRow.style.display = (statusEl.value==='custom') ? 'grid':'none';
+      }
+
+      if (!firstPaint) {
+        document.body.classList.add('ready');
+        firstPaint = true;
+        canSave = true; // allow saves only after first snapshot
+        const s = document.getElementById('inapp-splash');
+        if (s) setTimeout(()=>{ s.remove(); }, 400);
+      }
+    }, err=>{
+      setStatus(`Live data failed: ${err.message}`);
+    });
+  }
+
+  function applyOverlayOptions(){
+    const usp=new URLSearchParams(location.search);
+    const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
+    const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
+      if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
+    if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
+    if (mode==='departures') place(document.getElementById('screen-departures'));
+    if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
+      document.querySelectorAll('.table .tr').forEach(tr=>{ if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')) tr.style.display='none'; });
     }
 
-    // --- Overlay placeholders (your existing DOM renderers can replace these) ---
-    function renderDiag(){
-      const el = byId('diag');
-      const r = resolveRoom();
-      el.innerHTML = `mode=${mode} · room=${room} · resolved=${r||'∅'} · ${signedInUser?'auth:yes':'auth:no'}`;
-      el.classList.remove('hidden');
-    }
+    if (mode==='frame'){
+      const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
+      const pad=getNum('pad',16);
+      const topH=getNum('topH',22);
+      const logoGap=getNum('logoGap',18);
+      const matte= usp.get('matte') || '#1d1f22';
 
-    // --- Auth ---
-    function bindAuthUI(){
-      byId('btn_signin').onclick = async ()=>{
-        setStatus('');
-        try { await signInWithEmailAndPassword(auth, (byId('auth_email').value||'').trim(), byId('auth_password').value||''); }
-        catch(e){ setStatus(e.message); }
-      };
-      byId('btn_signup').onclick = async ()=>{
-        setStatus('');
-        try { await createUserWithEmailAndPassword(auth, (byId('auth_email').value||'').trim(), byId('auth_password').value||''); }
-        catch(e){ setStatus(e.message); }
-      };
-    }
-    bindAuthUI();
+      const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
+      const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
+      const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
+      [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
+      if(matteRect) matteRect.setAttribute('fill', matte);
 
-    function updateNetBadge(){
-      const b = byId('net_badge');
-      if (navigator.onLine){ b.textContent='Status: online'; b.className='pill ok'; }
-      else { b.textContent='Status: offline (changes won’t sync)'; b.className='pill warn'; }
-    }
-    addEventListener('online',  updateNetBadge);
-    addEventListener('offline', updateNetBadge);
-    updateNetBadge();
+      const lg=document.getElementById('frame_logo');
+      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
 
-    async function boot(){
-      try { await setPersistence(auth, browserLocalPersistence); } catch {}
+      const wc=document.getElementById('wc');
+      const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
+      if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; }
+
+      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; }
+      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+    }
+  }
+
+  function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
+  function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
+
+  function bindAuthUI(){
+    const emailEl = document.getElementById('auth_email');
+    const passEl  = document.getElementById('auth_password');
+    document.getElementById('btn_signin').onclick = async ()=>{
+      setStatus(''); try { await signInWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
+      catch(e){ setStatus(e.message); }
+    };
+    document.getElementById('btn_signup').onclick = async ()=>{
+      setStatus(''); try { await createUserWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
+      catch(e){ setStatus(e.message); }
+    };
+  }
+  bindAuthUI();
+
+  function updateNetBadge(){
+    const b = document.getElementById('net_badge');
+    if(!b) return;
+    if (navigator.onLine){ b.textContent='Status: online'; b.className='pill ok'; }
+    else { b.textContent='Status: offline (changes won’t sync)'; b.className='pill warn'; }
+  }
+  addEventListener('online',  updateNetBadge);
+  addEventListener('offline', updateNetBadge);
+  updateNetBadge();
+
+  function ensureUIDRoomAndBadge(){
+    const uid = signedInUser?.uid || '';
+    const inBtn = document.getElementById('uid_in_btn');
+    if (inBtn) inBtn.textContent = uid || '—';
+    const placeholder = !room || room === 'crabroom' || room === 'me';
+    if (uid && placeholder){
+      room = uid;
+      const base = location.href.split('#')[0];
+      location.hash = `${mode}:${room}`;
+      return;
+    }
+  }
+
+  function computeUrls(){
+    const targetRoom = signedInUser?.uid || room;
+    const base = location.href.split('#')[0];
+    const qs = location.search || '';
+    return {
+      info: `${base}#info:${targetRoom}${qs}`,
+      dep:  `${base}#departures:${targetRoom}${qs}`,
+      frame:`${base}#frame:${targetRoom}${qs}`
+    };
+  }
+  function openUrlModal(){
+    const urls = computeUrls();
+    document.getElementById('url_info').value = urls.info;
+    document.getElementById('url_dep').value  = urls.dep;
+    const uf = document.getElementById('url_frame'); if(uf) uf.value = urls.frame;
+    document.getElementById('url_modal').classList.add('open');
+  }
+  function closeUrlModal(){ document.getElementById('url_modal').classList.remove('open'); }
+  document.getElementById('url_modal_bg').onclick = closeUrlModal;
+  document.getElementById('close_modal').onclick = closeUrlModal;
+  addEventListener('keydown', e=>{ if(e.key==='Escape') closeUrlModal(); });
+  document.getElementById('copy_info').onclick = ()=> copyFrom('url_info');
+  document.getElementById('copy_dep').onclick  = ()=> copyFrom('url_dep');
+  const cfr = document.getElementById('copy_frame'); if(cfr) cfr.onclick = ()=> copyFrom('url_frame');
+  async function copyFrom(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    try{ await navigator.clipboard.writeText(el.value); el.nextElementSibling?.classList.add('ok'); setTimeout(()=>el.nextElementSibling?.classList.remove('ok'),800); }
+    catch{ el.select(); document.execCommand('copy'); }
+  }
+
+  function bind(){
+    if (mode === 'editor') {
       onAuthStateChanged(auth, (user)=>{
         signedInUser = user || null;
-        if (mode==='editor'){ bindEditor(); }
-        subscribe();
-        renderDiag();
-      });
-      addEventListener('keydown', (e)=>{
-        if((mode==='info'||mode==='departures') && (e.key==='e'||e.key==='E')){
-          const base=location.href.split('#')[0]; location.href = `${base}#editor:${room}`;
+        editorBound = false;
+        canSave = false;
+        ensureUIDRoomAndBadge();
+        if (!signedInUser){
+          requireAuthUI(true);
+          document.body.classList.add('ready');
+          const s = document.getElementById('inapp-splash');
+          if (s) { try { s.remove(); } catch {} }
+          if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
+        } else {
+          requireAuthUI(false);
+          bindEditor();        // now wires buttons
+          subscribe();
         }
+        applyOverlayOptions();
       });
+    } else {
+      subscribe();
+      applyOverlayOptions();
     }
-    boot();
-  </script>
+  }
+  bind();
+
+  addEventListener('keydown', (e)=>{
+    if((mode==='info'||mode==='departures') && (e.key==='e'||e.key==='E')){
+      const base=location.href.split('#')[0]; location.href = `${base}#editor:${room}`;
+    }
+  });
+
+  if (mode === 'editor') { try { history.replaceState(null, '', '/'); } catch (e) {} }
+</script>
+
 </body>
 </html>
