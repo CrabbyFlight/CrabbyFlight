@@ -252,6 +252,11 @@
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
       </div>
     </div>
+    <div class="grid">
+      <div><label for="simbrief_pid">SimBrief Pilot ID</label><input id="simbrief_pid" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="123456"></div>
+      <div><label>&nbsp;</label><button type="button" id="simbrief_import_btn">Import from SimBrief</button></div>
+    </div>
+
 
     <div class="btns">
       <button id="openInfo" type="button">Open Info</button>
@@ -416,7 +421,7 @@
     measurementId: "G-8PZNG3Y1CE"
   };
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+  import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
   const app = initializeApp(firebaseConfig);
@@ -430,7 +435,6 @@
     return { mode: (mode||'editor').toLowerCase(), room: room||'crabroom' };
   }
   let { mode, room } = parseHash();
-  try { if (room) localStorage.setItem('lastRoom', room); } catch {}
   function applyMode(){
     document.body.classList.remove('editor','info','departures','frame');
     document.body.classList.add(mode);
@@ -735,7 +739,6 @@
     const placeholder = !room || room === 'crabroom' || room === 'me';
     if (uid && placeholder){
       room = uid;
-      try { localStorage.setItem('lastRoom', room); } catch {}
       const base = location.href.split('#')[0];
       location.hash = `${mode}:${room}`;
       return;
@@ -882,11 +885,131 @@
     onAuthStateChanged(auth, (user) => {
       if (user?.uid && user.uid !== resolvedRoom) {
         adoptRoom(user.uid);
-
+      } else if (!user && !resolvedRoom) {
+        // No user: keep hash mode, no room suffix.
+        const { mode } = parseHash();
+        location.replace(`#${mode}`);
+        disableOverlayTargets(true);
+      }
     });
   }
 
-  // Keep same room on mode switches.
+  
+  // ---- SimBrief Integration ----
+  const SIMBRIEF_URL = (pid) => `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(pid)}&json=1`;
+
+  function bindSimbriefUI(){
+    try {
+      const pidEl = document.getElementById('simbrief_pid');
+      const importBtn = document.getElementById('simbrief_import_btn');
+      if (!pidEl || !importBtn) return;
+
+      // Load PID from room
+      onValue(ref(db, `rooms/${room}/simbrief/pid`), (snap) => {
+        const v = snap.val();
+        if (v && (!pidEl.value || pidEl.value !== String(v))) pidEl.value = String(v);
+      }, { onlyOnce: true });
+
+      // Persist PID on change
+      pidEl.addEventListener('change', async () => {
+        const pid = (pidEl.value||'').trim();
+        if (!/^\d{4,8}$/.test(pid)) { alert('Enter a valid Pilot ID (4–8 digits)'); return; }
+        await update(ref(db, `rooms/${room}/simbrief`), { pid });
+      });
+
+      // Import latest OFP
+      importBtn.addEventListener('click', async () => {
+        const pid = (pidEl.value||'').trim();
+        if (!/^\d{4,8}$/.test(pid)) { alert('Enter a valid Pilot ID first'); return; }
+        importBtn.disabled = true; const oldLabel = importBtn.textContent; importBtn.textContent = 'Importing…';
+        try {
+          const ofp = await fetchSimbrief(pid);
+          if (!ofp) throw new Error('No OFP found');
+          const patch = mapOfpToOverlayPatch(ofp);
+          if (Object.keys(patch).length === 0) throw new Error('OFP missing fields');
+          await update(ref(db, `rooms/${room}`), patch);
+          await update(ref(db, `rooms/${room}/simbrief`), { pid, lastImportAt: Date.now() });
+          importBtn.textContent = 'Imported ✓';
+          setTimeout(()=>{ importBtn.textContent = oldLabel; }, 1200);
+        } catch (e) {
+          console.error(e);
+          alert('Could not import: ' + (e.message||'Unknown error'));
+          importBtn.textContent = oldLabel;
+        } finally {
+          importBtn.disabled = false;
+        }
+      });
+    } catch(e) { console.warn('SimBrief UI bind error', e); }
+  }
+
+  async function fetchSimbrief(pid){
+    const res = await fetch(SIMBRIEF_URL(pid), { method: 'GET' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return data.ofp || data;
+  }
+
+  function hhmmUTC(isoOrHHMM){
+    try {
+      if (!isoOrHHMM) return '';
+      const s = String(isoOrHHMM);
+      const m = s.match(/(\d{2}):(\d{2})/);
+      const z = s.match(/(\d{2})(\d{2})Z/);
+      if (m) return `${m[1]}:${m[2]} UTC`;
+      if (z) return `${z[1]}:${z[2]} UTC`;
+      const d = new Date(s);
+      if (!isNaN(d)) return d.toISOString().slice(11,16) + ' UTC';
+    } catch {}
+    return '';
+  }
+
+  function cruiseString(ft){
+    if (!ft) return '';
+    const n = Number(String(ft).replace(/[^0-9]/g,''));
+    if (!n) return '';
+    return n.toLocaleString('en-US') + 'ft';
+  }
+
+  function mapOfpToOverlayPatch(ofp){
+    const g = ofp.general||{}; const t = ofp.times||{}; const a = ofp.aircraft||{};
+    const o = ofp.origin||{}; const d = ofp.destination||{}; const fl = ofp.flight||{};
+    const atc = ofp.atc||{}; const perf = ofp.performance||{};
+
+    const patch = {};
+    const dep = (o.icao_code||'').toUpperCase(); if (dep) patch.dep = dep;
+    const arr = (d.icao_code||'').toUpperCase(); if (arr) patch.arr = arr;
+
+    const depUTC = hhmmUTC(t.departure_time || t.sched_out || t.out_time_zulu || t.out_zulu);
+    const arrUTC = hhmmUTC(t.arrival_time || t.sched_in || t.in_time_zulu || t.in_zulu);
+    if (depUTC) patch.dep_utc = depUTC;
+    if (arrUTC) patch.arr_utc = arrUTC;
+
+    const ete = t.enroute || t.enroute_time || g.enroute_time;
+    if (ete) patch.enroute = ete;
+
+    const fltno = fl.number || g.flight_number || ofp.fltno || '';
+    if (fltno) patch.flight = fltno;
+
+    const cs = atc.callsign || fl.ident || g.callsign || '';
+    if (cs) patch.callsign = cs;
+
+    const type = a.icaocode || a.icao_code || a.type || '';
+    if (type) patch.aircraft = type;
+
+    const alt = perf.initial_altitude || ofp.initial_altitude || ofp.cruise_altitude || a.initial_altitude;
+    const cruise = cruiseString(alt);
+    if (cruise) patch.cruise = cruise;
+
+    const route = g.route || ofp.route || '';
+    if (route) patch.route = route; // optional
+    return patch;
+  }
+
+  // Bind once DOM is ready
+  window.addEventListener('DOMContentLoaded', bindSimbriefUI);
+  // ---- End SimBrief Integration ----
+
+// Keep same room on mode switches.
   window.addEventListener("hashchange", () => {
     const { room } = parseHash();
     if (resolvedRoom && room !== resolvedRoom) setHashRoom(resolvedRoom);
