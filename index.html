@@ -217,7 +217,23 @@
       <div><label>LIVE</label>
         <select id="live"><option value="on">On</option><option value="off">Off</option></select>
       </div>
-    
+    </div>
+
+    <!-- SimBrief section (editor-only; minimal UI change) -->
+    <div class="grid" style="margin-top:10px">
+      <div>
+        <label>SimBrief User ID</label>
+        <input id="simbriefUserId" placeholder="your SimBrief user id (numeric)">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="btn_simbrief" type="button" title="Fetch latest OFP and fill fields">Import from SimBrief</button>
+          <span id="simbrief_status" class="hint"></span>
+        </div>
+      </div>
+    </div>
+
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
       <div class="grid">
@@ -257,7 +273,6 @@
       </div>
       <div class="hint">These settings save per room. The Frame overlay URL can stay simply <code>#frame:&lt;room&gt;</code>.</div>
     </div>
-</div>
 
     <div class="btns">
       <button id="openInfo">Open Info</button>
@@ -467,11 +482,12 @@
 
   // Constants
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius"];
+    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius","simbriefUserId"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16" };
+    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16",
+    simbriefUserId:"" };
 
   // Editor binding (only when authed)
   function bindEditor(){
@@ -481,6 +497,7 @@
     const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
     const statusEl = els['status'];
     const customRow = document.getElementById('customRow');
+    const sbStatus = document.getElementById('simbrief_status');
 
     function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
 
@@ -518,45 +535,45 @@
         if (MAP[val]) { const [pw,ph]=MAP[val]; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
-      // set initial selection
-    // Download rounded mask PNG (alpha) matching current W×H×radius
-    (function bindMaskDownload(){
-      const btn = document.getElementById('btn_download_mask');
-      if (!btn) return;
-      btn.addEventListener('click', ()=>{
-        const w = parseInt((els['wcW']?.value||'').trim(), 10);
-        const h = parseInt((els['wcH']?.value||'').trim(), 10);
-        const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
-        if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
-          alert('Please set valid webcam width and height first.'); return;
-        }
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
-        const ctx = c.getContext('2d');
-        ctx.clearRect(0,0,w,h);
-        // draw rounded rect into alpha channel
-        ctx.fillStyle = 'white';
-        const rr = (x,y,w,h,r)=>{
-          const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
-          ctx.beginPath();
-          ctx.moveTo(x+rad, y);
-          ctx.arcTo(x+w, y,   x+w, y+h, rad);
-          ctx.arcTo(x+w, y+h, x,   y+h, rad);
-          ctx.arcTo(x,   y+h, x,   y,   rad);
-          ctx.arcTo(x,   y,   x+w, y,   rad);
-          ctx.closePath();
-        };
-        rr(0,0,w,h,r);
-        ctx.fill();
-        // export as PNG where white->opaque area acts as alpha mask
-        c.toBlob((blob)=>{
-          const a=document.createElement('a');
-          a.download = `mask_webcam_${w}x${h}_r${r}.png`;
-          a.href = URL.createObjectURL(blob);
-          a.click();
-          setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-        }, 'image/png');
-      });
-    })();
+
+      // Download rounded mask PNG (alpha) matching current W×H×radius
+      (function bindMaskDownload(){
+        const btn = document.getElementById('btn_download_mask');
+        if (!btn) return;
+        btn.addEventListener('click', ()=>{
+          const w = parseInt((els['wcW']?.value||'').trim(), 10);
+          const h = parseInt((els['wcH']?.value||'').trim(), 10);
+          const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
+          if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
+            alert('Please set valid webcam width and height first.'); return;
+          }
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.clearRect(0,0,w,h);
+          // draw rounded rect into alpha channel
+          ctx.fillStyle = 'white';
+          const rr = (x,y,w,h,r)=>{
+            const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
+            ctx.beginPath();
+            ctx.moveTo(x+rad, y);
+            ctx.arcTo(x+w, y,   x+w, y+h, rad);
+            ctx.arcTo(x+w, y+h, x,   y+h, rad);
+            ctx.arcTo(x,   y+h, x,   y,   rad);
+            ctx.arcTo(x,   y,   x+w, y,   rad);
+            ctx.closePath();
+          };
+          rr(0,0,w,h,r);
+          ctx.fill();
+          // export as PNG where white->opaque area acts as alpha mask
+          c.toBlob((blob)=>{
+            const a=document.createElement('a');
+            a.download = `mask_webcam_${w}x${h}_r${r}.png`;
+            a.href = URL.createObjectURL(blob);
+            a.click();
+            setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+          }, 'image/png');
+        });
+      })();
 
       updateSelectFromFields();
       // keep in sync when user edits numbers
@@ -564,6 +581,103 @@
       h.addEventListener('input', updateSelectFromFields);
     })();
 
+    // --- SimBrief Importer (editor only) ---
+    (function bindSimBrief(){
+      const btn = document.getElementById('btn_simbrief');
+      if (!btn) return;
+
+      function setSbStatus(msg, good=false){
+        if(!sbStatus) return;
+        sbStatus.textContent = msg || '';
+        sbStatus.style.color = good ? '#00d58a' : 'var(--muted)';
+      }
+
+      function text(doc, selectors){
+        for (const s of selectors){
+          const n = doc.querySelector(s);
+          if (n && n.textContent && n.textContent.trim()) return n.textContent.trim();
+        }
+        return '';
+      }
+
+      function toHHMM(v){ // accepts "20240105 1430", "1430", "14:30Z", "14:30"
+        if(!v) return '';
+        const m = v.match(/(\d{2}):?(\d{2})/);
+        if (!m) return '';
+        const hh = m[1].padStart(2,'0');
+        const mm = m[2].padStart(2,'0');
+        return `${hh}:${mm}`;
+      }
+
+      function fmtCruiseFeetAndFL(feetStr){
+        const n = parseInt((feetStr||'').replace(/[^\d]/g,''),10);
+        if (!Number.isFinite(n) || n<=0) return '';
+        const feet = n.toLocaleString();
+        const fl = Math.round(n/100);
+        return `${feet}ft (FL${fl})`; // why: readable for stream overlay
+      }
+
+      async function runImport(){
+        const uid = (els['simbriefUserId']?.value||'').trim();
+        if(!uid){ setSbStatus('Enter your SimBrief user ID first.'); alert('Please enter your SimBrief user ID.'); return; }
+
+        try{
+          setSbStatus('Fetching OFP…');
+          // SimBrief "latest OFP" XML endpoint (no auth; user-id scoped)
+          const url = `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(uid)}&json=0`;
+          const res = await fetch(url, { mode: 'cors' });
+          if(!res.ok){ throw new Error(`HTTP ${res.status}`); }
+          const xml = await res.text();
+          const doc = new DOMParser().parseFromString(xml, 'text/xml');
+
+          // Parse fields with tolerant selectors (SimBrief variants)
+          const origIcao = text(doc, ['origin icao_code','origin icao','general orig_icao','airports origin icao_code']);
+          const origName = text(doc, ['origin name','airports origin name','general orig_name']);
+          const destIcao = text(doc, ['destination icao_code','destination icao','general dest_icao','airports destination icao_code']);
+          const destName = text(doc, ['destination name','airports destination name','general dest_name']);
+
+          const airline = text(doc, ['general icao_airline','general airline_icao','general airline']);
+          const fnum    = text(doc, ['general flight_number','general ofp_flight_number']);
+          const callsign= text(doc, ['general atc_callsign','general callsign','general atc_id']);
+
+          const typeIcao= text(doc, ['aircraft icao_type','aircraft type','general aircraft_icao','general airframe_icao']);
+
+          const cruiseFt= text(doc, ['general cruise_altitude','general crz_alt','profile cruise_altitude']);
+          const ete      = text(doc, ['times est_time_enroute','times enroute_time','times ete','general enroute_time']); // HH:MM
+
+          const schedOut = text(doc, ['times sched_out','times dep_time','times sched_departure_local','times sched_departure_utc','general dep_time_utc']);
+          const schedIn  = text(doc, ['times sched_in','times arr_time','times sched_arrival_local','times sched_arrival_utc','general arr_time_utc']);
+
+          const from = (origName && origIcao) ? `${origName} (${origIcao})` : (origIcao||origName||'');
+          const to   = (destName && destIcao) ? `${destName} (${destIcao})` : (destIcao||destName||'');
+
+          let flight = '';
+          if (airline && fnum) flight = `${airline}${fnum}`;
+          else flight = fnum || text(doc, ['general ofp_flightnum','general flightnum']);
+
+          const aircraft = typeIcao || '';
+          const cruise = fmtCruiseFeetAndFL(cruiseFt) || '';
+          const dep_utc = (toHHMM(schedOut) ? `${toHHMM(schedOut)} UTC` : '');
+          const arr_utc = (toHHMM(schedIn)  ? `${toHHMM(schedIn)} UTC`  : '');
+          const enroute = (ete && /^\d{1,2}:\d{2}$/.test(ete)) ? ete : toHHMM(ete);
+
+          // Apply to inputs and trigger save via existing mechanism.
+          const updates = { from,to,flight,callsign,aircraft,cruise,dep_utc,arr_utc,enroute };
+          Object.entries(updates).forEach(([k,v])=>{
+            if (!v) return;
+            const el = els[k];
+            if (el){ el.value = v; el.dispatchEvent(new Event('input')); }
+          });
+
+          setSbStatus('Imported from SimBrief ✔', true);
+        }catch(err){
+          setSbStatus('Import failed. Check ID or network.');
+          alert(`SimBrief import failed: ${err.message}`);
+        }
+      }
+
+      btn.addEventListener('click', runImport);
+    })();
 
     const infoUrl = ()=> `#info:${signedInUser?.uid || room}${location.search}`;
     const depUrl  = ()=> `#departures:${signedInUser?.uid || room}${location.search}`;
@@ -604,7 +718,6 @@
     const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=labels[st]||st.toUpperCase();
   }
 
-  
   function renderFrame(d){
     // Values from DB (strings) with numeric coercion
     const v=(k,def)=>{ const raw=(d?.[k]??"").toString().trim(); return raw===''?def:raw; };
