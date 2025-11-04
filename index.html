@@ -20,6 +20,7 @@
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
     document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    // why: avoid deadlock—don’t show splash on editor; it may never mark "ready" when signed-out
     if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
       document.documentElement.classList.add('show-splash');
     }
@@ -154,6 +155,7 @@
   <div class="auth-wrap">
     <div class="card" style="text-align:center">
       <div class="auth-logo">
+        <!-- why: show brand; graceful fallback -->
         <img src="logo.png" alt="CrabbyFlight" onerror="this.onerror=null; this.src='logo192.png'">
       </div>
       <label>Email</label><input id="auth_email" type="email" inputmode="email" autocomplete="username" placeholder="you@example.com">
@@ -215,23 +217,7 @@
       <div><label>LIVE</label>
         <select id="live"><option value="on">On</option><option value="off">Off</option></select>
       </div>
-    </div>
-
-    <!-- SimBrief -->
-    <div class="grid" style="margin-top:10px">
-      <div>
-        <label>SimBrief User ID</label>
-        <input id="simbriefUserId" placeholder="your SimBrief user id (numeric)">
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <div style="display:flex;gap:10px;align-items:center">
-          <button id="btn_simbrief" type="button" title="Fetch latest OFP and fill fields">Import from SimBrief</button>
-          <span id="simbrief_status" class="hint"></span>
-        </div>
-      </div>
-    </div>
-
+    
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
       <div class="grid">
@@ -271,6 +257,7 @@
       </div>
       <div class="hint">These settings save per room. The Frame overlay URL can stay simply <code>#frame:&lt;room&gt;</code>.</div>
     </div>
+</div>
 
     <div class="btns">
       <button id="openInfo">Open Info</button>
@@ -421,6 +408,7 @@
 
 <script type="module">
 
+  // --- Cleanup any legacy frame add-ons to prevent duplicates ---
   (function cleanupLegacyFrame(){
     try{
       document.querySelectorAll('#frame-toggle, #frame-banner').forEach(n=>n.remove());
@@ -428,9 +416,10 @@
       if (frames.length > 1){
         frames.forEach((n,i)=>{ if(i>0) n.remove(); });
       }
-    }catch(e){}
+    }catch(e){ /* ignore */ }
   })();
 
+  // Firebase init
   const firebaseConfig = {
     apiKey: "AIzaSyBs4FN-KgUH7cQl15BFyCSLGGq-O-Ey4u0",
     authDomain: "crabbyflight.firebaseapp.com",
@@ -449,6 +438,7 @@
   const db  = getDatabase(app);
   const auth = getAuth(app);
 
+  // Routing / mode
   if (!location.hash) location.replace('#editor:crabroom');
   function parseHash(){
     const raw = (location.hash||'').replace(/^#/, '');
@@ -475,14 +465,15 @@
     bind();
   });
 
+  // Constants
   const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius","simbriefUserId"];
+    "wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","hideLogo","hideInfo","wcRadius"];
   const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16",
-    simbriefUserId:"" };
+    wcX:"32", wcY:"700", wcW:"420", wcH:"236", wcBorderColor:"#FFD100", wcBorderWidth:"6", hideLogo:"0", hideInfo:"0", wcRadius:"16" };
 
+  // Editor binding (only when authed)
   function bindEditor(){
     if (editorBound) return;
     editorBound = true;
@@ -490,13 +481,13 @@
     const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
     const statusEl = els['status'];
     const customRow = document.getElementById('customRow');
-    const sbStatus = document.getElementById('simbrief_status');
 
     function read(){ const d={}; for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); } return d; }
 
+    // Debounced write; only if authenticated.
     let t=null;
     function save(){
-      if (!signedInUser) return;
+      if (!signedInUser) return; // why: avoid writes without token
       clearTimeout(t);
       t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 220);
     }
@@ -505,6 +496,7 @@
     function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
     if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
 
+    // Webcam preset dropdown ↔ width/height sync
     (function initWcPreset(){
       const preset = document.getElementById('wcPreset');
       const w = els['wcW'], h = els['wcH'];
@@ -526,171 +518,52 @@
         if (MAP[val]) { const [pw,ph]=MAP[val]; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
       }
       preset.addEventListener('change', ()=> applyPreset(preset.value));
-
-      (function bindMaskDownload(){
-        const btn = document.getElementById('btn_download_mask');
-        if (!btn) return;
-        btn.addEventListener('click', ()=>{
-          const w = parseInt((els['wcW']?.value||'').trim(), 10);
-          const h = parseInt((els['wcH']?.value||'').trim(), 10);
-          const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
-          if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
-            alert('Please set valid webcam width and height first.'); return;
-          }
-          const c = document.createElement('canvas'); c.width = w; c.height = h;
-          const ctx = c.getContext('2d');
-          ctx.clearRect(0,0,w,h);
-          ctx.fillStyle = 'white';
-          const rr = (x,y,w,h,r)=>{
-            const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
-            ctx.beginPath();
-            ctx.moveTo(x+rad, y);
-            ctx.arcTo(x+w, y,   x+w, y+h, rad);
-            ctx.arcTo(x+w, y+h, x,   y+h, rad);
-            ctx.arcTo(x,   y+h, x,   y,   rad);
-            ctx.arcTo(x,   y,   x+w, y,   rad);
-            ctx.closePath();
-          };
-          rr(0,0,w,h,r);
-          ctx.fill();
-          c.toBlob((blob)=>{
-            const a=document.createElement('a');
-            a.download = `mask_webcam_${w}x${h}_r${r}.png`;
-            a.href = URL.createObjectURL(blob);
-            a.click();
-            setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-          }, 'image/png');
-        });
-      })();
+      // set initial selection
+    // Download rounded mask PNG (alpha) matching current W×H×radius
+    (function bindMaskDownload(){
+      const btn = document.getElementById('btn_download_mask');
+      if (!btn) return;
+      btn.addEventListener('click', ()=>{
+        const w = parseInt((els['wcW']?.value||'').trim(), 10);
+        const h = parseInt((els['wcH']?.value||'').trim(), 10);
+        const r = Math.max(0, parseInt((els['wcRadius']?.value||'16').trim(), 10));
+        if (!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0){
+          alert('Please set valid webcam width and height first.'); return;
+        }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0,0,w,h);
+        // draw rounded rect into alpha channel
+        ctx.fillStyle = 'white';
+        const rr = (x,y,w,h,r)=>{
+          const rad = Math.min(r, Math.floor(Math.min(w,h)/2));
+          ctx.beginPath();
+          ctx.moveTo(x+rad, y);
+          ctx.arcTo(x+w, y,   x+w, y+h, rad);
+          ctx.arcTo(x+w, y+h, x,   y+h, rad);
+          ctx.arcTo(x,   y+h, x,   y,   rad);
+          ctx.arcTo(x,   y,   x+w, y,   rad);
+          ctx.closePath();
+        };
+        rr(0,0,w,h,r);
+        ctx.fill();
+        // export as PNG where white->opaque area acts as alpha mask
+        c.toBlob((blob)=>{
+          const a=document.createElement('a');
+          a.download = `mask_webcam_${w}x${h}_r${r}.png`;
+          a.href = URL.createObjectURL(blob);
+          a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+        }, 'image/png');
+      });
+    })();
 
       updateSelectFromFields();
+      // keep in sync when user edits numbers
       w.addEventListener('input', updateSelectFromFields);
       h.addEventListener('input', updateSelectFromFields);
     })();
 
-    // --- SimBrief Importer ---
-    (function bindSimBrief(){
-      const btn = document.getElementById('btn_simbrief');
-      if (!btn) return;
-
-      function setSbStatus(msg, good=false){
-        if(!sbStatus) return;
-        sbStatus.textContent = msg || '';
-        sbStatus.style.color = good ? '#00d58a' : 'var(--muted)';
-      }
-
-      function text(doc, selectors){
-        for (const s of selectors){
-          const n = doc.querySelector(s);
-          const v = n?.textContent?.trim();
-          if (v) return v;
-        }
-        return '';
-      }
-
-      // strict HH:MM (24h). Accepts '15:10', '1510', '...15:10Z'
-      function toHHMMStrict(raw){
-        if (!raw) return '';
-        const s = String(raw);
-        const m1 = s.match(/(\d{2}):(\d{2})Z?/);
-        if (m1) {
-          const hh = m1[1], mm = m1[2];
-          if (parseInt(mm,10) < 60) return `${hh}:${mm}`;
-        }
-        const m2 = s.match(/\b(\d{2})(\d{2})\b/);
-        if (m2) {
-          const hh = m2[1], mm = m2[2];
-          if (parseInt(mm,10) < 60) return `${hh}:${mm}`;
-        }
-        const m3 = s.match(/T?(\d{2}):(\d{2})Z?/);
-        if (m3) {
-          const hh = m3[1], mm = m3[2];
-          if (parseInt(mm,10) < 60) return `${hh}:${mm}`;
-        }
-        return '';
-      }
-
-      function fmtCruiseFeetAndFL(feetStr){
-        const n = parseInt((feetStr||'').replace(/[^\d]/g,''),10);
-        if (!Number.isFinite(n) || n<=0) return '';
-        const feet = n.toLocaleString();
-        const fl = Math.round(n/100);
-        return `${feet}ft (FL${fl})`; // why: stream-friendly
-      }
-
-      async function runImport(){
-        const uid = (els['simbriefUserId']?.value||'').trim();
-        if(!uid){ setSbStatus('Enter your SimBrief user ID first.'); alert('Please enter your SimBrief user ID.'); return; }
-
-        try{
-          setSbStatus('Fetching OFP…');
-          const url = `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(uid)}&json=0`;
-          const res = await fetch(url, { mode: 'cors' });
-          if(!res.ok){ throw new Error(`HTTP ${res.status}`); }
-          const xml = await res.text();
-          const doc = new DOMParser().parseFromString(xml, 'text/xml');
-
-          const origIcao = text(doc, ['origin icao_code','origin icao','general orig_icao','airports origin icao_code']);
-          const origName = text(doc, ['origin name','airports origin name','general orig_name']);
-          const destIcao = text(doc, ['destination icao_code','destination icao','general dest_icao','airports destination icao_code']);
-          const destName = text(doc, ['destination name','airports destination name','general dest_name']);
-
-          const airline = text(doc, ['general icao_airline','general airline_icao','general airline']);
-          const fnum    = text(doc, ['general flight_number','general ofp_flight_number','general flightnum','general ofp_flightnum']);
-          const callsign= text(doc, ['general atc_callsign','general callsign','general atc_id']);
-
-          const typeIcao= text(doc, ['aircraft icao_type','aircraft type','general aircraft_icao','general airframe_icao']);
-          const cruiseFt= text(doc, ['general cruise_altitude','general crz_alt','profile cruise_altitude']);
-
-          // enroute = AIR TIME
-          const airTime  = text(doc, ['times air_time','times air_time_formatted']);
-          const ete      = text(doc, ['times est_time_enroute','times enroute_time','times ete']);
-
-          // Prefer explicit UTC fields
-          const schedOut = text(doc, [
-            'times sched_out_utc', 'times dep_time_utc',
-            'times sched_out', 'times dep_time',
-            'times sched_departure_utc', 'general dep_time_utc'
-          ]);
-          const schedIn  = text(doc, [
-            'times sched_in_utc', 'times arr_time_utc',
-            'times sched_in', 'times arr_time',
-            'times sched_arrival_utc', 'general arr_time_utc'
-          ]);
-
-          const from = (origName && origIcao) ? `${origName} (${origIcao})` : (origIcao||origName||'');
-          const to   = (destName && destIcao) ? `${destName} (${destIcao})` : (destIcao||destName||'');
-
-          let flight = '';
-          if (airline && fnum) flight = `${airline}${fnum}`; else flight = fnum;
-
-          const aircraft = typeIcao || '';
-          const cruise = fmtCruiseFeetAndFL(cruiseFt) || '';
-
-          const depCore = toHHMMStrict(schedOut);
-          const arrCore = toHHMMStrict(schedIn);
-          const dep_utc = depCore ? `${depCore} UTC` : '';
-          const arr_utc = arrCore ? `${arrCore} UTC` : '';
-
-          const enrCore = toHHMMStrict(airTime) || toHHMMStrict(ete);
-          const enroute = enrCore || '';
-
-          const updates = { from,to,flight,callsign,aircraft,cruise,dep_utc,arr_utc,enroute };
-          Object.entries(updates).forEach(([k,v])=>{
-            if (!v) return;
-            const el = els[k];
-            if (el){ el.value = v; el.dispatchEvent(new Event('input')); }
-          });
-
-          setSbStatus('Imported from SimBrief ✔', true);
-        }catch(err){
-          setSbStatus('Import failed. Check ID or network.');
-          alert(`SimBrief import failed: ${err.message}`);
-        }
-      }
-
-      btn.addEventListener('click', runImport);
-    })();
 
     const infoUrl = ()=> `#info:${signedInUser?.uid || room}${location.search}`;
     const depUrl  = ()=> `#departures:${signedInUser?.uid || room}${location.search}`;
@@ -706,6 +579,7 @@
     if (btnOut) btnOut.onclick = ()=> signOut(auth).catch(e=>setStatus(e.message));
   }
 
+  // Renders
   function renderInfo(d){
     const v=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
@@ -730,13 +604,16 @@
     const stTxt=document.getElementById('d_status_text'); if(stTxt) stTxt.textContent=labels[st]||st.toUpperCase();
   }
 
+  
   function renderFrame(d){
+    // Values from DB (strings) with numeric coercion
     const v=(k,def)=>{ const raw=(d?.[k]??"").toString().trim(); return raw===''?def:raw; };
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',420), wcH=num('wcH',236);
     const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
     const hideLogo = v('hideLogo','0')==='1', hideInfo = v('hideInfo','0')==='1';
 
+    // Allow URL params to override (optional)
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
     const orStr=(k,cur)=> usp.get(k) ?? cur;
@@ -762,6 +639,7 @@
     if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
+  // Subscriptions
   function subscribe(){
     if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
     const r = ref(db, `rooms/${room}`);
@@ -790,6 +668,7 @@
     });
   }
 
+  // Overlay placement
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
@@ -834,6 +713,7 @@
 
   }
 
+  // Auth UI helpers
   function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
   function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
 
@@ -851,6 +731,7 @@
   }
   bindAuthUI();
 
+  // network badge
   function updateNetBadge(){
     const b = document.getElementById('net_badge');
     if(!b) return;
@@ -861,6 +742,7 @@
   addEventListener('offline', updateNetBadge);
   updateNetBadge();
 
+  // Switch to UID room & paint UID in button after login
   function ensureUIDRoomAndBadge(){
     const uid = signedInUser?.uid || '';
     const inBtn = document.getElementById('uid_in_btn');
@@ -870,10 +752,11 @@
       room = uid;
       const base = location.href.split('#')[0];
       location.hash = `${mode}:${room}`;
-      return;
+      return; // hashchange will re-bind
     }
   }
 
+  // URLs modal logic
   function computeUrls(){
     const targetRoom = signedInUser?.uid || room;
     const base = location.href.split('#')[0];
@@ -894,7 +777,7 @@
   function closeUrlModal(){ document.getElementById('url_modal').classList.remove('open'); }
   document.getElementById('url_modal_bg').onclick = closeUrlModal;
   document.getElementById('close_modal').onclick = closeUrlModal;
-  addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeUrlModal(); });
+  addEventListener('keydown', e=>{ if(e.key==='Escape') closeUrlModal(); });
   document.getElementById('copy_info').onclick = ()=> copyFrom('url_info');
   document.getElementById('copy_dep').onclick  = ()=> copyFrom('url_dep');
   const cfr = document.getElementById('copy_frame'); if(cfr) cfr.onclick = ()=> copyFrom('url_frame');
@@ -905,6 +788,7 @@
     catch{ el.select(); document.execCommand('copy'); }
   }
 
+  // Auth gate for editor; overlays always subscribe
   function bind(){
     if (mode === 'editor') {
       onAuthStateChanged(auth, (user)=>{
@@ -913,7 +797,8 @@
         ensureUIDRoomAndBadge();
         if (!signedInUser){
           requireAuthUI(true);
-          document.body.classList.add('ready'); // why: avoid splash blocking auth
+          // --- important: never let splash block the auth screen ---
+          document.body.classList.add('ready');
           const s = document.getElementById('inapp-splash');
           if (s) { try { s.remove(); } catch {} }
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
@@ -931,6 +816,7 @@
   }
   bind();
 
+  // Quick jump back to editor with 'e'
   addEventListener('keydown', (e)=>{
     if((mode==='info'||mode==='departures') && (e.key==='e'||e.key==='E')){
       const base=location.href.split('#')[0]; location.href = `${base}#editor:${room}`;
