@@ -605,9 +605,7 @@
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
     const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
 
-    const dep = getUtcTime(doc,'dep');
-    const arr = getUtcTime(doc,'arr');
-
+    
     const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
     const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:''):'';
 
@@ -617,13 +615,11 @@
         to:   fmtLoc(toName, toIcao),
         flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
         callsign: callsign||'',
-        dep_utc: dep.label,
-        arr_utc: arr.label,
         aircraft: (aircraft||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw)
       },
-      meta: {depSource:dep.source, arrSource:arr.source}
+      meta: { note: 'utc_unchanged' }
     };
   }
 
@@ -716,7 +712,7 @@
         if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','cruise','enroute']
           .forEach(k => els[k]?.dispatchEvent(new Event('input')));
 
-        setSb(`Imported ✓ (UTC: ${meta.depSource} / ${meta.arrSource})`, false, true);
+        setSb('Imported ✓ (UTC unchanged — manual)', false, true);
       }catch(err){
         setSb(`Import failed: ${err?.message||err}`, true);
       }
