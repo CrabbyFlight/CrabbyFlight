@@ -833,7 +833,8 @@
 
 
 
-<!-- SimBrief import (read-only; manual import button; HH:MM formatting) -->
+
+<!-- SimBrief import (read-only; manual import button; strict HH:MM formatting) -->
 <script>
 (function(){
   const BASE = "https://www.simbrief.com/api/xml.fetcher.php";
@@ -858,37 +859,82 @@
     el.dispatchEvent(new Event("change", {bubbles:true}));
   }
 
-  function toHHMM(s){
-    if(!s) return "";
-    if (typeof s === "number" && Number.isFinite(s)) {
-      const h = Math.floor(s/60), m = Math.round(s%60);
-      return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+  // --- Time helpers (all return HH:MM) ---
+  function pad2(n){ return String(n).padStart(2, "0"); }
+
+  function isNumericLike(s){
+    if (typeof s === "number") return Number.isFinite(s);
+    if (typeof s !== "string") return false;
+    return /^[+-]?\d+(\.\d+)?$/.test(s.trim());
+  }
+
+  // For clock times: interpret numbers as epoch (sec/ms), strings as HH:MM/HHMM/ISO
+  function toClockHHMM(v){
+    if (v == null || v === "") return "";
+    // Numeric → epoch
+    if (isNumericLike(v)) {
+      const n = Number(v);
+      if (n >= 1e12) {                       // epoch millis
+        const d = new Date(n);
+        if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
+      } else if (n >= 1e9) {                 // epoch seconds
+        const d = new Date(n * 1000);
+        if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
+      } else if (n >= 0 && n < 24*60) {      // minutes since midnight (fallback)
+        const h = Math.floor(n/60), m = Math.round(n%60);
+        return pad2(h)+":"+pad2(m);
+      }
+      v = String(v);
     }
-    const str = String(s).trim();
-    let m = str.match(/^(\d{1,2}):(\d{2})/);
-    if(m) return m[1].padStart(2,"0")+":"+m[2];
-    m = str.match(/^(\d{2})(\d{2})Z?$/);
-    if(m) return m[1]+":"+m[2];
-    const d = new Date(str);
-    if(!isNaN(d)) return String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0");
-    return str;
+
+    const s = String(v).trim();
+    let m = s.match(/^(\d{1,2}):(\d{2})/);        // HH:MM or HH:MMZ
+    if (m) return pad2(+m[1])+":"+pad2(+m[2]);
+    m = s.match(/^(\d{2})(\d{2})Z?$/);            // HHMM/HHMMZ
+    if (m) return m[1]+":"+m[2];
+
+    const d = new Date(s);                          // ISO-ish
+    if (!isNaN(d)) return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
+    return s;
+  }
+
+  // For durations: interpret numbers as minutes; strings HH:MM → HH:MM
+  function toDurationHHMM(v){
+    if (v == null || v === "") return "";
+    if (isNumericLike(v)) {
+      const mins = Math.max(0, Math.round(Number(v)));
+      const h = Math.floor(mins/60), m = mins%60;
+      return pad2(h)+":"+pad2(m);
+    }
+    const s = String(v).trim();
+    let m = s.match(/^(\d{1,2}):(\d{2})$/);       // HH:MM
+    if (m) return pad2(+m[1])+":"+pad2(+m[2]);
+    m = s.match(/^(\d{2})(\d{2})$/);              // HHMM
+    if (m) return m[1]+":"+m[2];
+    m = s.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);   // ISO 8601 duration
+    if (m) {
+      const h = +(m[1]||0), mm = +(m[2]||0);
+      return pad2(h)+":"+pad2(mm);
+    }
+    return s;
   }
 
   function hmToMinutes(hm){
-    const m = String(hm||"").match(/^(\d{1,2}):(\d{2})/);
+    const m = String(hm||"").match(/^(\d{1,2}):(\d{2})$/);
     if(!m) return null;
     return (+m[1])*60 + (+m[2]);
   }
 
   function minutesDiffHHMM(a,b){
-    const A = hmToMinutes(toHHMM(a));
-    const B = hmToMinutes(toHHMM(b));
+    const A = hmToMinutes(toClockHHMM(a));
+    const B = hmToMinutes(toClockHHMM(b));
     if(A==null || B==null) return null;
     let diff = B - A;
-    if (diff < 0) diff += 24*60;
+    if (diff < 0) diff += 24*60; // cross-midnight
     return diff;
   }
 
+  // --- SimBrief fetch/normalize ---
   async function fetchOfpByUserId(userId){
     const j = await fetch(`${BASE}?userid=${encodeURIComponent(userId)}&json=1`);
     if(j.ok){ const ofp = await j.json().catch(()=>null); if(ofp) return {kind:"json", ofp}; }
@@ -902,8 +948,8 @@
   function norm(ofp, kind){
     if(kind==="json"){
       const g=ofp.general||{}, a=ofp.aircraft||{}, atc=ofp.atc||{}, o=ofp.origin||{}, d=ofp.destination||{}, t=ofp.times||{};
-      const dep = g.deptime || t.deptime || t.sched_out || t.est_out || t.out;
-      const arr = g.arrtime || t.arrtime || t.sched_in  || t.est_in  || t.in;
+      const dep = g.deptime ?? t.deptime ?? t.sched_out ?? t.est_out ?? t.out;
+      const arr = g.arrtime ?? t.arrtime ?? t.sched_in  ?? t.est_in  ?? t.in;
       return {
         from: o.name || o.icao_code || o.icao || "",
         to: d.name || d.icao_code || d.icao || "",
@@ -911,9 +957,9 @@
         callsign: atc.callsign || g.callsign || "",
         aircraft: a.icao_code || a.icao || a.type || "",
         airframe: a.reg || a.registration || "",
-        dep_utc: toHHMM(dep),
-        arr_utc: toHHMM(arr),
-        enroute: toHHMM(t.enroute_time || t.ete || t.block_time)
+        dep_utc: toClockHHMM(dep),
+        arr_utc: toClockHHMM(arr),
+        enroute: toDurationHHMM(t.enroute_time ?? t.ete ?? t.block_time)
       };
     } else {
       const q=(s)=> ofp.querySelector(s)?.textContent?.trim() || "";
@@ -926,9 +972,9 @@
         callsign: q("atc callsign") || q("general callsign"),
         aircraft: q("aircraft icao_code") || q("aircraft icao") || q("aircraft type"),
         airframe: q("aircraft reg") || q("aircraft registration"),
-        dep_utc: toHHMM(dep),
-        arr_utc: toHHMM(arr),
-        enroute: toHHMM(q("times enroute_time") || q("times ete") || q("times block_time"))
+        dep_utc: toClockHHMM(dep),
+        arr_utc: toClockHHMM(arr),
+        enroute: toDurationHHMM(q("times enroute_time") || q("times ete") || q("times block_time"))
       };
     }
   }
@@ -941,7 +987,7 @@
     const data = norm(ofp, kind);
     if(!data.enroute){
       const mins = minutesDiffHHMM(data.dep_utc, data.arr_utc);
-      if(mins!=null) data.enroute = toHHMM(mins);
+      if(mins!=null) data.enroute = toDurationHHMM(mins);
     }
     setValue(ELS.from, data.from);
     setValue(ELS.to, data.to);
@@ -959,12 +1005,13 @@
 
   document.addEventListener("DOMContentLoaded", function(){
     const btn = document.getElementById("simbrief_fetch");
-    if(btn){ btn.addEventListener("click", ()=>{
+    if(btn){ btn.addEventListener("click", ()=> {
       runImport().catch(e=>alert("SimBrief import failed: " + (e && e.message || e)));
     }); }
   });
 })();
 </script>
+
 
 </body>
 </html>
