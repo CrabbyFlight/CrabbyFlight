@@ -539,13 +539,12 @@
   };
 
   function getUtcTime(doc, kind){
-  // UTC-only: read SimBrief UTC/Zulu fields and do no offset math
-  const utcSelectors = (kind==='dep')
-    ? ['times sched_out_zulu','times sched_out_utc','general dep_time_utc','general dep_time_zulu']
-    : ['times sched_in_zulu','times sched_in_utc','general arr_time_utc','general arr_time_zulu'];
-  const utcRaw = pickText(doc, utcSelectors);
-  const label = parseTimeUTC(utcRaw);
-  return { label: (label||''), source: (label ? 'simbrief:utc' : 'missing') };
+  // Strict UTC-only: prefer SimBrief times/sched_*_zulu (as shown on OFP)
+  const key = (kind==='dep') ? 'sched_out_zulu' : 'sched_in_zulu';
+  const node = doc.querySelector(`times ${key}`);
+  const raw = node?.textContent?.trim() || '';
+  const label = parseTimeUTC(raw);
+  return { label: (label||''), source: (label ? `simbrief:${key}` : 'missing') };
 }
 
 async function importFromSimBrief(pilotOrUser){
