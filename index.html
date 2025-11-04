@@ -139,17 +139,6 @@
   .embed{position:absolute;transform-origin:top left}
   .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
-
-  /* About pill link */
-  .about-link{font-size:13px;color:var(--muted);text-decoration:none;margin-left:10px;border:1px solid var(--line);padding:4px 10px;border-radius:999px;background:#31363d;display:inline-flex;align-items:center;gap:6px}
-  .about-link:hover{text-decoration:underline}
-  /* Status row to split status and about */
-  .status-bar{display:flex;align-items:center;justify-content:space-between}
-  /* Persistent footer */
-  .site-footer{position:fixed;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(0,0,0,.25);backdrop-filter:blur(4px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:16px;font-size:13px;z-index:9999}
-  .site-footer a{color:var(--muted);text-decoration:none}
-  .site-footer a:hover{text-decoration:underline}
-
 </style>
 </head>
 <body>
@@ -174,7 +163,9 @@
       </div>
       <div class="auth-status" id="auth_status" role="status" aria-live="polite"></div>
     </div>
-    <div class="card"><div class="status-bar"><span class="pill" id="net_badge">Status: checking…</span><a class="about-link" href="about.html" target="_blank" rel="noopener">About</a></div></div>
+    <div class="card">
+      <span class="pill" id="net_badge">Status: checking…</span>
+    </div>
   </div>
 </div>
 
@@ -1056,15 +1047,6 @@
   });
 </script>
 <!-- END ROOM ROUTER PATCH -->
-
-
-<footer class="site-footer" role="contentinfo">
-  <a href="about.html" target="_blank" rel="noopener">About</a>
-  <span aria-hidden="true">·</span>
-  <a href="license.txt" target="_blank" rel="noopener">License</a>
-  <span aria-hidden="true">·</span>
-  <a href="https://github.com/" target="_blank" rel="noopener" id="footer_github">GitHub</a>
-</footer>
 
 </body>
 </html>
