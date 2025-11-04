@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CrabbyFlight — Live Overlay (Firebase)</title>
+<title>CrabbyFlight — Live Overlay (Firebase + SimBrief)</title>
 
 <link rel="icon" type="image/png" sizes="32x32" href="logo192.png">
 <link rel="apple-touch-icon" href="logo192.png">
@@ -59,13 +59,17 @@
   input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
   input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
-  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)} /* preset + X + Y */
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)}
   .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
   button{border:1px solid #454b54;background:#373c43;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;transition:background .15s ease,transform .02s ease}
   button:hover{background:#3f454d} button:active{transform:translateY(1px)}
   .hint{color:var(--muted);font-size:12px}
   .pill{display:inline-block;padding:4px 10px;font-size:12px;border-radius:999px;background:#31363d;border:1px solid #3f454d}
   .ok{color:#00d58a} .warn{color:#ffb84d}
+
+  /* SimBrief card */
+  .sb-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end}
+  .sb-row button{height:44px}
 
   /* Auth */
   #screen-auth .auth-wrap{max-width:420px;margin:64px auto;padding:0 16px}
@@ -173,6 +177,20 @@
 <!-- EDITOR -->
 <div id="screen-editor" class="wrap">
   <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
+
+  <!-- SimBrief Integration -->
+  <div class="card">
+    <div class="sb-row">
+      <div>
+        <label for="simbrief_id">SimBrief PilotID or Username</label>
+        <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
+      </div>
+      <button id="btn_import_sb" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
+      <span class="pill" id="sb_status">Ready</span>
+    </div>
+    <div class="hint" style="margin-top:8px">Pulls: from/to, flight, callsign, dep/arr (UTC), aircraft, cruise, ETE.</div>
+  </div>
+
   <div class="card">
     <div class="grid">
       <div><label for="from">From</label><input id="from" placeholder="Oslo (ENGM)"></div>
@@ -222,7 +240,6 @@
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
 
-      <!-- Preset + X + Y on the same line -->
       <div class="grid-3">
         <div>
           <label for="wcPreset">Webcam Size</label>
@@ -239,7 +256,6 @@
         <div><label for="wcY">Webcam Y</label><input id="wcY" type="number" placeholder="700"></div>
       </div>
 
-      <!-- Hidden width/height (kept for data binding) -->
       <input id="wcW" type="hidden" value="1280">
       <input id="wcH" type="hidden" value="720">
 
@@ -452,10 +468,10 @@
     bind();
   });
 
-  // Include wcPreset so the user's choice persists
-  const FIELDS = ["from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
+  // Include SimBrief + wcPreset so the user's choice persists
+  const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
     "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
-  const DEFAULTS = { from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
+  const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
@@ -504,7 +520,6 @@
         if (!pair) return;
         const [pw,ph]=pair;
         w.value=pw; h.value=ph;
-        // trigger save when allowed
         w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input'));
       }
 
@@ -521,30 +536,27 @@
       Object.assign(initWcPreset, {updatePresetFromWH});
     })();
 
-    // ===== NEW: BUTTON BINDINGS =====
+    // ===== BUTTON BINDINGS =====
     const byId = (id)=>document.getElementById(id);
     const openInNew = (url)=> window.open(url, '_blank', 'noopener');
-
     const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.onclick = fn; };
 
-    bindIf('openInfo',  ()=> openInNew(computeUrls().info));   // why: open overlay route in new tab
+    bindIf('openInfo',  ()=> openInNew(computeUrls().info));
     bindIf('openDep',   ()=> openInNew(computeUrls().dep));
     bindIf('openFrame', ()=> openInNew(computeUrls().frame));
     bindIf('copyUrls',  ()=> openUrlModal());
     bindIf('btn_signout', ()=> signOut(auth).catch(e=>setStatus(e.message)));
     bindIf('btn_download_mask', ()=>{
       // why: generate rounded-rect alpha mask matching 16px radius
-      const w=512, h=512, r=16*2; // scale up slightly for better edges
+      const w=512, h=512;
       const c=document.createElement('canvas'); c.width=w; c.height=h;
       const ctx=c.getContext('2d');
       ctx.fillStyle='black'; ctx.fillRect(0,0,w,h);
       ctx.save();
       ctx.globalCompositeOperation='destination-out';
-      const pad=32;
+      const pad=32, rr=32;
       const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
-      const rr=16*2;
       ctx.beginPath();
-      // rounded rect path
       ctx.moveTo(rx+rr, ry);
       ctx.arcTo(rx+rw, ry, rx+rw, ry+rh, rr);
       ctx.arcTo(rx+rw, ry+rh, rx, ry+rh, rr);
@@ -558,7 +570,119 @@
       a.download='crabbyflight-rounded-mask.png';
       a.click();
     });
-    // ===== END NEW: BUTTON BINDINGS =====
+
+    // === SimBrief import ===
+    bindIf('btn_import_sb', async ()=>{
+      const id = (els['simbrief_id']?.value||'').trim();
+      if (!id){ setSb('Enter your PilotID or username', true); return; }
+      try{
+        setSb('Fetching…');
+        const urls = [
+          `https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(id)}`,
+          `https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(id)}`
+        ];
+        let xmlText = null, lastErr=null;
+        for (const u of urls){
+          try{
+            const res = await fetch(u, { cache:'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const t = await res.text();
+            if (t && !/^\s*<\/?html/i.test(t)) { xmlText = t; break; } // why: ignore HTML error pages
+          }catch(e){ lastErr = e; }
+        }
+        if (!xmlText) throw lastErr || new Error('No XML received');
+
+        const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+        if (doc.querySelector('parsererror')) throw new Error('XML parse error');
+
+        const v = (x)=> (x||'').trim();
+        const pick = (...qs)=>{
+          for (const q of qs.flat()){
+            const n = doc.querySelector(q);
+            const t = v(n?.textContent||'');
+            if (t) return t;
+          }
+          return '';
+        };
+
+        // Try common SimBrief shapes (OFP / origin|destination / general|aircraft|times)
+        const fromIcao = pick('OFP origin icao_code','origin icao_code','general orig_icao');
+        const fromName = pick('OFP origin name','origin name','general orig_name','origin city');
+        const toIcao   = pick('OFP destination icao_code','destination icao_code','general dest_icao');
+        const toName   = pick('OFP destination name','destination name','general dest_name','destination city');
+
+        const airline  = pick('OFP general airline_icao','general airline_icao','general icao_airline');
+        const fltNum   = pick('OFP general flight_number','general flight_number','general number');
+        const callsign = pick('OFP general callsign','general callsign');
+        const aircraft = pick('OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
+        const cruiseFt = pick('OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
+        const depZulu  = pick('OFP times sched_out','times sched_out','general dep_time','times dep_time');
+        const arrZulu  = pick('OFP times sched_in','times sched_in','general arr_time','times arr_time');
+        const ete      = pick('OFP times est_time_enroute','times est_time_enroute','general ete');
+
+        const zToUTC = (s)=>{
+          // accepts HH:MM / HHMM / 20250101 1234Z → returns "HH:MM UTC"
+          if (!s) return '';
+          const m = s.match(/(\d{2}):?(\d{2})/);
+          return m ? `${m[1]}:${m[2]} UTC` : s.replace(/Z$/,' UTC');
+        };
+        const fmtCruise = (a)=>{
+          const n = parseInt((a||'').replace(/\D/g,''),10);
+          return Number.isFinite(n) && n>0 ? n.toLocaleString()+'ft' : (a||'');
+        };
+        const fmtEte = (e)=>{
+          // "02:15" → "~2h 15m"
+          const m = e.match(/(\d{1,2}):(\d{2})/);
+          if (!m) return e || '';
+          const h = parseInt(m[1],10), mins = parseInt(m[2],10);
+          if (h && mins) return `~${h}h ${mins}m`;
+          if (h) return `~${h}h`;
+          return `~${mins}m`;
+        };
+        const fmtLoc = (name, icao)=>{
+          if (!icao && !name) return '';
+          const lab = name || icao;
+          const code = icao ? ` (${icao.toUpperCase()})` : '';
+          return lab + code;
+        };
+
+        const patch = {
+          from: fmtLoc(fromName, fromIcao) || els['from']?.value || '',
+          to:   fmtLoc(toName,   toIcao)   || els['to']?.value || '',
+          flight: (airline && fltNum) ? (airline.toUpperCase()+fltNum) : (pick('general flight') || ''),
+          callsign: callsign || '',
+          dep_utc: zToUTC(depZulu),
+          arr_utc: zToUTC(arrZulu),
+          aircraft: (aircraft||'').toUpperCase(),
+          cruise: fmtCruise(cruiseFt),
+          enroute: fmtEte(ete)
+        };
+
+        // Apply to inputs
+        Object.entries(patch).forEach(([k,val])=>{
+          const el = els[k];
+          if (el && val) el.value = val;
+        });
+
+        // Auto-save to Firebase if allowed
+        if (canSave) {
+          // trigger change events for debounce path
+          Object.keys(patch).forEach(k => els[k]?.dispatchEvent(new Event('input')));
+        }
+
+        setSb('Imported ✓', false, true);
+      }catch(err){
+        setSb(`Import failed: ${err?.message||err}`, true);
+      }
+    });
+
+    function setSb(msg, warn=false, ok=false){
+      const b = document.getElementById('sb_status');
+      if (!b) return;
+      b.textContent = msg || '';
+      b.className = 'pill ' + (warn ? 'warn' : ok ? 'ok' : '');
+    }
+    // ===== END BINDINGS =====
   }
 
   function renderInfo(d){
@@ -788,7 +912,7 @@
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
         } else {
           requireAuthUI(false);
-          bindEditor();        // now wires buttons
+          bindEditor();        // wires buttons + SimBrief
           subscribe();
         }
         applyOverlayOptions();
@@ -814,7 +938,6 @@
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
   const auth = (() => {
-    // Reuse existing Firebase app if present.
     try { return getAuth(); } catch { return null; }
   })();
 
@@ -836,7 +959,7 @@
   function updateOverlayTargets(room) {
     const sel = ['a[href^="#info:"]','a[href^="#departures:"]','a[href^="#frame:"]'].join(',');
     document.querySelectorAll(sel).forEach(a => {
-      const path = a.getAttribute("href").split(":")[0]; // "#info", "#departures", "#frame"
+      const path = a.getAttribute("href").split(":")[0];
       a.setAttribute("href", `${path}:${room}`);
     });
     const f = document.querySelector('#screen-frame');
@@ -854,10 +977,7 @@
     });
   }
 
-  // Ensure we don't boot into a placeholder; force simple #editor on empty hash.
   if (!location.hash) location.replace("#editor");
-
-  // Prevent accidental clicks before room is known.
   disableOverlayTargets(true);
 
   let resolvedRoom = null;
@@ -871,22 +991,19 @@
     disableOverlayTargets(false);
   }
 
-  // Fallback before auth restores: try to keep user's lastRoom to preserve iPhone PWA UX.
   const last = localStorage.getItem("lastRoom");
   if (last) {
     adoptRoom(last);
   }
 
-  // Prefer UID once available.
   if (auth) {
     onAuthStateChanged(auth, (user) => {
       if (user?.uid && user.uid !== resolvedRoom) {
         adoptRoom(user.uid);
-
+      }
     });
   }
 
-  // Keep same room on mode switches.
   window.addEventListener("hashchange", () => {
     const { room } = parseHash();
     if (resolvedRoom && room !== resolvedRoom) setHashRoom(resolvedRoom);
