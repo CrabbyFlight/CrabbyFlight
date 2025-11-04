@@ -23,10 +23,10 @@ Each overlay mode is accessed through the URL hash:
 | `#frame` | Full 1080p frame with an embedded webcam window and live flight data. |
 
 Example overlay URLs:
-
-https://www.crabbyflight.co.uk/#info:<yourUID>
-https://www.crabbyflight.co.uk/#departures:<yourUID>
-https://www.crabbyflight.co.uk/#frame:<yourUID>
+  
+https://www.crabbyflight.co.uk/#info:<yourUID>  
+https://www.crabbyflight.co.uk/#departures:<yourUID>  
+https://www.crabbyflight.co.uk/#frame:<yourUID>  
 
 
 Each URL can be used directly as a browser source in OBS or any compatible streaming application.
@@ -85,7 +85,7 @@ It may be used freely by end users but may not be redistributed, modified, or re
 
 ## Contact
 
-e-mail: [info@ridgwaygroup.net](info@ridgwaygroup.net)
+e-mail: [info@ridgwaygroup.net](info@ridgwaygroup.net)  
 Website: [https://www.crabbyflight.co.uk](https://www.crabbyflight.co.uk)  
 GitHub: [https://github.com/CrabbyFlight](https://github.com/CrabbyFlight)  
 Creator: njridgway
