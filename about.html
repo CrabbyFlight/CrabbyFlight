@@ -210,27 +210,24 @@
       </p>
     </div>
 
-<div class="card">
-      <h2>SimBrief Integration</h2>
+    <div class="card">
+      <h2>SimBrief Integration (Planned)</h2>
       <p>
-        CrabbyFlight now integrates directly with <strong>SimBrief</strong>. By linking your
-        SimBrief account you can pull your latest operational flight plan straight into the
-        overlay editor, so you spend less time typing and more time flying.
+        A SimBrief integration feature is planned. The goal is to allow you to enter your
+        SimBrief PilotID and import your latest operational flight plan directly into
+        CrabbyFlight. The application will fetch XML data from the SimBrief API, parse it in
+        the browser and use it to populate the relevant editor fields automatically.
       </p>
       <p>
-        After entering your SimBrief username / PilotID in the app, you can import a flight and
-        automatically fill fields such as departure and arrival airports, route, callsign,
-        flight number, aircraft type, cruise level, ETD / ETA and en-route time. The imported
-        data is merged into your current room and pushed to all overlay views in real time.
-      </p>
-      <p>
-        CrabbyFlight only reads the data that SimBrief exposes for your flight plan. Your
-        SimBrief credentials are never stored by CrabbyFlight, and you can simply remove your
-        PilotID any time if you prefer to enter flights manually.
+        The imported XML will be used to fill details such as origin and destination airports,
+        flight number, callsign, scheduled departure and arrival times, aircraft type, cruise
+        altitude and estimated enroute duration. Once imported, this data will sync to Firebase
+        and immediately update all overlay modes, reducing the amount of manual data entry
+        required.
       </p>
     </div>
 
-<div class="card">
+    <div class="card">
       <h2>Security and Privacy</h2>
       <p>
         CrabbyFlight is designed to keep user data separated and protected. Each user’s data is
