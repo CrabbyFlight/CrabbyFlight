@@ -3,15 +3,14 @@
 CrabbyFlight is a web-based flight overlay editor and display system for
 streamers, virtual pilots, and aviation enthusiasts. It allows users to
 create live, professional-quality flight information overlays for OBS
-and other streaming software. The system is built using HTML, CSS, and
-JavaScript, with Firebase providing authentication and real-time data
-synchronization. All user data is stored securely under each user's own
-account.
+and other streaming software.
 
-Website: https://www.crabbyflight.co.uk\
-Source: https://github.com/CrabbyFlight/CrabbyFlight
+The system is built using HTML, CSS, and JavaScript, with Firebase
+providing authentication and real-time data synchronization. All user
+data is stored securely under each user's own account.
 
-------------------------------------------------------------------------
+-   **Website:** https://www.crabbyflight.co.uk\
+-   **Source:** https://github.com/CrabbyFlight/CrabbyFlight
 
 ## Overview
 
@@ -21,39 +20,43 @@ sources. Data is stored securely in Firebase and updates in real time,
 so any changes made in the editor are immediately reflected in the
 overlays.
 
-### Modes
+## Overlay Modes
 
 Each overlay mode is accessed using a URL hash:
 
-  -----------------------------------------------------------------------
-  Mode                   Description
-  ---------------------- ------------------------------------------------
-  `#editor`              Main interface for entering and editing flight
-                         information.
+  ---------------------------------------------------------------------------
+  Mode            Description
+  --------------- -----------------------------------------------------------
+  `#editor`       Main interface for entering and editing flight information.
 
-  `#info`                Compact overlay with route, callsign, aircraft,
-                         and essential details.
+  `#info`         Compact overlay with route, callsign, aircraft, and
+                  essential details.
 
-  `#departures`          Realistic departure-board style overlay showing
-                         your live flight.
+  `#departures`   Departure-board style overlay showing your current or
+                  upcoming flight.
 
-  `#frame`               Full 1080p frame with embedded webcam window and
-                         live data.
-  -----------------------------------------------------------------------
+  `#frame`        Full 1080p frame with embedded webcam window and live data.
+  ---------------------------------------------------------------------------
 
-Example overlay URLs:\
-https://www.crabbyflight.co.uk/#info:`<yourUID>`{=html}\
-https://www.crabbyflight.co.uk/#departures:`<yourUID>`{=html}\
-https://www.crabbyflight.co.uk/#frame:`<yourUID>`{=html}
+Example overlay URLs:
+
+    https://www.crabbyflight.co.uk/#info:<yourUID>
+    https://www.crabbyflight.co.uk/#departures:<yourUID>
+    https://www.crabbyflight.co.uk/#frame:<yourUID>
 
 Each link can be used directly as a browser source in OBS or any
 compatible streaming software.
 
-------------------------------------------------------------------------
+## Features
+
+-   Live, browser-source compatible overlays for OBS and similar tools
+-   Multiple overlay layouts (info strip, departures board, full frame)
+-   Real-time updates via Firebase Realtime Database
+-   Per-user data separation and secure authentication
+-   SimBrief integration for automatic flight-plan import
 
 ## SimBrief Integration
 
-CrabbyFlight now fully integrates with **SimBrief**.\
 Users can enter their SimBrief PilotID and import their latest
 operational flight plan directly into the editor.
 
@@ -69,67 +72,30 @@ fills:
 -   Route information (when available)
 
 Once imported, all values sync to Firebase and update every overlay mode
-in real time.\
-Your SimBrief credentials are never stored --- only your imported OFP
-data.
+in real time.
 
-------------------------------------------------------------------------
+> Your SimBrief credentials are **never** stored --- only your imported
+> OFP data is saved to your account.
 
 ## Technical Summary
 
 -   **Frontend:** HTML, CSS, JavaScript\
 -   **Backend:** Firebase Authentication & Realtime Database\
--   **Hosting:** GitHub Pages / crabbyflight.co.uk\
+-   **Hosting:** GitHub Pages / `crabbyflight.co.uk`\
 -   **Integration:** SimBrief XML API\
 -   **Architecture:** Fully client-side (no dedicated backend server)
 
-------------------------------------------------------------------------
-
-## Security and Privacy
-
-CrabbyFlight is built with privacy in mind:
-
--   Each user's data is stored under their unique Firebase UID.\
--   Only the account owner can edit their data; overlays are read-only
-    to others.\
--   Firebase security rules enforce authenticated write access only.\
--   No analytics, cookies, or external tracking providers are used.\
--   Stored data includes only your email and overlay configuration
-    fields.
-
-------------------------------------------------------------------------
-
-## Usage Policy
-
-CrabbyFlight is free for personal and non-commercial use. You may use it
-freely to enhance streams, videos, or flight-simulation content.
-
-The source code, branding, UI design, and project structure are
-protected.\
-Redistributing, cloning, modifying, or re-hosting CrabbyFlight without
-written permission is not allowed --- including derivative or rebranded
-versions.
-
-For collaboration, integration, or contributions, please contact the
-project owner.
-
-------------------------------------------------------------------------
-
 ## License
 
-Copyright © 2025 CrabbyFlight\
-All rights reserved.
-
 This software is provided for transparency and educational reference
-only.\
-It may be used freely by end users but may not be redistributed,
-modified, or re-hosted without permission.
+only.
 
-------------------------------------------------------------------------
+It may be used freely by end users but **may not** be redistributed,
+modified, or re-hosted without permission.
 
 ## Contact
 
-Email: info@ridgwaygroup.net\
-Website: https://www.crabbyflight.co.uk\
-GitHub: https://github.com/CrabbyFlight\
-Creator: njridgway
+-   **Email:** info@ridgwaygroup.net\
+-   **Website:** https://www.crabbyflight.co.uk\
+-   **GitHub:** https://github.com/CrabbyFlight\
+-   **Creator:** `njridgway`
