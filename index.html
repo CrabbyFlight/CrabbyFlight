@@ -4,6 +4,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="CrabbyFlight is a free, browser-based streaming asset that creates dynamic, professional flight overlays and frames for OBS, with SimBrief integration for automatic flight plan import.">
+
 <title>CrabbyFlight — Live Overlay (Firebase + SimBrief)</title>
 
 <link rel="icon" type="image/png" sizes="32x32" href="logo192.png">
@@ -259,6 +261,26 @@
       <div class="grid">
         <div><label>Rounded mask (fixed 16px)</label></div>
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
+      
+      <div class="grid">
+        <div>
+          <label for="showInfo">
+            <input id="showInfo" type="checkbox" style="width:auto;height:auto;vertical-align:middle;margin-right:8px" checked>
+            Show Info overlay on frame
+          </label>
+        </div>
+        <div>
+          <label for="showWebcam">
+            <input id="showWebcam" type="checkbox" style="width:auto;height:auto;vertical-align:middle;margin-right:8px" checked>
+            Show Webcam on frame
+          </label>
+        </div>
+        <div>
+          <label for="showLogo">
+            <input id="showLogo" type="checkbox" style="width:auto;height:auto;vertical-align:middle;margin-right:8px" checked>
+            Show Logo pill on frame
+          </label>
+        </div>
       </div>
     </div>
 
@@ -467,6 +489,19 @@
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
+  // ===== Added toggles for overlays =====
+  const EXTRA_FIELDS = ["showInfo","showWebcam","showLogo"];
+  try { FIELDS.push(...EXTRA_FIELDS); } catch {}
+  try { Object.assign(DEFAULTS, { showInfo:"on", showWebcam:"on", showLogo:"on" }); } catch {}
+
+  const truthy = (v, def=true) => {
+    if (v === undefined || v === null || v === "") return def;
+    const s = String(v).toLowerCase();
+    if (["1","true","on","yes","y"].includes(s)) return true;
+    if (["0","false","off","no","n"].includes(s)) return false;
+    return def;
+  };
+
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -630,6 +665,19 @@
 
     const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
     const statusEl = els['status'];
+
+    // map checkboxes to "on"/"off" values and hook save()
+    ;['showInfo','showWebcam','showLogo'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      const raw = (data && typeof data[id]==='string') ? data[id] : (DEFAULTS[id]||'on');
+      el.checked = truthy(raw, true);
+      el.value = el.checked ? 'on' : 'off';
+      el.addEventListener('change', ()=>{
+        el.value = el.checked ? 'on' : 'off';
+        el.dispatchEvent(new Event('input'));
+      });
+    });
     const customRow = document.getElementById('customRow');
 
     const setSb = (msg, warn=false, ok=false)=>{
@@ -757,6 +805,16 @@
     const orStr=(k,cur)=> usp.get(k) ?? cur;
     const pad = orNum('pad',16), topH = orNum('topH',22), logoGap = orNum('logoGap',18);
     const matte = orStr('matte','#1d1f22');
+    // overlays visibility (data + URL overrides)
+    const coerce = (key, cur) => truthy(usp.get(key), cur);
+    const showInfo   = coerce('showInfo',   truthy(v('showInfo','on')));
+    const showWebcam = coerce('showWebcam', truthy(v('showWebcam','on')));
+    const showLogo   = coerce('showLogo',   truthy(v('showLogo','on')));
+    // apply visibility
+    const wcEl = document.getElementById('wc'); if (wcEl) wcEl.style.display = showWebcam ? 'block' : 'none';
+    const infoWrap = document.getElementById('embed_info'); if (infoWrap) infoWrap.style.display = showInfo ? 'block' : 'none';
+    const logo = document.getElementById('frame_logo'); if (logo) logo.style.display = showLogo ? 'flex' : 'none';
+
 
     const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
     const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
@@ -796,6 +854,13 @@
         }
         sanitizeUTCField(document.getElementById('dep_utc'));
         sanitizeUTCField(document.getElementById('arr_utc'));
+        ;['showInfo','showWebcam','showLogo'].forEach(id=>{
+          const el=document.getElementById(id); if(!el) return;
+          const raw=(data && typeof data[id]==='string')? data[id] : DEFAULTS[id];
+          const on=truthy(raw, true);
+          el.checked = on; el.value = on ? 'on' : 'off';
+        });
+
 
         const presetEl = document.getElementById('wcPreset');
         const wEl = document.getElementById('wcW'); const hEl = document.getElementById('wcH');
@@ -831,6 +896,13 @@
     }
 
     if (mode==='frame'){
+    // honor URL toggles
+    const usp2 = new URLSearchParams(location.search);
+    const b = (k, def)=> truthy(usp2.get(k), def);
+    const infoWrap2 = document.getElementById('embed_info'); if (infoWrap2) infoWrap2.style.display = b('showInfo', true) ? 'block' : 'none';
+    const wc2 = document.getElementById('wc'); if (wc2) wc2.style.display = b('showWebcam', true) ? 'block' : 'none';
+    const logo2 = document.getElementById('frame_logo'); if (logo2) logo2.style.display = b('showLogo', true) ? 'flex' : 'none';
+
       const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
       const pad=getNum('pad',16);
       const topH=getNum('topH',22);
