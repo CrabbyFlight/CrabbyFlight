@@ -259,8 +259,8 @@
         <div><label for="wcBorderColor">Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
         <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
         <div>
-          <label for="wcShow">Toggle webcam</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off (AFK shows when off)</span></div>
+          <label for="wcBorder">Show webcam border</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcBorder" type="checkbox" checked><span class="hint">Toggle border outline</span></div>
         </div>
       </div>
       <div class="grid">
@@ -272,6 +272,10 @@
         <div>
           <label for="wcAfkPath">AFK logo filename/path</label>
           <input id="wcAfkPath" placeholder="afklogo.png">
+        </div>
+        <div>
+          <label for="wcAfkOn">Show AFK logo</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcAfkOn" type="checkbox" checked><span class="hint">Show when webcam hidden</span></div>
         </div>
         <div style="display:flex;align-items:end;justify-content:flex-end">
           <button id="btn_clear_afk" type="button">Clear AFK</button>
@@ -481,12 +485,12 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","wcAfkPath"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcBorder","wcAfkPath","wcAfkOn"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
-    wcAfkPath:"afklogo.png" };
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcBorder:"on",
+    wcAfkPath:"afklogo.png", wcAfkOn:"on" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -701,15 +705,16 @@
       const toNum=(k, def)=>{ const el = els[k]; const n = parseFloat(el?.value||''); return Number.isNaN(n)?def:n; };
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
       const bCol=(els['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
-      const wcShown=(els['wcShow']?.checked===true);
+      const bOn=(els['wcBorder']?.checked===true);
       const afkPath=((els['wcAfkPath']?.value||'').toString().trim());
+      const afkOn=(els['wcAfkOn']?.checked===true);
       const pad = 16;
       wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
-      wc.style.outline = `${bTh}px solid ${bCol}`;
-      wc.style.boxShadow = '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)';
+      wc.style.outline = bOn ? `${bTh}px solid ${bCol}` : 'none';
+      wc.style.boxShadow = bOn ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
       const afkImg=document.getElementById('wc_afk');
       if(afkImg){
-        if(!wcShown && afkPath){
+        if(afkOn && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
           afkImg.style.display = 'block';
         } else {
@@ -718,7 +723,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','wcAfkPath' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcBorder','wcAfkPath','wcAfkOn' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -769,8 +774,10 @@
     });
     bindIf('btn_clear_afk', ()=>{
       const pathEl = document.getElementById('wcAfkPath'); if(pathEl) pathEl.value = '';
+      const onEl = document.getElementById('wcAfkOn'); if(onEl) onEl.checked = false;
       // trigger save & preview
       if (pathEl) { pathEl.dispatchEvent(new Event('input')); }
+      if (onEl) { onEl.dispatchEvent(new Event('change')); }
       updatePreview();
       save();
     });
@@ -808,11 +815,7 @@
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',1280), wcH=num('wcH',720);
     const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
-    const wcShowSaved = (v('wcShow','on') === 'on');
-    const wcShowParam = (usp.get('wcShow')||'').toLowerCase();
-    let wcShow = wcShowSaved;
-    if (wcShowParam === 'off') wcShow = false;
-    else if (wcShowParam === 'on') wcShow = true;
+    const bOn = (v('wcBorder','on') === 'on');
 
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
@@ -831,10 +834,10 @@
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
 
     const wc=document.getElementById('wc');
-    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; }
-    // AFK logo handling (show AFK when webcam is NOT shown)
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = bOn? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = bOn ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
+    // AFK logo handling
     const afkPath=v('wcAfkPath','afklogo.png');
-    const afkOn = !wcShow;
+    const afkOn = (v('wcAfkOn','on') === 'on');
     const imgEl = document.getElementById('wc_afk');
     if(imgEl){
       const paramOff = (usp.get('wcAfk')||'').toLowerCase()=== 'off';
@@ -925,7 +928,7 @@
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
       if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
-        const wcShowParam = usp.get('wcShow'); const imgEl=document.getElementById('wc_afk'); if(wcShowParam && wcShowParam === 'off'){ if(imgEl) imgEl.style.display='block'; } else { if(imgEl) imgEl.style.display='none'; }
+        const wcBorderParam = usp.get('wcBorder'); if(wcBorderParam && wcBorderParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; }
       }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
