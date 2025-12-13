@@ -28,9 +28,9 @@
 
 <style>
   :root{
-    --bg:#1d1f22; --panel:#2a2d31; --ink:#f2f3f5; --muted:#b5bcc6; --line:#3a3f46;
-    --brand:#FFD100; --accent:#FFA500; --shadow:0 8px 24px rgba(0,0,0,.28);
-    --radius:14px; --gap:16px;
+    --bg:#f7fafc; --panel:#ffffff; --ink:#0f1724; --muted:#6b7280; --line:#e6e9ef;
+    --brand:#1e90ff; --accent:#2563eb; --shadow:0 6px 18px rgba(14,30,37,.06);
+    --radius:10px; --gap:12px;
   }
   #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
   body.editor #screen-editor{display:block}
@@ -52,23 +52,28 @@
   body.editor{background:var(--bg)!important}
   body.info,body.departures{background:transparent!important}
 
-  .wrap{max-width:980px;margin:0 auto;padding:28px;background:var(--bg)}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0;box-shadow:var(--shadow)}
-  h1{margin:0 0 14px;font-size:26px;font-weight:700;letter-spacing:.2px}
-  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:6px 0 6px}
-  input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px;background:var(--bg)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:12px 0;box-shadow:var(--shadow)}
+  h1{margin:0 0 18px;font-size:26px;font-weight:700;letter-spacing:.2px;color:var(--ink)}
+  label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:8px 0 8px}
+  input,select{width:100%;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px 12px;height:44px;box-sizing:border-box;outline:none;appearance:none}
   /* ensure checkboxes render normally instead of inheriting text input styles */
-  input[type="checkbox"]{width:auto;height:auto;box-sizing:content-box;padding:0;margin:0 8px 0 0;background:transparent;border:none;appearance:auto;cursor:pointer}
+  input[type="checkbox"]{width:18px;height:18px;box-sizing:content-box;padding:0;margin:0 8px 0 0;background:transparent;border:1px solid var(--line);border-radius:4px;appearance:none;cursor:pointer;display:inline-block;vertical-align:middle}
+  input[type="checkbox"]:checked{background:var(--brand);border-color:var(--brand)}
   .wc-frame img{display:block;pointer-events:none;width:100%;height:100%;object-fit:contain;border-radius:inherit}
   input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)}
   .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
-  button{border:1px solid #454b54;background:#373c43;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;transition:background .15s ease,transform .02s ease}
-  button:hover{background:#3f454d} button:active{transform:translateY(1px)}
-  .hint{color:var(--muted);font-size:12px}
-  .pill{display:inline-block;padding:4px 10px;font-size:12px;border-radius:999px;background:#31363d;border:1px solid #3f454d}
-  .ok{color:#00d58a} .warn{color:#ffb84d}
+  button{border:1px solid var(--line);background:#f8fafc;color:var(--ink);padding:10px 14px;border-radius:8px;cursor:pointer;transition:background .12s ease,transform .02s ease}
+  button:hover{background:#f0f5ff}
+  button.primary{background:var(--brand);border-color:transparent;color:white}
+  button.primary:hover{filter:brightness(.98)}
+  button:active{transform:translateY(1px)}
+
+  .hint{color:var(--muted);font-size:13px}
+  .pill{display:inline-block;padding:4px 10px;font-size:12px;border-radius:999px;background:transparent;border:1px solid var(--line);color:var(--muted)}
+  .ok{color:#0ea5a4} .warn{color:#f59e0b}
 
   .sb-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end}
   .sb-row button{height:44px}
@@ -96,8 +101,8 @@
   .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
   .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
 
-  .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:#2c3036;border:1px solid var(--frame-border-color, #3d434b);box-shadow:var(--shadow)}
-  .header{background:#FFD100;color:#000;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;padding:12px 18px;font-size:22px;position:relative;overflow:hidden}
+  .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
+  .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
   .header svg{width:22px;height:22px}
   .header::after{content:"";position:absolute;top:0;left:-45%;width:40%;height:100%;background:linear-gradient(120deg, rgba(255,209,0,0) 0%, rgba(255,209,0,.45) 50%, rgba(255,209,0,0) 100%);filter:blur(1px);animation:hdrSweep 4s linear infinite;display:none}
   body.ready .header::after{display:block}
@@ -161,7 +166,7 @@
       <label for="auth_email">Email</label><input id="auth_email" type="email" inputmode="email" autocomplete="username" placeholder="you@example.com">
       <label for="auth_password">Password</label><input id="auth_password" type="password" autocomplete="current-password" placeholder="••••••••">
       <div class="auth-actions">
-        <button id="btn_signin" type="button">Sign in</button>
+        <button id="btn_signin" class="primary" type="button">Sign in</button>
         <button id="btn_signup" type="button" title="Create an account for yourself">Sign up</button>
       </div>
       <div class="auth-status" id="auth_status" role="status" aria-live="polite"></div>
@@ -183,7 +188,7 @@
         <label for="simbrief_id">SimBrief PilotID or Username</label>
         <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
       </div>
-      <button id="btn_import_sb" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
+      <button id="btn_import_sb" class="primary" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
       <span class="pill" id="sb_status">Ready</span>
     </div>
   </div>
@@ -280,7 +285,14 @@
         <div><label for="frameBorderColor">Frame Border Color</label><input id="frameBorderColor" type="color" value="#3d434b"></div>
         
         <div><label for="frameBorderRadius">Border Radius (Frame/Info/Webcam)</label><input id="frameBorderRadius" type="number" placeholder="28" value="28"></div> 
-        <div><label for="frameBorderWidth">Border Width (Frame/Webcam) (px)</label><input id="frameBorderWidth" type="number" placeholder="6"></div>
+        <div>
+          <label for="frameBorderWidth">Border Width (Frame/Webcam) (px)</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <input id="frameBorderWidth_range" type="range" min="0" max="48" value="6">
+            <input id="frameBorderWidth" type="number" min="0" max="48" placeholder="6" style="width:64px">
+            <span id="frameBorderWidth_badge" class="pill" style="min-width:36px">6</span>
+          </div>
+        </div>
         <div>
           <label for="wcShow">Toggle webcam</label>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off (shows AFK when on)</span></div>
@@ -305,7 +317,7 @@
       <button id="openInfo" type="button">Open Info</button>
       <button id="openDep" type="button">Open Departures</button>
       <button id="openFrame" type="button">Open Frame</button>
-      <button id="copyUrls" type="button" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
+      <button id="copyUrls" class="primary" type="button" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
       <button id="btn_signout" type="button" style="margin-left:auto">Sign out</button>
     </div>
   </div>
@@ -808,6 +820,23 @@
     [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
+    // Frame border width slider + badge sync
+    try{
+      const rangeEl = document.getElementById('frameBorderWidth_range');
+      const numEl = document.getElementById('frameBorderWidth');
+      const badge = document.getElementById('frameBorderWidth_badge');
+      if(rangeEl && numEl && badge){
+        // initialize from persisted value (if any)
+        const initial = parseInt(numEl.value || '6', 10) || 6;
+        rangeEl.value = initial;
+        numEl.value = initial;
+        badge.textContent = String(initial);
+        rangeEl.addEventListener('input', ()=>{ const v = rangeEl.value; numEl.value = v; badge.textContent = v; updatePreview(); save(); });
+        numEl.addEventListener('input', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; badge.textContent = String(n); updatePreview(); save(); });
+        numEl.addEventListener('change', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; badge.textContent = String(n); updatePreview(); save(); });
+      }
+    }catch(e){}
+
     const byId = (id)=>document.getElementById(id);
     const openInNew = (url)=> window.open(url, '_blank', 'noopener');
     const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.onclick = fn; };
@@ -997,6 +1026,16 @@
           if (typeof val === 'undefined') continue;
           if (el.type === 'checkbox') el.checked = (String(val) === 'on'); else el.value = val;
         }
+        // Keep border width slider in sync when data loads from DB
+        try{
+          const rangeEl = document.getElementById('frameBorderWidth_range');
+          const numEl = document.getElementById('frameBorderWidth');
+          const badge = document.getElementById('frameBorderWidth_badge');
+          if(rangeEl && numEl && badge){
+            const v = parseInt(numEl.value||DEFAULTS.frameBorderWidth||'6',10) || 6;
+            rangeEl.value = v; badge.textContent = String(v);
+          }
+        }catch(e){}
         sanitizeUTCField(document.getElementById('dep_utc'));
         sanitizeUTCField(document.getElementById('arr_utc'));
 
