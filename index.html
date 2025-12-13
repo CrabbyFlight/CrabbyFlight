@@ -89,9 +89,10 @@
   button:active{transform:translateY(1px)}
 
   /* Footer links */
-  .footer{margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .footer a{color:var(--ink);border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:8px;text-decoration:none}
-  .footer a:hover{filter:brightness(.98)}
+  .footer{margin:24px 0 12px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;text-align:center}
+  .footer a{color:var(--muted);text-decoration:none;transition:color .15s ease}
+  .footer a:hover{color:var(--ink)}
+  .footer .sep{margin:0 8px;color:var(--line)}
 
   /* Theme toggle */
   .switch{position:relative;display:inline-block;width:52px;height:28px}
@@ -358,9 +359,10 @@
       <button id="btn_signout" type="button" style="margin-left:8px">Sign out</button>
     </div>
     <div class="footer">
-      <span>Docs:</span>
       <a href="about.html" target="_blank" rel="noopener">About</a>
+      <span class="sep">|</span>
       <a href="README.md" target="_blank" rel="noopener">README</a>
+      <span class="sep">|</span>
       <a href="license.txt" target="_blank" rel="noopener">License</a>
     </div>
   </div>
