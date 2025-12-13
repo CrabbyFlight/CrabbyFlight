@@ -280,7 +280,7 @@
         <div><label for="frameBorderColor">Frame Border Color</label><input id="frameBorderColor" type="color" value="#3d434b"></div>
         
         <div><label for="frameBorderRadius">Border Radius (Frame/Info/Webcam)</label><input id="frameBorderRadius" type="number" placeholder="28" value="28"></div> 
-        <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
+        <div><label for="frameBorderWidth">Border Width (Frame/Webcam) (px)</label><input id="frameBorderWidth" type="number" placeholder="6"></div>
         <div>
           <label for="wcShow">Toggle webcam</label>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off (shows AFK when on)</span></div>
@@ -502,11 +502,11 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
+    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28",
-    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderWidth:"6", wcShow:"on",
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
   /* ---------- Time helpers ---------- */
@@ -761,7 +761,7 @@
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
       const frameCol=(editorEls['frameBorderColor']?.value||'#3d434b');
       const bCol = frameCol;
-      const bTh=toNum('wcBorderWidth',6);
+      const bTh=toNum('frameBorderWidth',6);
       const frameRadius = toNum('frameBorderRadius',28);
       const wcRadius = frameRadius;
       const wcShown=(editorEls['wcShow']?.checked===true);
@@ -773,7 +773,7 @@
       const afkImg=document.getElementById('wc_afk');
       // Apply frame border color via CSS variable and preview svg border
       try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadius}px`); }catch(e){}
-      const previewBorderRect=document.getElementById('borderRect'); if(previewBorderRect){ previewBorderRect.setAttribute('stroke', frameCol); previewBorderRect.setAttribute('rx', frameRadius); previewBorderRect.setAttribute('ry', frameRadius); }
+      const previewBorderRect=document.getElementById('borderRect'); if(previewBorderRect){ previewBorderRect.setAttribute('stroke', frameCol); previewBorderRect.setAttribute('stroke-width', bTh); previewBorderRect.setAttribute('rx', frameRadius); previewBorderRect.setAttribute('ry', frameRadius); }
       const previewHole=document.getElementById('hole'); if(previewHole){ previewHole.setAttribute('rx', frameRadius); previewHole.setAttribute('ry', frameRadius); }
       const previewHair=document.getElementById('hairRect'); if(previewHair){ previewHair.setAttribute('rx', frameRadius); previewHair.setAttribute('ry', frameRadius); }
       const frameLogoEl = document.getElementById('frame_logo');
@@ -803,7 +803,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -923,7 +923,7 @@
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',1280), wcH=num('wcH',720);
     const frameCol=v('frameBorderColor','#3d434b');
-    const bCol = frameCol; const bTh=num('wcBorderWidth',6);
+    const bCol = frameCol; const bTh=num('frameBorderWidth',6);
     const frameRadius = parseFloat(v('frameBorderRadius','28'))||28;
     const wcRadius = frameRadius; 
     try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadius}px`); }catch(e){}
@@ -940,7 +940,7 @@
     const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
     [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
     if(matteRect) matteRect.setAttribute('fill', matte);
-    if(borderRect) { const bc = usp.get('bCol') || frameCol || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); if(bc) borderRect.setAttribute('rx', frameRadius); if(bc) borderRect.setAttribute('ry', frameRadius); }
+    if(borderRect) { const bc = usp.get('bCol') || frameCol || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||parseFloat(bTh)); else borderRect.setAttribute('stroke-width', parseFloat(bTh)); if(bc) borderRect.setAttribute('rx', frameRadius); if(bc) borderRect.setAttribute('ry', frameRadius); }
     if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
     if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
 
@@ -1032,7 +1032,7 @@
       const topH=getNum('topH',22);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
-      const bTh = getNum('wcBorderWidth', 6);
+      const bTh = getNum('frameBorderWidth', 6);
       const bCol = usp.get('frameBorderColor') || DEFAULTS.frameBorderColor;
 
       const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
