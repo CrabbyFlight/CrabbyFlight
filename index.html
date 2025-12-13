@@ -649,6 +649,8 @@
     const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
     const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:''):'';
 
+    const dep = getUtcTime(doc, 'dep');
+    const arr = getUtcTime(doc, 'arr');
     return {
       patch: {
         from: fmtLoc(fromName, fromIcao),
@@ -657,9 +659,11 @@
         callsign: callsign||'',
         aircraft: (aircraft||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
-        enroute: formatEte(eteRaw)
+        enroute: formatEte(eteRaw),
+        dep_utc: (dep?.label||'').toString().trim(),
+        arr_utc: (arr?.label||'').toString().trim(),
       },
-      meta: { note: 'utc_unchanged' }
+      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source }
     };
   }
 
@@ -799,7 +803,13 @@
         if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','cruise','enroute']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
-        setSimBriefStatus('Imported ✓ (UTC unchanged — manual)', false, true);
+        if (meta?.note === 'utc_autosynced'){
+          const depMsg = meta?.dep_src ? `DEP(${meta.dep_src})` : '';
+          const arrMsg = meta?.arr_src ? `ARR(${meta.arr_src})` : '';
+          setSimBriefStatus(`Imported ✓ (UTC updated ${depMsg} ${arrMsg})`, false, true);
+        } else {
+          setSimBriefStatus('Imported ✓ (UTC unchanged — manual)', false, true);
+        }
       }catch(err){
         setSimBriefStatus(`Import failed: ${err?.message||err}`, true);
       }
