@@ -691,6 +691,7 @@
       const pad = 16;
       wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
       wc.style.outline = bOn ? `${bTh}px solid ${bCol}` : 'none';
+      wc.style.boxShadow = bOn ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
     }
 
     [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcBorder' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
@@ -795,7 +796,7 @@
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
 
     const wc=document.getElementById('wc');
-    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = bOn? `${bTh}px solid ${bCol}` : 'none'; }
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = bOn? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = bOn ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
@@ -876,7 +877,7 @@
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
       if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
-        const wcBorderParam = usp.get('wcBorder'); if(wcBorderParam && wcBorderParam === 'off'){ wc.style.outline = 'none'; }
+        const wcBorderParam = usp.get('wcBorder'); if(wcBorderParam && wcBorderParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; }
       }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
