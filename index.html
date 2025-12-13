@@ -260,7 +260,7 @@
         <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
         <div>
           <label for="wcShow">Toggle webcam</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off (shows AFK when off)</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off (shows AFK when on)</span></div>
         </div>
       </div>
       <div class="grid">
@@ -709,7 +709,7 @@
       wc.style.boxShadow = wcShown ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
       const afkImg=document.getElementById('wc_afk');
       if(afkImg){
-        if(!wcShown && afkPath){
+        if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
           afkImg.style.display = 'block';
         } else {
@@ -830,14 +830,14 @@
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
     // AFK logo handling
     const afkPath=v('wcAfkPath','afklogo.png');
-    const afkOn = !wcShowSaved;
+    const afkOn = wcShowSaved;
     const imgEl = document.getElementById('wc_afk');
     if(imgEl){
       const wcShowParam = (usp.get('wcShow')||'').toLowerCase();
       const pathOverride = usp.get('wcAfkPath');
       let finalPath = (pathOverride!==null && pathOverride!==undefined) ? pathOverride : afkPath;
       if(!afkOn) finalPath = '';
-      if(wcShowParam === 'on') finalPath = '';
+      if(wcShowParam === 'off') finalPath = '';
       if(finalPath){ try{ const base = location.href.split('#')[0].split('?')[0]; imgEl.src = /^[a-zA-Z]+:/.test(finalPath) ? finalPath : new URL(finalPath, base).href; }catch(e){ imgEl.src = finalPath; } imgEl.style.display = 'block'; }
       else imgEl.style.display = 'none';
     }
@@ -922,8 +922,8 @@
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
       if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
         const wcShowParam = (usp.get('wcShow')||'').toLowerCase(); const imgEl=document.getElementById('wc_afk');
-        if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'block'; }
-        else if (wcShowParam === 'on'){ if(imgEl) imgEl.style.display = 'none'; }
+        if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'none'; }
+        else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
