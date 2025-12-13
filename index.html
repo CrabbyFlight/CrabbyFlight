@@ -1105,7 +1105,7 @@
 
   const MODES = ["editor","info","departures","frame"];
 
-  function parseHash() {
+  function routerParseHash() {
     const raw = (location.hash || "").slice(1);
     let [mode, room] = raw.split(":");
     if (!mode || !MODES.includes(mode)) mode = "editor";
@@ -1113,7 +1113,7 @@
   }
 
   function setHashRoom(room) {
-    const { mode } = parseHash();
+    const { mode } = routerParseHash();
     const target = `#${mode}:${room}`;
     if (location.hash !== target) location.replace(target);
   }
@@ -1158,8 +1158,8 @@
     adoptRoom(last);
   }
 
-  if (auth) {
-    onAuthStateChanged(auth, (user) => {
+  if (routerAuth) {
+    onAuthStateChanged(routerAuth, (user) => {
       if (user?.uid && user.uid !== resolvedRoom) {
         adoptRoom(user.uid);
       }
@@ -1167,7 +1167,7 @@
   }
 
   window.addEventListener("hashchange", () => {
-    const { room } = parseHash();
+    const { room } = routerParseHash();
     if (resolvedRoom && room !== resolvedRoom) setHashRoom(resolvedRoom);
   });
 </script>
