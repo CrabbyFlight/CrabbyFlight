@@ -232,6 +232,31 @@
         <select id="live"><option value="on">On</option><option value="off">Off</option></select>
       </div>
     </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div>
+        <label for="infoLive">Show live indicator</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoLive" type="checkbox" checked><span class="hint">Show the LIVE indicator on the info overlay</span></div>
+      </div>
+      <div>
+        <label for="infoRes">Show resolution</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoRes" type="checkbox" checked><span class="hint">Display resolution text (e.g., 1080p60FPS)</span></div>
+      </div>
+      <div>
+        <label for="infoPlatform">Show platform</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Display platform text (macOS + OneCast)</span></div>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div>
+        <label for="infoResText">Resolution text</label>
+        <input id="infoResText" placeholder="1080p60FPS">
+      </div>
+      <div>
+        <label for="infoPlatformText">Platform text</label>
+        <input id="infoPlatformText" placeholder="macOS + OneCast">
+      </div>
+      <div></div>
+    </div>
 
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
@@ -312,7 +337,7 @@
 
     <div class="bottom-row" style="margin-top:3px; gap:10px;">
       <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
-      1080p60FPS | macOS + OneCast
+      <span id="i_res">1080p60FPS</span> <span class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
     </div>
   </div>
 </div>
@@ -480,12 +505,12 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
-    logoShow:"on" }; 
+    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -710,6 +735,18 @@
       const frameLogoEl = document.getElementById('frame_logo');
       const logoShown = (els['logoShow']?.checked === true);
       if(frameLogoEl){ frameLogoEl.style.display = logoShown ? 'flex' : 'none'; }
+      // Info overlay bottom items preview
+      const liveEl = document.getElementById('i_live_block');
+      const resEl = document.getElementById('i_res');
+      const platEl = document.getElementById('i_platform');
+      const infoLiveShown = (els['infoLive']?.checked === true);
+      const infoResShown = (els['infoRes']?.checked === true);
+      const infoPlatformShown = (els['infoPlatform']?.checked === true);
+      const resText = (els['infoResText']?.value || '1080p60FPS').toString().trim();
+      const platText = (els['infoPlatformText']?.value || 'macOS + OneCast').toString().trim();
+      if(liveEl) liveEl.style.display = (infoLiveShown && (els['live']?.value === 'on')) ? 'inline-flex' : 'none';
+      if(resEl){ resEl.textContent = resText; resEl.style.display = infoResShown ? 'inline' : 'none'; }
+      if(platEl){ platEl.textContent = platText; platEl.style.display = infoPlatformShown ? 'inline' : 'none'; }
       if(afkImg){
         if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
@@ -720,7 +757,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','logoShow' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -778,7 +815,23 @@
     setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
     setT('i_flight',val('flight',DEFAULTS.flight)); setT('i_callsign',val('callsign',DEFAULTS.callsign));
     setT('i_aircraft',val('aircraft',DEFAULTS.aircraft)); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
-    const live = val('live','on')==='on'; const blk=document.getElementById('i_live_block'); if(blk) blk.style.display = live?'inline-flex':'none';
+    const live = val('live','on')==='on';
+    const blk=document.getElementById('i_live_block');
+    // Info display toggles
+    const infoLiveSaved = (val('infoLive','on') === 'on');
+    const infoResSaved = (val('infoRes','on') === 'on');
+    const infoPlatformSaved = (val('infoPlatform','on') === 'on');
+    const resTextSaved = val('infoResText','1080p60FPS');
+    const platTextSaved = val('infoPlatformText','macOS + OneCast');
+    const usp=new URLSearchParams(location.search);
+    const liveParam = (usp.get('infoLive')||'').toLowerCase(); const resParam = (usp.get('infoRes')||'').toLowerCase(); const platParam = (usp.get('infoPlatform')||'').toLowerCase();
+    const liveShould = liveParam === 'on' ? true : liveParam === 'off' ? false : infoLiveSaved;
+    const resShould = resParam === 'on' ? true : resParam === 'off' ? false : infoResSaved;
+    const platShould = platParam === 'on' ? true : platParam === 'off' ? false : infoPlatformSaved;
+    const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform');
+    if(liveEl) liveEl.style.display = (live && liveShould) ? 'inline-flex' : 'none';
+    if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
+    if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
   }
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
