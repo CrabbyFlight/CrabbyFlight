@@ -287,7 +287,7 @@
         </div>
       </div>
       <div class="grid">
-        <div><label>Rounded mask (fixed 16px)</label></div>
+        <div><label>Rounded mask (matches webcam size & radius)</label></div>
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
       </div>
 
@@ -816,9 +816,14 @@
     bindIf('copyUrls',  ()=> openUrlModal());
     bindIf('btn_signout', ()=> signOut(auth).catch(e=>setStatus(e.message)));
     bindIf('btn_download_mask', ()=>{
-      const w=512, h=512; const c=document.createElement('canvas'); c.width=w; c.height=h;
+      const wcW=parseInt((editorEls['wcW']?.value||'1280'),10)||1280; const wcH=parseInt((editorEls['wcH']?.value||'720'),10)||720; const frameRadius=parseFloat((editorEls['frameBorderRadius']?.value||'28'))||28;
+      let w=wcW, h=wcH; // canvas size
+      // limit large sizes to avoid heavy images (scale down uniformly)
+      const MAX_DIM=2048; let scale = 1; if(w>MAX_DIM || h>MAX_DIM){ scale = Math.min(MAX_DIM/w, MAX_DIM/h); w=Math.round(w*scale); h=Math.round(h*scale); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
       const ctx=c.getContext('2d'); ctx.fillStyle='black'; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalCompositeOperation='destination-out';
-      const pad=32, rr=32; const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
+      const pad=0; const rr=Math.round(frameRadius*scale);
+      const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
       ctx.beginPath();
       ctx.moveTo(rx+rr, ry);
       ctx.arcTo(rx+rw, ry, rx+rw, ry+rh, rr);
@@ -826,7 +831,7 @@
       ctx.arcTo(rx, ry+rh, rx, ry, rr);
       ctx.arcTo(rx, ry, rx+rw, ry, rr);
       ctx.closePath(); ctx.fill(); ctx.restore();
-      const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='crabbyflight-rounded-mask.png'; a.click();
+      const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download=`crabbyflight-rounded-mask-${wcW}x${wcH}.png`; a.click();
     });
 
     bindIf('btn_import_sb', async ()=>{
