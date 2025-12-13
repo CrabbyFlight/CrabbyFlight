@@ -221,8 +221,9 @@
       <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
       <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
     </div>
-    <div class="grid">
-      <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320neo"></div>
+    <div class="grid-3">
+      <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320-251N"></div>
+      <div><label for="airframe">Airframe (Reg)</label><input id="airframe" placeholder="G-WALI"></div>
       <div><label for="cruise">Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
     <div class="grid">
@@ -500,11 +501,11 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute",
+  const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute",
     "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-    aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs",
+    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
@@ -673,7 +674,8 @@
     const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
     const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
     const callsign = pickText(doc,'OFP general callsign','general callsign');
-    const aircraft = pickText(doc,'OFP aircraft icao_code','aircraft icao_code','general aircraft_icao','aircraft type');
+    const aircraft = pickText(doc,'OFP aircraft name','aircraft name','aircraft type','OFP aircraft icao_code','aircraft icao_code','general aircraft_icao');
+    const airframe = pickText(doc,'aircraft reg','reg','OFP aircraft reg','general reg');
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
     const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
 
@@ -689,13 +691,14 @@
         to:   fmtLoc(toName, toIcao),
         flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
         callsign: callsign||'',
-        aircraft: (aircraft||'').toUpperCase(),
+        aircraft: (aircraft||'').toString().trim(),
+        airframe: (airframe||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw),
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
       },
-      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source, dep_raw: dep?.raw, arr_raw: arr?.raw, dep_hm: dep?.hm, arr_hm: arr?.hm, dep_offMin: dep?.offMin, arr_offMin: arr?.offMin }
+      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source, dep_raw: dep?.raw, arr_raw: arr?.raw, dep_hm: dep?.hm, arr_hm: arr?.hm, dep_offMin: dep?.offMin, arr_offMin: arr?.offMin, aircraft_raw: aircraft, airframe_raw: airframe }
     };
   }
 
@@ -833,7 +836,7 @@
         sanitizeUTCField(editorEls['dep_utc']);
         sanitizeUTCField(editorEls['arr_utc']);
 
-        if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','cruise','enroute']
+        if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','airframe','cruise','enroute']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
         if (meta?.note === 'utc_autosynced'){
@@ -855,7 +858,10 @@
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
     setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
     setT('i_flight',val('flight',DEFAULTS.flight)); setT('i_callsign',val('callsign',DEFAULTS.callsign));
-    setT('i_aircraft',val('aircraft',DEFAULTS.aircraft)); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
+    const aircraftSaved = val('aircraft', DEFAULTS.aircraft);
+    const airframeSaved = val('airframe', '');
+    const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
+    setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
     const blk=document.getElementById('i_live_block');
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
