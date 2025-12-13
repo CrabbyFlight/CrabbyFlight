@@ -278,7 +278,9 @@
 
       <div class="grid-3">
         <div><label for="wcBorderColor">Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
+        <div><label for="wcBorderRadius">Webcam Border Radius</label><input id="wcBorderRadius" type="number" placeholder="16" value="16"></div>
         <div><label for="frameBorderColor">Frame Border Color</label><input id="frameBorderColor" type="color" value="#3d434b"></div>
+        <div><label for="frameBorderRadius">Frame Border Radius</label><input id="frameBorderRadius" type="number" placeholder="28" value="28"></div>
         <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
         <div>
           <label for="wcShow">Toggle webcam</label>
@@ -500,11 +502,11 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor",
+  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius","wcBorderRadius",
     "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b",
+    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28", wcBorderRadius: "16",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
@@ -760,16 +762,20 @@
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
       const bCol=(editorEls['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
       const frameCol=(editorEls['frameBorderColor']?.value||'#3d434b');
+      const wcRadius = toNum('wcBorderRadius',16);
+      const frameRadius = toNum('frameBorderRadius',28);
       const wcShown=(editorEls['wcShow']?.checked===true);
       const afkPath='afklogo.png';
       const pad = 16;
-      wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
+      wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius=`${wcRadius}px`;
       wc.style.outline = wcShown ? `${bTh}px solid ${bCol}` : 'none';
       wc.style.boxShadow = wcShown ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
       const afkImg=document.getElementById('wc_afk');
       // Apply frame border color via CSS variable and preview svg border
-      try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); }catch(e){}
-      const previewBorderRect=document.getElementById('borderRect'); if(previewBorderRect){ previewBorderRect.setAttribute('stroke', frameCol); }
+      try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadius}px`); }catch(e){}
+      const previewBorderRect=document.getElementById('borderRect'); if(previewBorderRect){ previewBorderRect.setAttribute('stroke', frameCol); previewBorderRect.setAttribute('rx', frameRadius); previewBorderRect.setAttribute('ry', frameRadius); }
+      const previewHole=document.getElementById('hole'); if(previewHole){ previewHole.setAttribute('rx', frameRadius); previewHole.setAttribute('ry', frameRadius); }
+      const previewHair=document.getElementById('hairRect'); if(previewHair){ const hairR=Math.max(0, frameRadius-6); previewHair.setAttribute('rx', hairR); previewHair.setAttribute('ry', hairR); }
       const frameLogoEl = document.getElementById('frame_logo');
       const logoShown = (editorEls['logoShow']?.checked === true);
       if(frameLogoEl){ frameLogoEl.style.display = logoShown ? 'flex' : 'none'; }
@@ -797,7 +803,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','frameBorderColor','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','frameBorderColor','frameBorderRadius','wcBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -916,6 +922,8 @@
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',1280), wcH=num('wcH',720);
     const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
     const frameCol=v('frameBorderColor','#3d434b');
+    const frameRadius = parseFloat(v('frameBorderRadius','28'))||28;
+    const wcRadius = parseFloat(v('wcBorderRadius','16'))||16;
     try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); }catch(e){}
     const wcShowSaved = (v('wcShow','on') === 'on');
 
@@ -930,7 +938,7 @@
     const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
     [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
     if(matteRect) matteRect.setAttribute('fill', matte);
-    if(borderRect) { const bc = usp.get('bCol') || frameCol || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); }
+    if(borderRect) { const bc = usp.get('bCol') || frameCol || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); if(bc) borderRect.setAttribute('rx', frameRadius); if(bc) borderRect.setAttribute('ry', frameRadius); }
 
     const lg=document.getElementById('frame_logo');
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
@@ -941,7 +949,7 @@
       lg.style.display = logoShouldShow ? 'flex' : 'none'; }
 
     const wc=document.getElementById('wc');
-    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius = `${wcRadius}px`; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
     // AFK logo handling
     const afkPath = 'afklogo.png';
     const afkOn = wcShowSaved;
@@ -1016,6 +1024,7 @@
     if (mode==='frame'){
       const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
       const pad=getNum('pad',16);
+      const frameRadius=getNum('frameBorderRadius',28);
       const topH=getNum('topH',22);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
@@ -1024,7 +1033,13 @@
       const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
       const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
       [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
+      if(hole){ hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
+      if(borderRect){ borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
+      if(hairRect){ const hr = Math.max(0, frameRadius-6); hairRect.setAttribute('rx', hr); hairRect.setAttribute('ry', hr); }
       if(matteRect) matteRect.setAttribute('fill', matte);
+      if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
+      if(borderRect) { borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
+      if(hairRect) { const hr = Math.max(0, frameRadius-6); hairRect.setAttribute('rx', hr); hairRect.setAttribute('ry', hr); }
 
       const lg=document.getElementById('frame_logo');
       if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
