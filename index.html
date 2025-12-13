@@ -533,14 +533,27 @@
   function parseTimeUTC(any){ const hm=parseHHMM(any); return hm? hmToLabel(hm.h, hm.m) : ''; }
   function parseOffsetToMinutes(off){
     if(!off) return null;
-    const s=String(off).trim().toUpperCase();
+    const raw=String(off).trim();
+    // quick path for canonical ISO offsets and 'Z'
+    const s = raw.toUpperCase();
     if(s==='Z') return 0;
-    const m1=s.match(/^([+-]?)(\d{1,2}):?(\d{2})$/);
+    // try variants: +HH:MM, +HHMM, +HH, -HH, +H
+    // strip common leading tokens like 'GMT' or 'UTC'
+    let cleaned = raw.replace(/^(?:GMT|UTC)\s*/i, '').trim();
+    // also strip surrounding parentheses
+    cleaned = cleaned.replace(/[()]/g,'').trim();
+    // Now try common numeric forms
+    const m1 = cleaned.match(/^([+-]?)(\d{1,2}):?(\d{2})$/);
     if(m1){ const sign=m1[1]==='-'?-1:1; return sign*(parseInt(m1[2],10)*60+parseInt(m1[3],10)); }
-    const m2=s.match(/^([+-]?)(\d{1,2})(?:\.(\d+))?$/);
-    if(m2){ const sign=m2[1]==='-'?-1:1; const hrs=parseInt(m2[2],10); const mins=Math.round(parseFloat('0.'+(m2[3]||'0'))*60); return sign*(hrs*60+mins); }
-    const m3=s.match(/^([+-]?)(\d{3,4})$/);
-    if(m3){ const sign=m3[1]==='-'?-1:1; const num=parseInt(m3[2],10); const hrs=Math.floor(num/100), mins=num%100; return sign*(hrs*60+mins); }
+    // forms like '+3' or '-3' or '3'
+    const m2 = cleaned.match(/^([+-]?)(\d{1,2})$/);
+    if(m2){ const sign=m2[1]==='-'?-1:1; const hrs=parseInt(m2[2],10); return sign*(hrs*60); }
+    // decimal hours like '+4.5'
+    const m3 = cleaned.match(/^([+-]?)(\d{1,2})\.(\d+)$/);
+    if(m3){ const sign=m3[1]==='-'?-1:1; const hrs=parseInt(m3[2],10); const mins = Math.round(parseFloat('0.'+(m3[3]||'0'))*60); return sign*(hrs*60+mins); }
+    // fallback for 3-4 digit numeric like 0100 or 530
+    const m4 = cleaned.match(/^([+-]?)(\d{3,4})$/);
+    if(m4){ const sign=m4[1]==='-'?-1:1; const num=parseInt(m4[2],10); const hrs=Math.floor(num/100), mins=num%100; return sign*(hrs*60+mins); }
     return null;
   }
   function addMinutesHM(h,m,delta){
@@ -594,24 +607,29 @@
     const utcRaw = pickText(doc, utcSelectors);
     if(utcRaw){
       const label = parseTimeUTC(utcRaw);
-      return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc' };
+      return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc', raw: { utcRaw, localRaw: '', offRaw: '' } };
     }
 
     const localRaw = pickText(doc, localSelectors);
-    const offRaw   = pickText(doc, offSelectors);
+    let offRaw   = pickText(doc, offSelectors);
+    // Some sources embed offset inside the local time string (e.g. "15:05 UTC+1" or "15:05 +01:00")
+    if(!offRaw && localRaw){
+      const ext = (localRaw.match(/([+-]\d{1,2}:?\d{2})/) || localRaw.match(/UTC([+-]\d{1,2}:?\d{2})/i) || localRaw.match(/GMT([+-]\d{1,2}:?\d{2})/i));
+      if(ext) offRaw = ext[0].replace(/^UTC/i,'').replace(/^GMT/i,'');
+    }
     if(localRaw){
       const hm = parseHHMM(localRaw);
       if(hm){
         const offMin = parseOffsetToMinutes(offRaw);
         if(offMin!==null){
           const utcHM = addMinutesHM(hm.h, hm.m, -offMin); // local -> UTC
-          return { label: hmToLabel(utcHM.h, utcHM.m), source: (offRaw?`local+offset(${offRaw})`:'local') };
+          return { label: hmToLabel(utcHM.h, utcHM.m), source: (offRaw?`local+offset(${offRaw})`:'local'), raw: { utcRaw:'', localRaw, offRaw }, hm, offMin };
         }
-        return { label: hmToLabel(hm.h, hm.m), source: 'local(no offset)' };
+        return { label: hmToLabel(hm.h, hm.m), source: 'local(no offset)', raw: { utcRaw:'', localRaw, offRaw }, hm, offMin: null };
       }
     }
     const any = pickText(doc, [...utcSelectors, ...localSelectors]);
-    return { label: parseTimeUTC(any), source: 'fallback' };
+    return { label: parseTimeUTC(any), source: 'fallback', raw: { utcRaw: any, localRaw: '', offRaw: '' } };
   }
 
   async function importFromSimBrief(pilotOrUser){
@@ -663,7 +681,7 @@
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
       },
-      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source }
+      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source, dep_raw: dep?.raw, arr_raw: arr?.raw, dep_hm: dep?.hm, arr_hm: arr?.hm, dep_offMin: dep?.offMin, arr_offMin: arr?.offMin }
     };
   }
 
@@ -791,6 +809,7 @@
       try{
         setSimBriefStatus('Fetching…');
         const {patch, meta} = await importFromSimBrief(id);
+        console.debug('SimBrief import meta:', meta);
 
         Object.entries(patch).forEach(([k,val])=>{
           const el = editorEls[k];
@@ -848,8 +867,11 @@
     setT('d_from',val('from',DEFAULTS.from)); setT('d_to',val('to',DEFAULTS.to));
     setT('d_flight',val('flight',DEFAULTS.flight)); setT('d_gate',val('gate',DEFAULTS.gate));
 
-    const depDisp = parseTimeUTC(val('dep_utc',DEFAULTS.dep_utc)) || DEFAULTS.dep_utc;
-    const arrDisp = parseTimeUTC(val('arr_utc',DEFAULTS.arr_utc)) || DEFAULTS.arr_utc;
+    const depRaw = val('dep_utc', DEFAULTS.dep_utc);
+    const arrRaw = val('arr_utc', DEFAULTS.arr_utc);
+    const depDisp = parseTimeUTC(depRaw) || DEFAULTS.dep_utc;
+    const arrDisp = parseTimeUTC(arrRaw) || DEFAULTS.arr_utc;
+    console.debug('renderDepartures parsed:', { depRaw, depDisp, arrRaw, arrDisp });
     setT('d_dep',depDisp); setT('d_arr',arrDisp); setT('d_enroute',val('enroute',DEFAULTS.enroute));
     setT('d_time',(depDisp||'').replace(' UTC',''));
 
