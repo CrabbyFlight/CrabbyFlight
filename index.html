@@ -57,6 +57,8 @@
   h1{margin:0 0 14px;font-size:26px;font-weight:700;letter-spacing:.2px}
   label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:6px 0 6px}
   input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
+  /* ensure checkboxes render normally instead of inheriting text input styles */
+  input[type="checkbox"]{width:auto;height:auto;box-sizing:content-box;padding:0;margin:0 8px 0 0;background:transparent;border:none;appearance:auto;cursor:pointer}
   input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)}
@@ -679,6 +681,20 @@
       function setWH(pVal){ const pair = MAP[pVal]; if (!pair) return; const [pw,ph]=pair; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
       preset.addEventListener('change', ()=>{ els['wcPreset'].value = preset.value; setWH(preset.value); });
     })();
+
+    function updatePreview(){
+      const wc=document.getElementById('wc'); if(!wc) return;
+      const toNum=(k, def)=>{ const el = els[k]; const n = parseFloat(el?.value||''); return Number.isNaN(n)?def:n; };
+      const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
+      const bCol=(els['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
+      const bOn=(els['wcBorder']?.checked===true);
+      const pad = 16;
+      wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
+      wc.style.outline = bOn ? `${bTh}px solid ${bCol}` : 'none';
+    }
+
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcBorder' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
     const openInNew = (url)=> window.open(url, '_blank', 'noopener');
