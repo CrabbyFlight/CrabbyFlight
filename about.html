@@ -171,6 +171,9 @@
         entirely in the browser and uses Firebase for authentication and real-time data
         synchronisation.
       </p>
+      <p>
+        Recent enhancements include unified controls for frame border (color, thickness and radius) that apply across the frame, info-box, and webcam; a webcam rounded-mask generator for OBS; a robust SimBrief importer that parses UTC epoch and offset times; and a light/dark theme toggle in the editor.
+      </p>
       <p class="muted">
         Website: <a href="https://www.crabbyflight.co.uk" target="_blank" rel="noreferrer">www.crabbyflight.co.uk</a><br>
         Source: <a href="https://github.com/CrabbyFlight/CrabbyFlight" target="_blank" rel="noreferrer">github.com/CrabbyFlight/CrabbyFlight</a>
@@ -211,17 +214,18 @@
     </div>
 
     <div class="card">
-      <h2>SimBrief Integration (Planned)</h2>
+      <h2>SimBrief Integration</h2>
       <p>
-        A SimBrief integration feature is planned. The goal is to allow you to enter your
-        SimBrief PilotID and import your latest operational flight plan directly into
-        CrabbyFlight. The application will fetch XML data from the SimBrief API, parse it in
-        the browser and use it to populate the relevant editor fields automatically.
+        CrabbyFlight supports importing flight plans from SimBrief. Enter your SimBrief
+        PilotID (or username) and click "Import from SimBrief" in the editor. The editor
+        fetches the SimBrief XML, parses it in the browser, and uses it to populate the
+        relevant fields automatically.
       </p>
       <p>
         The imported XML will be used to fill details such as origin and destination airports,
         flight number, scheduled departure and arrival times, aircraft type, cruise
-        altitude and estimated enroute duration. Once imported, this data will sync to Firebase
+        altitude and estimated enroute duration. The importer includes improved time parsing
+        (UTC epochs and offsets) so most SimBrief formats import reliably. Once imported, this data will sync to Firebase
         and immediately update all overlay modes, reducing the amount of manual data entry
         required.
       </p>

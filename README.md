@@ -2,6 +2,8 @@
 
 CrabbyFlight is a web-based flight overlay editor and display system for streamers, virtual pilots, and aviation enthusiasts. It allows users to create live, professional-quality flight information overlays for OBS and other streaming software. The system is built using HTML, CSS, and JavaScript, with Firebase providing authentication and real-time data synchronization. All user data is stored securely under each user’s own account.
 
+Notable features added recently include unified frame controls (border color/width/radius) that apply across the overlay, a webcam mask generator that downloads rounded PNG masks matching your webcam size, a SimBrief importer with robust UTC parsing, and a light/dark theme toggle in the editor.
+
 Website: [https://www.crabbyflight.co.uk](https://www.crabbyflight.co.uk)  
 Source: [https://github.com/CrabbyFlight/CrabbyFlight](https://github.com/CrabbyFlight/CrabbyFlight)
 
@@ -33,11 +35,9 @@ Each URL can be used directly as a browser source in OBS or any compatible strea
 
 ---
 
-## SimBrief Integration (Planned)
+## SimBrief integration
 
-A new SimBrief integration feature is in development. Users will be able to enter their SimBrief PilotID and click an “Import from SimBrief” button to automatically retrieve and import their latest flight plan. The system will fetch XML data from the SimBrief API, parse it in the browser, and populate the relevant CrabbyFlight fields automatically.
-
-During initial testing, the XML data was successfully fetched and parsed directly from the browser, so this integration will continue to use that approach. The imported data will include the departure and destination airports, flight number, aircraft type, cruise altitude, scheduled times, and estimated enroute duration. Once imported, these values will be synced to Firebase and immediately reflected in all overlays.
+CrabbyFlight supports importing flight plans from SimBrief. Enter your SimBrief PilotID (or username) and click "Import from SimBrief" in the editor to fetch and parse the SimBrief XML. Imported fields include origin/destination, flight number, aircraft & registration (airframe), cruise altitude, ETE, and scheduled UTC departure/arrival times. The importer has improved UTC parsing to handle epochs, offsets, and common SimBrief formats.
 
 ---
 
@@ -46,8 +46,14 @@ During initial testing, the XML data was successfully fetched and parsed directl
 - Frontend: HTML, CSS, JavaScript  
 - Backend: Firebase Authentication and Firebase Realtime Database  
 - Hosting: GitHub Pages / crabbyflight.co.uk  
-- Planned Integration: SimBrief XML API  
+- SimBrief XML API  
 - Architecture: Fully client-side (no dedicated backend server)
+
+Additional features:
+- Unified frame controls (color, thickness/width, corner radius) apply to frame, info box, and webcam.
+- Download rounded webcam masks matching webcam resolution and corner radius for use in OBS.
+- Light/dark editor theme toggle, stored in Firebase and localStorage to reduce visual flashing on load.
+- Mask generation limits large images to 2048px on the longest dimension to keep downloads reasonable.
 
 ---
 
