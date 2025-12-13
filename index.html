@@ -268,15 +268,7 @@
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
       </div>
 
-      <div class="grid-3" style="margin-top:10px;align-items:center">
-        <div>
-          <label for="wcAfkPath">AFK logo filename/path</label>
-          <input id="wcAfkPath" placeholder="afklogo.png">
-        </div>
-        <div style="display:flex;align-items:end;justify-content:flex-end">
-          <button id="btn_clear_afk" type="button">Clear AFK</button>
-        </div>
-      </div>
+
 
       <div class="grid-3" style="margin-top:10px">
         <div>
@@ -488,12 +480,12 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","wcAfkPath","logoShow"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
-    wcAfkPath:"afklogo.png", logoShow:"on" };
+    logoShow:"on" }; 
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -709,7 +701,7 @@
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
       const bCol=(els['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
       const wcShown=(els['wcShow']?.checked===true);
-      const afkPath=((els['wcAfkPath']?.value||'').toString().trim());
+      const afkPath='afklogo.png';
       const pad = 16;
       wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
       wc.style.outline = wcShown ? `${bTh}px solid ${bCol}` : 'none';
@@ -728,7 +720,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','wcAfkPath','logoShow' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','logoShow' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -777,13 +769,7 @@
         setSb(`Import failed: ${err?.message||err}`, true);
       }
     });
-    bindIf('btn_clear_afk', ()=>{
-      const pathEl = document.getElementById('wcAfkPath'); if(pathEl) pathEl.value = '';
-      // trigger save & preview
-      if (pathEl) { pathEl.dispatchEvent(new Event('input')); }
-      updatePreview();
-      save();
-    });
+
   }
 
   function renderInfo(d){
@@ -844,16 +830,13 @@
     const wc=document.getElementById('wc');
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
     // AFK logo handling
-    const afkPath=v('wcAfkPath','afklogo.png');
+    const afkPath = 'afklogo.png';
     const afkOn = wcShowSaved;
     const imgEl = document.getElementById('wc_afk');
     if(imgEl){
       const wcShowParam = (usp.get('wcShow')||'').toLowerCase();
-      const pathOverride = usp.get('wcAfkPath');
-      let finalPath = (pathOverride!==null && pathOverride!==undefined) ? pathOverride : afkPath;
-      if(!afkOn) finalPath = '';
-      if(wcShowParam === 'off') finalPath = '';
-      if(finalPath){ try{ const base = location.href.split('#')[0].split('?')[0]; imgEl.src = /^[a-zA-Z]+:/.test(finalPath) ? finalPath : new URL(finalPath, base).href; }catch(e){ imgEl.src = finalPath; } imgEl.style.display = 'block'; }
+      const shouldShow = afkOn && (wcShowParam !== 'off');
+      if(shouldShow){ try{ const base = location.href.split('#')[0].split('?')[0]; imgEl.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ imgEl.src = afkPath; } imgEl.style.display = 'block'; }
       else imgEl.style.display = 'none';
     }
 
