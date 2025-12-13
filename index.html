@@ -500,11 +500,11 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
+  const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute",
     "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-    aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
+    aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
@@ -668,11 +668,11 @@
     if (editorBound) return;
     editorBound = true;
 
-    const els = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
-    const statusEl = els['status'];
+    const editorEls = Object.fromEntries(FIELDS.map(id=>[id, document.getElementById(id)]));
+    const statusEl = editorEls['status'];
     const customRow = document.getElementById('customRow');
 
-    const setSb = (msg, warn=false, ok=false)=>{
+    const setSimBriefStatus = (msg, warn=false, ok=false)=>{
       const b=document.getElementById('sb_status'); if(!b) return;
       b.textContent=msg||''; b.className='pill '+(warn?'warn':ok?'ok':'');
     };
@@ -680,7 +680,7 @@
     function read(){
       const d={};
       for(const k of FIELDS){
-        const el = els[k];
+        const el = editorEls[k];
         if(!el){ d[k] = ''; continue; }
         if(el.type === 'checkbox') d[k] = el.checked ? 'on' : 'off';
         else d[k] = (el.value||'').toString().trim();
@@ -694,10 +694,10 @@
       clearTimeout(t);
       t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
     }
-    for(const k of FIELDS){ const el=els[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
+    for(const k of FIELDS){ const el=editorEls[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
 
     ['dep_utc','arr_utc'].forEach(id=>{
-      const el = els[id]; if(!el) return;
+      const el = editorEls[id]; if(!el) return;
       const onBlur = ()=> sanitizeUTCField(el);
       el.addEventListener('blur', onBlur);
       el.addEventListener('change', onBlur);
@@ -709,19 +709,19 @@
 
     (function initWcPreset(){
       const preset = document.getElementById('wcPreset');
-      const w = els['wcW'], h = els['wcH'];
+      const w = editorEls['wcW'], h = editorEls['wcH'];
       if (!preset || !w || !h) return;
       const MAP = {"1920x1080":[1920,1080],"1280x720":[1280,720],"960x540":[960,540],"640x480":[640,480],"352x288":[352,288],"320x240":[320,240]};
       function setWH(pVal){ const pair = MAP[pVal]; if (!pair) return; const [pw,ph]=pair; w.value=pw; h.value=ph; w.dispatchEvent(new Event('input')); h.dispatchEvent(new Event('input')); }
-      preset.addEventListener('change', ()=>{ els['wcPreset'].value = preset.value; setWH(preset.value); });
+      preset.addEventListener('change', ()=>{ editorEls['wcPreset'].value = preset.value; setWH(preset.value); });
     })();
 
     function updatePreview(){
       const wc=document.getElementById('wc'); if(!wc) return;
-      const toNum=(k, def)=>{ const el = els[k]; const n = parseFloat(el?.value||''); return Number.isNaN(n)?def:n; };
+      const toNum=(k, def)=>{ const el = editorEls[k]; const n = parseFloat(el?.value||''); return Number.isNaN(n)?def:n; };
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
-      const bCol=(els['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
-      const wcShown=(els['wcShow']?.checked===true);
+      const bCol=(editorEls['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
+      const wcShown=(editorEls['wcShow']?.checked===true);
       const afkPath='afklogo.png';
       const pad = 16;
       wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
@@ -729,18 +729,18 @@
       wc.style.boxShadow = wcShown ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
       const afkImg=document.getElementById('wc_afk');
       const frameLogoEl = document.getElementById('frame_logo');
-      const logoShown = (els['logoShow']?.checked === true);
+      const logoShown = (editorEls['logoShow']?.checked === true);
       if(frameLogoEl){ frameLogoEl.style.display = logoShown ? 'flex' : 'none'; }
       // Info overlay bottom items preview
       const liveEl = document.getElementById('i_live_block');
       const resEl = document.getElementById('i_res');
       const platEl = document.getElementById('i_platform');
       const sepEl = document.getElementById('i_sep');
-      const infoLiveShown = (els['infoLive']?.checked === true);
-      const infoResShown = (els['infoRes']?.checked === true);
-      const infoPlatformShown = (els['infoPlatform']?.checked === true);
-      const resText = (els['infoResText']?.value || '1080p60FPS').toString().trim();
-      const platText = (els['infoPlatformText']?.value || 'macOS + OneCast').toString().trim();
+      const infoLiveShown = (editorEls['infoLive']?.checked === true);
+      const infoResShown = (editorEls['infoRes']?.checked === true);
+      const infoPlatformShown = (editorEls['infoPlatform']?.checked === true);
+      const resText = (editorEls['infoResText']?.value || '1080p60FPS').toString().trim();
+      const platText = (editorEls['infoPlatformText']?.value || 'macOS + OneCast').toString().trim();
       if(liveEl) liveEl.style.display = infoLiveShown ? 'inline-flex' : 'none';
       if(resEl){ resEl.textContent = resText; resEl.style.display = infoResShown ? 'inline' : 'none'; }
       if(platEl){ platEl.textContent = platText; platEl.style.display = infoPlatformShown ? 'inline' : 'none'; }
@@ -755,7 +755,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -782,26 +782,26 @@
     });
 
     bindIf('btn_import_sb', async ()=>{
-      const id = (els['simbrief_id']?.value||'').trim();
-      if (!id){ setSb('Enter your PilotID or username', true); return; }
+      const id = (editorEls['simbrief_id']?.value||'').trim();
+      if (!id){ setSimBriefStatus('Enter your PilotID or username', true); return; }
       try{
-        setSb('Fetching…');
+        setSimBriefStatus('Fetching…');
         const {patch, meta} = await importFromSimBrief(id);
 
         Object.entries(patch).forEach(([k,val])=>{
-          const el = els[k];
+          const el = editorEls[k];
           if (el && val) el.value = val;
         });
 
-        sanitizeUTCField(els['dep_utc']);
-        sanitizeUTCField(els['arr_utc']);
+        sanitizeUTCField(editorEls['dep_utc']);
+        sanitizeUTCField(editorEls['arr_utc']);
 
         if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','cruise','enroute']
-          .forEach(k => els[k]?.dispatchEvent(new Event('input')));
+          .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
-        setSb('Imported ✓ (UTC unchanged — manual)', false, true);
+        setSimBriefStatus('Imported ✓ (UTC unchanged — manual)', false, true);
       }catch(err){
-        setSb(`Import failed: ${err?.message||err}`, true);
+        setSimBriefStatus(`Import failed: ${err?.message||err}`, true);
       }
     });
 
