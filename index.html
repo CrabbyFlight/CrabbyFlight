@@ -21,6 +21,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add(mode || 'editor');
       try{ const saved = localStorage.getItem('cf_theme'); if(saved==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }catch(e){}
+      // Keep the toggle-in-editor in sync with the saved theme; this lets nested editors keep the right position
+      try{ const themeHidden = document.getElementById('theme'); const themeToggle = document.getElementById('theme_toggle'); if(themeHidden && themeToggle){ themeToggle.checked = ((themeHidden.value||'dark') === 'dark'); } }catch(e){}
     });
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
@@ -37,6 +39,12 @@
   }
   /* Dark theme overrides */
   html.dark{ --bg:#0b1220; --panel:#0f1724; --ink:#e6eef6; --muted:#94a3b8; --line:#1f2a3b; --brand:#60a5fa; --accent:#3b82f6; --shadow:0 8px 22px rgba(2,6,23,.6); }
+  /* Ensure general buttons remain legible in dark mode */
+  html.dark button{ background:var(--panel); color:var(--ink); border:1px solid rgba(255,255,255,0.04); box-shadow:0 6px 18px rgba(0,0,0,.4); }
+  html.dark .btns button{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color:rgba(255,255,255,0.04) }
+  html.dark button[disabled]{ opacity:0.6 }
+  /* Slightly darker accent for primary to improve contrast in dark mode */
+  html.dark button.primary{ background: #1f6fe8; box-shadow:0 4px 12px rgba(31,111,232,.14) }
   #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
   body.editor #screen-editor{display:block}
   body.info #screen-info{display:block}
@@ -70,11 +78,21 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)}
   .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
-  button{border:1px solid var(--line);background:#f8fafc;color:var(--ink);padding:10px 14px;border-radius:8px;cursor:pointer;transition:background .12s ease,transform .02s ease}
-  button:hover{background:#f0f5ff}
+  button{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:8px;cursor:pointer;transition:filter .12s ease,transform .02s ease}
+  button:hover{filter:brightness(.98)}
   button.primary{background:var(--brand);border-color:transparent;color:white}
+  /* Make sure primary buttons stay legible in dark mode */
+  html.dark button.primary{color:white}
   button.primary:hover{filter:brightness(.98)}
   button:active{transform:translateY(1px)}
+
+  /* Theme toggle */
+  .switch{position:relative;display:inline-block;width:52px;height:28px}
+  .switch input{display:none}
+  .switch .slider{position:absolute;cursor:pointer;background:var(--line);top:2px;left:2px;right:2px;bottom:2px;border-radius:999px;transition:all .18s ease}
+  .switch .slider:before{content:"";position:absolute;height:22px;width:22px;left:3px;top:3px;border-radius:50%;background:var(--panel);box-shadow:0 2px 6px rgba(0,0,0,.18);transition:all .18s ease}
+  .switch input:checked + .slider{background:var(--brand)}
+  .switch input:checked + .slider:before{transform:translateX(24px);background:white}
 
   .hint{color:var(--muted);font-size:13px}
   .pill{display:inline-block;padding:4px 10px;font-size:12px;border-radius:999px;background:transparent;border:1px solid var(--line);color:var(--muted)}
@@ -323,13 +341,14 @@
       <button id="openFrame" type="button">Open Frame</button>
       <button id="copyUrls" class="primary" type="button" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
-        <label for="theme" style="margin:0;font-weight:700;color:var(--muted);font-size:13px">Theme</label>
-        <select id="theme" style="width:120px">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
+        <input id="theme" type="hidden" value="dark">
+        <label for="theme_toggle" style="margin:0;font-weight:700;color:var(--muted);font-size:13px">Theme</label>
+        <label class="switch" title="Toggle dark mode">
+          <input id="theme_toggle" type="checkbox" aria-label="Theme toggle">
+          <span class="slider"></span>
+        </label>
       </div>
-      <button id="btn_signout" type="button">Sign out</button>
+      <button id="btn_signout" type="button" style="margin-left:8px">Sign out</button>
     </div>
   </div>
 </div>
@@ -834,19 +853,32 @@
     [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
-    // Frame border width slider + badge sync
+    // Frame border width slider sync
     try{
       const rangeEl = document.getElementById('frameBorderWidth_range');
       const numEl = document.getElementById('frameBorderWidth');
       if(rangeEl && numEl){
-        // initialize from persisted value (if any)
+        // initialize the UI value from persisted/hidden numeric field
         const initial = parseInt(numEl.value || '6', 10) || 6;
         rangeEl.value = initial;
         numEl.value = initial;
-        // no badge - we only sync the numeric input and range
         rangeEl.addEventListener('input', ()=>{ const v = rangeEl.value; numEl.value = v; updatePreview(); save(); });
-        numEl.addEventListener('input', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; updatePreview(); save(); });
-        numEl.addEventListener('change', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; updatePreview(); save(); });
+        numEl.addEventListener('input', ()=>{ const v = numEl.value; const n = Math.max(0, Math.min(48, parseInt(v||'0',10)||0)); rangeEl.value = n; updatePreview(); save(); });
+        numEl.addEventListener('change', ()=>{ const v = numEl.value; const n = Math.max(0, Math.min(48, parseInt(v||'0',10)||0)); rangeEl.value = n; updatePreview(); save(); });
+      }
+    }catch(e){}
+    // Theme toggle wiring
+    try{
+      const themeHidden = document.getElementById('theme');
+      const themeToggle = document.getElementById('theme_toggle');
+      if(themeHidden && themeToggle){
+        // initialize based on the hidden value
+        const v = (themeHidden.value||DEFAULTS.theme||'dark');
+        themeToggle.checked = (v === 'dark');
+        themeToggle.addEventListener('change', ()=>{
+          const themeVal = themeToggle.checked ? 'dark' : 'light';
+          themeHidden.value = themeVal; save(); updatePreview();
+        });
       }
     }catch(e){}
 
