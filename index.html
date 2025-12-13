@@ -912,7 +912,10 @@
       // limit large sizes to avoid heavy images (scale down uniformly)
       const MAX_DIM=2048; let scale = 1; if(w>MAX_DIM || h>MAX_DIM){ scale = Math.min(MAX_DIM/w, MAX_DIM/h); w=Math.round(w*scale); h=Math.round(h*scale); }
       const c=document.createElement('canvas'); c.width=w; c.height=h;
-      const ctx=c.getContext('2d'); ctx.fillStyle='black'; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalCompositeOperation='destination-out';
+      const ctx=c.getContext('2d');
+      // OBS masks: white = visible, black = transparent. Fill black, then draw white rounded rect for webcam area
+      ctx.fillStyle='black'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='white';
       const pad=0; const rr=Math.round(frameRadius*scale);
       const rx=pad, ry=pad, rw=w-pad*2, rh=h-pad*2;
       ctx.beginPath();
@@ -921,7 +924,7 @@
       ctx.arcTo(rx+rw, ry+rh, rx, ry+rh, rr);
       ctx.arcTo(rx, ry+rh, rx, ry, rr);
       ctx.arcTo(rx, ry, rx+rw, ry, rr);
-      ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.closePath(); ctx.fill();
       const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download=`crabbyflight-rounded-mask-${wcW}x${wcH}.png`; a.click();
     });
 
