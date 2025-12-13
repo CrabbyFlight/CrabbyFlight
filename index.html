@@ -18,7 +18,10 @@
   (function () {
     const raw = (location.hash || '').replace(/^#/, '');
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
-    document.addEventListener('DOMContentLoaded', () => document.body.classList.add(mode || 'editor'));
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.classList.add(mode || 'editor');
+      try{ const saved = localStorage.getItem('cf_theme'); if(saved==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }catch(e){}
+    });
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     if (standalone && (mode === 'info' || mode === 'departures' || mode === 'frame')) {
       document.documentElement.classList.add('show-splash');
@@ -32,6 +35,8 @@
     --brand:#1e90ff; --accent:#2563eb; --shadow:0 6px 18px rgba(14,30,37,.06);
     --radius:10px; --gap:12px;
   }
+  /* Dark theme overrides */
+  html.dark{ --bg:#0b1220; --panel:#0f1724; --ink:#e6eef6; --muted:#94a3b8; --line:#1f2a3b; --brand:#60a5fa; --accent:#3b82f6; --shadow:0 8px 22px rgba(2,6,23,.6); }
   #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
   body.editor #screen-editor{display:block}
   body.info #screen-info{display:block}
@@ -290,7 +295,6 @@
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
             <input id="frameBorderWidth_range" type="range" min="0" max="48" value="6">
             <input id="frameBorderWidth" type="number" min="0" max="48" placeholder="6" style="width:64px">
-            <span id="frameBorderWidth_badge" class="pill" style="min-width:36px">6</span>
           </div>
         </div>
         <div>
@@ -318,7 +322,14 @@
       <button id="openDep" type="button">Open Departures</button>
       <button id="openFrame" type="button">Open Frame</button>
       <button id="copyUrls" class="primary" type="button" title="Show your OBS overlay URLs">UID: <span id="uid_in_btn">—</span> • Show OBS URLs</button>
-      <button id="btn_signout" type="button" style="margin-left:auto">Sign out</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <label for="theme" style="margin:0;font-weight:700;color:var(--muted);font-size:13px">Theme</label>
+        <select id="theme" style="width:120px">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <button id="btn_signout" type="button">Sign out</button>
     </div>
   </div>
 </div>
@@ -515,11 +526,12 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius",
-    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
+    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
+    theme: "dark",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
   /* ---------- Time helpers ---------- */
@@ -772,6 +784,8 @@
       const wc=document.getElementById('wc'); if(!wc) return;
       const toNum=(k, def)=>{ const el = editorEls[k]; const n = parseFloat(el?.value||''); return Number.isNaN(n)?def:n; };
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
+      const curTheme = (editorEls['theme']?.value || DEFAULTS.theme || 'dark');
+      try{ if(curTheme==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); localStorage.setItem('cf_theme', curTheme); }catch(e){}
       const frameCol=(editorEls['frameBorderColor']?.value||'#3d434b');
       const bCol = frameCol;
       const bTh=toNum('frameBorderWidth',6);
@@ -817,23 +831,22 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // Frame border width slider + badge sync
     try{
       const rangeEl = document.getElementById('frameBorderWidth_range');
       const numEl = document.getElementById('frameBorderWidth');
-      const badge = document.getElementById('frameBorderWidth_badge');
-      if(rangeEl && numEl && badge){
+      if(rangeEl && numEl){
         // initialize from persisted value (if any)
         const initial = parseInt(numEl.value || '6', 10) || 6;
         rangeEl.value = initial;
         numEl.value = initial;
-        badge.textContent = String(initial);
-        rangeEl.addEventListener('input', ()=>{ const v = rangeEl.value; numEl.value = v; badge.textContent = v; updatePreview(); save(); });
-        numEl.addEventListener('input', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; badge.textContent = String(n); updatePreview(); save(); });
-        numEl.addEventListener('change', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; badge.textContent = String(n); updatePreview(); save(); });
+        // no badge - we only sync the numeric input and range
+        rangeEl.addEventListener('input', ()=>{ const v = rangeEl.value; numEl.value = v; updatePreview(); save(); });
+        numEl.addEventListener('input', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; updatePreview(); save(); });
+        numEl.addEventListener('change', ()=>{ const v = numEl.value; const n = parseInt(v||'0',10)||0; rangeEl.value = n; updatePreview(); save(); });
       }
     }catch(e){}
 
@@ -1030,10 +1043,9 @@
         try{
           const rangeEl = document.getElementById('frameBorderWidth_range');
           const numEl = document.getElementById('frameBorderWidth');
-          const badge = document.getElementById('frameBorderWidth_badge');
-          if(rangeEl && numEl && badge){
+          if(rangeEl && numEl){
             const v = parseInt(numEl.value||DEFAULTS.frameBorderWidth||'6',10) || 6;
-            rangeEl.value = v; badge.textContent = String(v);
+            rangeEl.value = v;
           }
         }catch(e){}
         sanitizeUTCField(document.getElementById('dep_utc'));
@@ -1047,6 +1059,8 @@
           const presetHidden = document.getElementById('wcPreset');
           if (presetHidden) presetHidden.value = presetEl.value;
         }
+        // Ensure preview picks up new values loaded from DB
+        try{ setTimeout(()=>{ updatePreview(); }, 8); }catch(e){}
       }
 
       if (!firstPaint) {
