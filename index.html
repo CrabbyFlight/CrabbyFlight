@@ -80,7 +80,7 @@
   .auth-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 
   .container{position:absolute;top:24px;left:24px}
-  .info-box{background:rgba(44,48,54,.62);border:1px solid var(--frame-border-color, rgba(61,67,75,.85));border-radius:var(--frame-border-radius,12px);box-shadow:var(--shadow);color:#fff;font-size:18px;padding:12px 18px;line-height:1.4;display:inline-block;min-width:480px;text-shadow:2px 2px 4px rgba(0,0,0,.9);backdrop-filter:blur(2px)}
+  .info-box{background:rgba(44,48,54,.62);border:none;border-radius:var(--frame-border-radius,12px);box-shadow:var(--shadow);color:#fff;font-size:18px;padding:12px 18px;line-height:1.4;display:inline-block;min-width:480px;text-shadow:2px 2px 4px rgba(0,0,0,.9);backdrop-filter:blur(2px)}
   .plane-icon{vertical-align:middle;margin:0 5px;transform:rotate(90deg);width:16px;height:16px}
 
   @keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}100%{transform:scale(1);opacity:1}}
@@ -277,8 +277,8 @@
       <input id="wcH" type="hidden" value="720">
 
       <div class="grid-3">
-        <div><label for="wcBorderColor">Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
         <div><label for="frameBorderColor">Frame Border Color</label><input id="frameBorderColor" type="color" value="#3d434b"></div>
+        
         <div><label for="frameBorderRadius">Border Radius (Frame/Info/Webcam)</label><input id="frameBorderRadius" type="number" placeholder="28" value="28"></div> 
         <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
         <div>
@@ -502,11 +502,11 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28",
-    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderWidth:"6", wcShow:"on",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
   /* ---------- Time helpers ---------- */
@@ -759,8 +759,9 @@
       const wc=document.getElementById('wc'); if(!wc) return;
       const toNum=(k, def)=>{ const el = editorEls[k]; const n = parseFloat(el?.value||''); return Number.isNaN(n)?def:n; };
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
-      const bCol=(editorEls['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
       const frameCol=(editorEls['frameBorderColor']?.value||'#3d434b');
+      const bCol = frameCol;
+      const bTh=toNum('wcBorderWidth',6);
       const frameRadius = toNum('frameBorderRadius',28);
       const wcRadius = frameRadius;
       const wcShown=(editorEls['wcShow']?.checked===true);
@@ -774,7 +775,7 @@
       try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadius}px`); }catch(e){}
       const previewBorderRect=document.getElementById('borderRect'); if(previewBorderRect){ previewBorderRect.setAttribute('stroke', frameCol); previewBorderRect.setAttribute('rx', frameRadius); previewBorderRect.setAttribute('ry', frameRadius); }
       const previewHole=document.getElementById('hole'); if(previewHole){ previewHole.setAttribute('rx', frameRadius); previewHole.setAttribute('ry', frameRadius); }
-      const previewHair=document.getElementById('hairRect'); if(previewHair){ const hairR=Math.max(0, frameRadius-6); previewHair.setAttribute('rx', hairR); previewHair.setAttribute('ry', hairR); }
+      const previewHair=document.getElementById('hairRect'); if(previewHair){ previewHair.setAttribute('rx', frameRadius); previewHair.setAttribute('ry', frameRadius); }
       const frameLogoEl = document.getElementById('frame_logo');
       const logoShown = (editorEls['logoShow']?.checked === true);
       if(frameLogoEl){ frameLogoEl.style.display = logoShown ? 'flex' : 'none'; }
@@ -802,7 +803,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -921,8 +922,8 @@
     const v=(k,def)=>{ const raw=(d?.[k]??"").toString().trim(); return raw===''?def:raw; };
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',1280), wcH=num('wcH',720);
-    const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
     const frameCol=v('frameBorderColor','#3d434b');
+    const bCol = frameCol; const bTh=num('wcBorderWidth',6);
     const frameRadius = parseFloat(v('frameBorderRadius','28'))||28;
     const wcRadius = frameRadius; 
     try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadius}px`); }catch(e){}
@@ -941,7 +942,7 @@
     if(matteRect) matteRect.setAttribute('fill', matte);
     if(borderRect) { const bc = usp.get('bCol') || frameCol || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); if(bc) borderRect.setAttribute('rx', frameRadius); if(bc) borderRect.setAttribute('ry', frameRadius); }
     if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
-    if(hairRect){ const hairR=Math.max(0, frameRadius-6); hairRect.setAttribute('rx', hairR); hairRect.setAttribute('ry', hairR); }
+    if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
 
     const lg=document.getElementById('frame_logo');
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
@@ -1031,6 +1032,8 @@
       const topH=getNum('topH',22);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
+      const bTh = getNum('wcBorderWidth', 6);
+      const bCol = usp.get('frameBorderColor') || DEFAULTS.frameBorderColor;
 
       const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
       const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
@@ -1038,11 +1041,11 @@
       [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
       if(hole){ hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
       if(borderRect){ borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
-      if(hairRect){ const hr = Math.max(0, frameRadius-6); hairRect.setAttribute('rx', hr); hairRect.setAttribute('ry', hr); }
+      if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
       if(matteRect) matteRect.setAttribute('fill', matte);
       if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
       if(borderRect) { borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
-      if(hairRect) { const hr = Math.max(0, frameRadius-6); hairRect.setAttribute('rx', hr); hairRect.setAttribute('ry', hr); }
+      if(hairRect) { hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
 
       const lg=document.getElementById('frame_logo');
       if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
@@ -1053,7 +1056,7 @@
 
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
-      if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
+      if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius=`${frameRadius}px`;
         const wcShowParam = (usp.get('wcShow')||'').toLowerCase(); const imgEl=document.getElementById('wc_afk');
         if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'none'; }
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
