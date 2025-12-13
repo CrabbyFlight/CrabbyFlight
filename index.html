@@ -252,9 +252,13 @@
       <input id="wcW" type="hidden" value="1280">
       <input id="wcH" type="hidden" value="720">
 
-      <div class="grid">
+      <div class="grid-3">
         <div><label for="wcBorderColor">Webcam Border Color</label><input id="wcBorderColor" type="color" value="#FFD100"></div>
         <div><label for="wcBorderWidth">Webcam Border Width (px)</label><input id="wcBorderWidth" type="number" placeholder="6"></div>
+        <div>
+          <label for="wcBorder">Show webcam border</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcBorder" type="checkbox" checked><span class="hint">Toggle border outline</span></div>
+        </div>
       </div>
       <div class="grid">
         <div><label>Rounded mask (fixed 16px)</label></div>
@@ -462,11 +466,11 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcBorder"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6" };
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcBorder:"on" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -639,7 +643,12 @@
 
     function read(){
       const d={};
-      for(const k of FIELDS){ d[k] = (els[k]?.value||'').trim(); }
+      for(const k of FIELDS){
+        const el = els[k];
+        if(!el){ d[k] = ''; continue; }
+        if(el.type === 'checkbox') d[k] = el.checked ? 'on' : 'off';
+        else d[k] = (el.value||'').toString().trim();
+      }
       return d;
     }
 
@@ -751,6 +760,7 @@
     const num=(k,def)=>{ const n=parseFloat(v(k, def.toString())); return Number.isNaN(n)?def:n; };
     const wcX=num('wcX',32), wcY=num('wcY',700), wcW=num('wcW',1280), wcH=num('wcH',720);
     const bCol=v('wcBorderColor','#FFD100'), bTh=num('wcBorderWidth',6);
+    const bOn = (v('wcBorder','on') === 'on');
 
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
@@ -769,7 +779,7 @@
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
 
     const wc=document.getElementById('wc');
-    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.outlineColor=bCol; wc.style.outlineWidth=bTh+'px'; wc.style.borderRadius='16px'; }
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = bOn? `${bTh}px solid ${bCol}` : 'none'; }
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
@@ -792,7 +802,8 @@
           const el=document.getElementById(k);
           if(!el) continue;
           const val = (typeof data[k]==='string') ? data[k] : DEFAULTS[k];
-          if (typeof val !== 'undefined') el.value = val;
+          if (typeof val === 'undefined') continue;
+          if (el.type === 'checkbox') el.checked = (String(val) === 'on'); else el.value = val;
         }
         sanitizeUTCField(document.getElementById('dep_utc'));
         sanitizeUTCField(document.getElementById('arr_utc'));
@@ -848,7 +859,9 @@
 
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
-      if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; }
+      if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
+        const wcBorderParam = usp.get('wcBorder'); if(wcBorderParam && wcBorderParam === 'off'){ wc.style.outline = 'none'; }
+      }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
