@@ -277,6 +277,13 @@
           <button id="btn_clear_afk" type="button">Clear AFK</button>
         </div>
       </div>
+
+      <div class="grid-3" style="margin-top:10px">
+        <div>
+          <label for="logoShow">Show frame logo</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="logoShow" type="checkbox" checked><span class="hint">Show the CrabbyFlight logo on the frame</span></div>
+        </div>
+      </div>
     </div>
 
     <div class="btns">
@@ -481,12 +488,12 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","wcAfkPath"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","wcAfkPath","logoShow"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
-    wcAfkPath:"afklogo.png" };
+    wcAfkPath:"afklogo.png", logoShow:"on" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -708,6 +715,9 @@
       wc.style.outline = wcShown ? `${bTh}px solid ${bCol}` : 'none';
       wc.style.boxShadow = wcShown ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
       const afkImg=document.getElementById('wc_afk');
+      const frameLogoEl = document.getElementById('frame_logo');
+      const logoShown = (els['logoShow']?.checked === true);
+      if(frameLogoEl){ frameLogoEl.style.display = logoShown ? 'flex' : 'none'; }
       if(afkImg){
         if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
@@ -718,7 +728,7 @@
       }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','wcAfkPath' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcShow','wcAfkPath','logoShow' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -824,7 +834,12 @@
     if(borderRect) { const bc = usp.get('bCol') || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||8); }
 
     const lg=document.getElementById('frame_logo');
-    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
+    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
+      const logoSaved = (v('logoShow','on') === 'on');
+      const logoParam = (usp.get('logoShow')||'').toLowerCase();
+      let logoShouldShow = logoSaved;
+      if(logoParam === 'on') logoShouldShow = true; else if (logoParam === 'off') logoShouldShow = false;
+      lg.style.display = logoShouldShow ? 'flex' : 'none'; }
 
     const wc=document.getElementById('wc');
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
@@ -916,7 +931,11 @@
       if(matteRect) matteRect.setAttribute('fill', matte);
 
       const lg=document.getElementById('frame_logo');
-      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px'; lg.style.display = 'flex'; }
+      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
+        const logoParam=(usp.get('logoShow')||'').toLowerCase();
+        if(logoParam === 'off') lg.style.display = 'none';
+        else if(logoParam === 'on') lg.style.display = 'flex';
+        else lg.style.display = 'flex'; }
 
       const wc=document.getElementById('wc');
       const wcX=getNum('wcX',32), wcY=getNum('wcY',700), wcW=getNum('wcW',1280), wcH=getNum('wcH',720);
