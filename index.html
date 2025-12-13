@@ -227,10 +227,6 @@
     </div>
     <div class="grid">
       <div><label for="enroute">Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
-      <div>
-        <label for="live">LIVE</label>
-        <select id="live"><option value="on">On</option><option value="off">Off</option></select>
-      </div>
     </div>
     <div class="grid-3" style="margin-top:8px">
       <div>
@@ -337,7 +333,7 @@
 
     <div class="bottom-row" style="margin-top:3px; gap:10px;">
       <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
-      <span id="i_res">1080p60FPS</span> <span class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+      <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
     </div>
   </div>
 </div>
@@ -739,14 +735,16 @@
       const liveEl = document.getElementById('i_live_block');
       const resEl = document.getElementById('i_res');
       const platEl = document.getElementById('i_platform');
+      const sepEl = document.getElementById('i_sep');
       const infoLiveShown = (els['infoLive']?.checked === true);
       const infoResShown = (els['infoRes']?.checked === true);
       const infoPlatformShown = (els['infoPlatform']?.checked === true);
       const resText = (els['infoResText']?.value || '1080p60FPS').toString().trim();
       const platText = (els['infoPlatformText']?.value || 'macOS + OneCast').toString().trim();
-      if(liveEl) liveEl.style.display = (infoLiveShown && (els['live']?.value === 'on')) ? 'inline-flex' : 'none';
+      if(liveEl) liveEl.style.display = infoLiveShown ? 'inline-flex' : 'none';
       if(resEl){ resEl.textContent = resText; resEl.style.display = infoResShown ? 'inline' : 'none'; }
       if(platEl){ platEl.textContent = platText; platEl.style.display = infoPlatformShown ? 'inline' : 'none'; }
+      if(sepEl) sepEl.style.display = (infoResShown && infoPlatformShown) ? 'inline' : 'none';
       if(afkImg){
         if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
@@ -815,7 +813,6 @@
     setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
     setT('i_flight',val('flight',DEFAULTS.flight)); setT('i_callsign',val('callsign',DEFAULTS.callsign));
     setT('i_aircraft',val('aircraft',DEFAULTS.aircraft)); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
-    const live = val('live','on')==='on';
     const blk=document.getElementById('i_live_block');
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
@@ -829,9 +826,11 @@
     const resShould = resParam === 'on' ? true : resParam === 'off' ? false : infoResSaved;
     const platShould = platParam === 'on' ? true : platParam === 'off' ? false : infoPlatformSaved;
     const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform');
-    if(liveEl) liveEl.style.display = (live && liveShould) ? 'inline-flex' : 'none';
+    const sepEl = document.getElementById('i_sep');
+    if(liveEl) liveEl.style.display = liveShould ? 'inline-flex' : 'none';
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
+    if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
   }
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
