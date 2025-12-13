@@ -18,7 +18,7 @@ Each overlay mode is accessed through the URL hash:
 | Mode | Description |
 |------|--------------|
 | `#editor` | Main interface for entering and editing flight information. |
-| `#info` | Compact overlay showing flight details such as route, callsign, and aircraft. |
+| `#info` | Compact overlay showing flight details such as route and aircraft. |
 | `#departures` | Realistic departures board with one live row showing the user’s flight. |
 | `#frame` | Full 1080p frame with an embedded webcam window and live flight data. |
 
@@ -37,7 +37,7 @@ Each URL can be used directly as a browser source in OBS or any compatible strea
 
 A new SimBrief integration feature is in development. Users will be able to enter their SimBrief PilotID and click an “Import from SimBrief” button to automatically retrieve and import their latest flight plan. The system will fetch XML data from the SimBrief API, parse it in the browser, and populate the relevant CrabbyFlight fields automatically.
 
-During initial testing, the XML data was successfully fetched and parsed directly from the browser, so this integration will continue to use that approach. The imported data will include the departure and destination airports, flight number, callsign, aircraft type, cruise altitude, scheduled times, and estimated enroute duration. Once imported, these values will be synced to Firebase and immediately reflected in all overlays.
+During initial testing, the XML data was successfully fetched and parsed directly from the browser, so this integration will continue to use that approach. The imported data will include the departure and destination airports, flight number, aircraft type, cruise altitude, scheduled times, and estimated enroute duration. Once imported, these values will be synced to Firebase and immediately reflected in all overlays.
 
 ---
 

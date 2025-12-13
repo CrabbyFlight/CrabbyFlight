@@ -92,7 +92,7 @@
   .top-row{display:flex;align-items:center;margin-bottom:5px}
   .airport-info{display:flex;align-items:center;gap:5px}
   .flight-info{display:flex;align-items:center;gap:8px}
-  .flight-label{color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
+  .flight-label{color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,.9); font-weight:700}
   .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
   .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
 
@@ -195,7 +195,6 @@
     </div>
     <div class="grid">
       <div><label for="flight">Flight</label><input id="flight" placeholder="POR9392"></div>
-      <div><label for="callsign">Callsign</label><input id="callsign" placeholder="WALL13"></div>
     </div>
     <div class="grid">
       <div><label for="gate">Gate (Departures)</label><input id="gate" placeholder="B12"></div>
@@ -321,15 +320,14 @@
       </div>
       <span class="separator-diamond"></span>
       <div class="flight-info">
-        <span class="flight-label">Flight:</span> <span class="dynamic" id="i_flight">POR9392</span> |
-        <span class="flight-label">Callsign:</span> <span class="dynamic" id="i_callsign">WALL13</span>
+        <span class="flight-label">Flight:</span> <span class="dynamic" id="i_flight">POR9392</span>
       </div>
     </div>
 
     <div class="bottom-row">
-      <strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320neo</span> |
-      <strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span> |
-      Time en route: <span class="dynamic" id="i_enroute">~2hrs</span>
+      <strong class="flight-label">Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320neo</span> |
+      <strong class="flight-label">Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span> |
+      <strong class="flight-label">Time en route:</strong> <span class="dynamic" id="i_enroute">~2hrs</span>
     </div>
 
     <div class="bottom-row" style="margin-top:3px; gap:10px;">
@@ -501,9 +499,9 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute",
+  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute",
     "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText"];
-  const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
+  const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcShow:"on",
@@ -673,7 +671,7 @@
 
     const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
     const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
-    const callsign = pickText(doc,'OFP general callsign','general callsign');
+    // callsign removed: we display only flight number (SimBrief still contains callsign but it's redundant)
     const aircraft = pickText(doc,'OFP aircraft name','aircraft name','aircraft type','OFP aircraft icao_code','aircraft icao_code','general aircraft_icao');
     const airframe = pickText(doc,'aircraft reg','reg','OFP aircraft reg','general reg');
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
@@ -690,7 +688,7 @@
         from: fmtLoc(fromName, fromIcao),
         to:   fmtLoc(toName, toIcao),
         flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
-        callsign: callsign||'',
+        // callsign removed from patch
         aircraft: (aircraft||'').toString().trim(),
         airframe: (airframe||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
@@ -836,7 +834,7 @@
         sanitizeUTCField(editorEls['dep_utc']);
         sanitizeUTCField(editorEls['arr_utc']);
 
-        if (canSave) ['dep_utc','arr_utc','from','to','flight','callsign','aircraft','airframe','cruise','enroute']
+        if (canSave) ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
         if (meta?.note === 'utc_autosynced'){
@@ -857,7 +855,7 @@
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
     setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
-    setT('i_flight',val('flight',DEFAULTS.flight)); setT('i_callsign',val('callsign',DEFAULTS.callsign));
+    setT('i_flight',val('flight',DEFAULTS.flight));
     const aircraftSaved = val('aircraft', DEFAULTS.aircraft);
     const airframeSaved = val('airframe', '');
     const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;

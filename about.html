@@ -181,7 +181,7 @@
       <h2>What CrabbyFlight Does</h2>
       <p>
         After signing in with an email and password, you can enter details about your flight,
-        such as departure and arrival airports, flight number, callsign, gate, aircraft type,
+        such as departure and arrival airports, flight number, gate, aircraft type,
         cruise altitude and enroute time. This data is stored securely in Firebase under your
         own user account and is used to drive several overlay views that you can load directly
         into OBS as browser sources.
@@ -191,7 +191,7 @@
       </p>
       <ul>
         <li><strong>#editor</strong> – main interface for entering and editing flight information.</li>
-        <li><strong>#info</strong> – compact information overlay showing route, callsign, aircraft and related details.</li>
+        <li><strong>#info</strong> – compact information overlay showing route and aircraft-related details.</li>
         <li><strong>#departures</strong> – departures board layout with one live row for your current flight.</li>
         <li><strong>#frame</strong> – full 1080p frame with an embedded webcam area and flight data overlay.</li>
       </ul>
@@ -220,7 +220,7 @@
       </p>
       <p>
         The imported XML will be used to fill details such as origin and destination airports,
-        flight number, callsign, scheduled departure and arrival times, aircraft type, cruise
+        flight number, scheduled departure and arrival times, aircraft type, cruise
         altitude and estimated enroute duration. Once imported, this data will sync to Firebase
         and immediately update all overlay modes, reducing the amount of manual data entry
         required.
