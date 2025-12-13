@@ -59,6 +59,7 @@
   input,select{width:100%;background:#32363c;border:1px solid #444a52;color:var(--ink);border-radius:12px;padding:10px 14px;height:44px;box-sizing:border-box;outline:none;appearance:none}
   /* ensure checkboxes render normally instead of inheriting text input styles */
   input[type="checkbox"]{width:auto;height:auto;box-sizing:content-box;padding:0;margin:0 8px 0 0;background:transparent;border:none;appearance:auto;cursor:pointer}
+  .wc-frame img{display:block;pointer-events:none;width:100%;height:100%;object-fit:contain;border-radius:inherit}
   input:focus,select:focus{border-color:#5b9cff;box-shadow:0 0 0 3px rgba(91,156,255,.18)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)}
@@ -266,6 +267,20 @@
         <div><label>Rounded mask (fixed 16px)</label></div>
         <div><label>&nbsp;</label><button id="btn_download_mask" type="button">Download rounded mask PNG</button></div>
       </div>
+
+      <div class="grid-3" style="margin-top:10px;align-items:center">
+        <div>
+          <label for="wcAfkPath">AFK logo filename/path</label>
+          <input id="wcAfkPath" placeholder="afklogo.png">
+        </div>
+        <div>
+          <label for="wcAfkOn">Show AFK logo</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcAfkOn" type="checkbox" checked><span class="hint">Show when webcam hidden</span></div>
+        </div>
+        <div style="display:flex;align-items:end;justify-content:flex-end">
+          <button id="btn_clear_afk" type="button">Clear AFK</button>
+        </div>
+      </div>
     </div>
 
     <div class="btns">
@@ -377,7 +392,9 @@
     <img src="logo192.png" alt=""><span>CrabbyFlight</span>
   </div>
 
-  <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px"></div>
+  <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px">
+    <img id="wc_afk" src="afklogo.png" alt="AFK logo">
+  </div>
 
   <div id="embed_info" class="embed info" style="left:32px;top:80px;transform:scale(1)">
     <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
@@ -468,11 +485,12 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","callsign","gate","status","status_custom","dep_utc","arr_utc","aircraft","cruise","enroute","live",
-    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcBorder"];
+    "wcPreset","wcX","wcY","wcW","wcH","wcBorderColor","wcBorderWidth","wcBorder","wcAfkPath","wcAfkOn"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", callsign:"WALL13", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320neo", cruise:"35,000ft", enroute:"~2hrs", live:"on",
-    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcBorder:"on" };
+    wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", wcBorderColor:"#FFD100", wcBorderWidth:"6", wcBorder:"on",
+    wcAfkPath:"afklogo.png", wcAfkOn:"on" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -688,13 +706,24 @@
       const wcX=toNum('wcX',32), wcY=toNum('wcY',700), wcW=toNum('wcW',1280), wcH=toNum('wcH',720);
       const bCol=(els['wcBorderColor']?.value||'#FFD100'), bTh=toNum('wcBorderWidth',6);
       const bOn=(els['wcBorder']?.checked===true);
+      const afkPath=((els['wcAfkPath']?.value||'').toString().trim());
+      const afkOn=(els['wcAfkOn']?.checked===true);
       const pad = 16;
       wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px';
       wc.style.outline = bOn ? `${bTh}px solid ${bCol}` : 'none';
       wc.style.boxShadow = bOn ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
+      const afkImg=document.getElementById('wc_afk');
+      if(afkImg){
+        if(afkOn && afkPath){
+          try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
+          afkImg.style.display = 'block';
+        } else {
+          afkImg.style.display = 'none';
+        }
+      }
     }
 
-    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcBorder' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','wcBorderColor','wcBorderWidth','wcBorder','wcAfkPath','wcAfkOn' ].forEach(k=>{ const el=els[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     const byId = (id)=>document.getElementById(id);
@@ -742,6 +771,15 @@
       }catch(err){
         setSb(`Import failed: ${err?.message||err}`, true);
       }
+    });
+    bindIf('btn_clear_afk', ()=>{
+      const pathEl = document.getElementById('wcAfkPath'); if(pathEl) pathEl.value = '';
+      const onEl = document.getElementById('wcAfkOn'); if(onEl) onEl.checked = false;
+      // trigger save & preview
+      if (pathEl) { pathEl.dispatchEvent(new Event('input')); }
+      if (onEl) { onEl.dispatchEvent(new Event('change')); }
+      updatePreview();
+      save();
     });
   }
 
@@ -797,6 +835,19 @@
 
     const wc=document.getElementById('wc');
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius='16px'; wc.style.outline = bOn? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = bOn ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
+    // AFK logo handling
+    const afkPath=v('wcAfkPath','afklogo.png');
+    const afkOn = (v('wcAfkOn','on') === 'on');
+    const imgEl = document.getElementById('wc_afk');
+    if(imgEl){
+      const paramOff = (usp.get('wcAfk')||'').toLowerCase()=== 'off';
+      const pathOverride = usp.get('wcAfkPath');
+      let finalPath = (pathOverride!==null && pathOverride!==undefined) ? pathOverride : afkPath;
+      if(!afkOn) finalPath = '';
+      if(paramOff) finalPath = '';
+      if(finalPath){ try{ const base = location.href.split('#')[0].split('?')[0]; imgEl.src = /^[a-zA-Z]+:/.test(finalPath) ? finalPath : new URL(finalPath, base).href; }catch(e){ imgEl.src = finalPath; } imgEl.style.display = 'block'; }
+      else imgEl.style.display = 'none';
+    }
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
