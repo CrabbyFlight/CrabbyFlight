@@ -606,6 +606,13 @@
 
     const utcRaw = pickText(doc, utcSelectors);
     if(utcRaw){
+      // If a numeric epoch is returned in a UTC selector, convert that
+      const epochMatch = String(utcRaw).trim().match(/^\d{9,}$/);
+      if(epochMatch){
+        const d = new Date(parseInt(utcRaw,10)*1000);
+        const label = `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')} UTC`;
+        return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc', raw: { utcRaw, localRaw: '', offRaw: '' } };
+      }
       const label = parseTimeUTC(utcRaw);
       return { label, source: utcSelectors.find(s=>doc.querySelector(s)) || 'utc', raw: { utcRaw, localRaw: '', offRaw: '' } };
     }
@@ -618,6 +625,13 @@
       if(ext) offRaw = ext[0].replace(/^UTC/i,'').replace(/^GMT/i,'');
     }
     if(localRaw){
+      // If localRaw looks like a Unix epoch timestamp, convert directly to UTC label
+      const epochMatch = localRaw.trim().match(/^\d{9,}$/);
+      if(epochMatch){
+        const d = new Date(parseInt(localRaw,10)*1000);
+        const label = `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')} UTC`;
+        return { label, source: 'utc(epoch)', raw: { utcRaw:'', localRaw, offRaw:'' } };
+      }
       const hm = parseHHMM(localRaw);
       if(hm){
         const offMin = parseOffsetToMinutes(offRaw);
