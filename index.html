@@ -402,7 +402,8 @@
     </defs>
     <rect id="matteRect" x="0" y="0" width="1920" height="1080" fill="#1d1f22" mask="url(#matteMask)"/>
     <rect id="borderRect" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="none" stroke="url(#g)" stroke-width="8"/>
-    <rect id="hairRect"   x="26" y="48" width="1868" height="1006" rx="22" ry="22" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2"/>
+    <rect id="borderOutline" x="16" y="38" width="1888" height="1026" rx="28" ry="28" fill="none" stroke="rgba(0,0,0,.6)" stroke-width="1"/>
+    <rect id="hairRect"   x="26" y="48" width="1868" height="1006" rx="22" ry="22" fill="none" stroke="rgba(0,0,0,.6)" stroke-width="2"/>
   </svg>
 
   <div class="frame-logo" id="frame_logo">
@@ -769,13 +770,14 @@
       const pad = 16;
       wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius=`${frameRadius}px`;
       wc.style.outline = wcShown ? `${bTh}px solid ${bCol}` : 'none';
-      wc.style.boxShadow = wcShown ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
+      wc.style.boxShadow = wcShown ? '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none';
       const afkImg=document.getElementById('wc_afk');
       // Apply frame border color via CSS variable and preview svg border
       try{ document.documentElement.style.setProperty('--frame-border-color', frameCol); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadius}px`); }catch(e){}
       const previewBorderRect=document.getElementById('borderRect'); if(previewBorderRect){ previewBorderRect.setAttribute('stroke', frameCol); previewBorderRect.setAttribute('stroke-width', bTh); previewBorderRect.setAttribute('rx', frameRadius); previewBorderRect.setAttribute('ry', frameRadius); }
       const previewHole=document.getElementById('hole'); if(previewHole){ previewHole.setAttribute('rx', frameRadius); previewHole.setAttribute('ry', frameRadius); }
-      const previewHair=document.getElementById('hairRect'); if(previewHair){ previewHair.setAttribute('rx', frameRadius); previewHair.setAttribute('ry', frameRadius); }
+      const previewBorderOutline=document.getElementById('borderOutline'); if(previewBorderOutline){ previewBorderOutline.setAttribute('stroke', 'rgba(0,0,0,.6)'); previewBorderOutline.setAttribute('stroke-width', '1'); previewBorderOutline.setAttribute('rx', frameRadius); previewBorderOutline.setAttribute('ry', frameRadius); }
+      const previewHair=document.getElementById('hairRect'); if(previewHair){ previewHair.setAttribute('rx', frameRadius); previewHair.setAttribute('ry', frameRadius); previewHair.setAttribute('stroke', 'rgba(0,0,0,.6)'); }
       const frameLogoEl = document.getElementById('frame_logo');
       const logoShown = (editorEls['logoShow']?.checked === true);
       if(frameLogoEl){ frameLogoEl.style.display = logoShown ? 'flex' : 'none'; }
@@ -942,12 +944,13 @@
 
     const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
     const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
-    const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
+    const borderRect=document.getElementById('borderRect'), borderOutline=document.getElementById('borderOutline'), hairRect=document.getElementById('hairRect');
     [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
     if(matteRect) matteRect.setAttribute('fill', matte);
     if(borderRect) { const bc = usp.get('bCol') || frameCol || ''; const bt = usp.get('bTh') || ''; if(bc) borderRect.setAttribute('stroke', bc); if(bt) borderRect.setAttribute('stroke-width', parseFloat(bt)||parseFloat(bTh)); else borderRect.setAttribute('stroke-width', parseFloat(bTh)); if(bc) borderRect.setAttribute('rx', frameRadius); if(bc) borderRect.setAttribute('ry', frameRadius); }
+    if(borderOutline){ borderOutline.setAttribute('stroke', 'rgba(0,0,0,.6)'); borderOutline.setAttribute('stroke-width', '1'); if(borderOutline) borderOutline.setAttribute('rx', frameRadius); if(borderOutline) borderOutline.setAttribute('ry', frameRadius); }
     if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
-    if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
+    if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); hairRect.setAttribute('stroke', 'rgba(0,0,0,.6)'); }
 
     const lg=document.getElementById('frame_logo');
     if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
@@ -958,7 +961,7 @@
       lg.style.display = logoShouldShow ? 'flex' : 'none'; }
 
     const wc=document.getElementById('wc');
-    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius = `${frameRadius}px`; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
+    if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius = `${frameRadius}px`; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
     // AFK logo handling
     const afkPath = 'afklogo.png';
     const afkOn = wcShowSaved;
@@ -1042,11 +1045,12 @@
 
       const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
       const hole=document.getElementById('hole'), matteRect=document.getElementById('matteRect');
-      const borderRect=document.getElementById('borderRect'), hairRect=document.getElementById('hairRect');
-      [hole,borderRect,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
+      const borderRect=document.getElementById('borderRect'), borderOutline=document.getElementById('borderOutline'), hairRect=document.getElementById('hairRect');
+      [hole,borderRect,borderOutline,hairRect].forEach((r)=>{ if(!r) return; const inset=(r===hairRect)?10:0; r.setAttribute('x',holeX+inset); r.setAttribute('y',holeY+inset); r.setAttribute('width',holeW-inset*2); r.setAttribute('height',holeH-inset*2); });
       if(hole){ hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
       if(borderRect){ borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
-      if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
+      if(borderOutline){ borderOutline.setAttribute('rx', frameRadius); borderOutline.setAttribute('ry', frameRadius); borderOutline.setAttribute('stroke', 'rgba(0,0,0,.6)'); borderOutline.setAttribute('stroke-width','1'); }
+      if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); hairRect.setAttribute('stroke','rgba(0,0,0,.6)'); }
       if(matteRect) matteRect.setAttribute('fill', matte);
       if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
       if(borderRect) { borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
@@ -1064,7 +1068,7 @@
       if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius=`${frameRadius}px`;
         const wcShowParam = (usp.get('wcShow')||'').toLowerCase(); const imgEl=document.getElementById('wc_afk');
         if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'none'; }
-        else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
+        else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
