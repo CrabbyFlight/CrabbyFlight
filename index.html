@@ -88,6 +88,11 @@
   button.primary:hover{filter:brightness(.98)}
   button:active{transform:translateY(1px)}
 
+  /* Footer links */
+  .footer{margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .footer a{color:var(--ink);border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:8px;text-decoration:none}
+  .footer a:hover{filter:brightness(.98)}
+
   /* Theme toggle */
   .switch{position:relative;display:inline-block;width:52px;height:28px}
   .switch input{display:none}
@@ -204,7 +209,7 @@
 
 <!-- EDITOR -->
 <div id="screen-editor" class="wrap">
-  <h1>CrabbyFlight — Overlay Editor (Firebase)</h1>
+  <h1>CrabbyFlight — Overlay Editor</h1>
 
   <!-- SimBrief Integration -->
   <div class="card">
@@ -285,7 +290,7 @@
     </div>
 
     <div class="card" style="margin-top:10px">
-      <h3 style="margin:0 0 10px;font-size:18px">Frame (Webcam) Settings</h3>
+      <h3 style="margin:0 0 10px;font-size:18px">Frame and Webcam Settings</h3>
 
       <div class="grid-3">
         <div>
@@ -319,7 +324,7 @@
         </div>
         <div>
           <label for="wcShow">Toggle webcam</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off (shows AFK when on)</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off</span></div>
         </div>
       </div>
       <div class="grid">
@@ -351,6 +356,12 @@
         </label>
       </div>
       <button id="btn_signout" type="button" style="margin-left:8px">Sign out</button>
+    </div>
+    <div class="footer">
+      <span>Docs:</span>
+      <a href="about.html" target="_blank" rel="noopener">About</a>
+      <a href="README.md" target="_blank" rel="noopener">README</a>
+      <a href="license.txt" target="_blank" rel="noopener">License</a>
     </div>
   </div>
 </div>
