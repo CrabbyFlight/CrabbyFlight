@@ -470,7 +470,7 @@
   </svg>
 
   <div class="frame-logo" id="frame_logo">
-    <img src="logo192.png" alt=""><span>CrabbyFlight</span>
+    <img src="logo192.png" alt="CrabbyFlight"><span>CrabbyFlight</span>
   </div>
 
   <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px">
@@ -940,7 +940,7 @@
       try{
         setSimBriefStatus('Fetching…');
         const {patch, meta} = await importFromSimBrief(id);
-        console.debug('SimBrief import meta:', meta);
+        // SimBrief import meta available if needed for debugging
 
         Object.entries(patch).forEach(([k,val])=>{
           const el = editorEls[k];
@@ -980,7 +980,7 @@
     const airframeSaved = val('airframe', '');
     const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
     setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
-    const blk=document.getElementById('i_live_block');
+    // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
     const infoResSaved = (val('infoRes','on') === 'on');
@@ -1009,7 +1009,7 @@
     const arrRaw = val('arr_utc', DEFAULTS.arr_utc);
     const depDisp = parseTimeUTC(depRaw) || DEFAULTS.dep_utc;
     const arrDisp = parseTimeUTC(arrRaw) || DEFAULTS.arr_utc;
-    console.debug('renderDepartures parsed:', { depRaw, depDisp, arrRaw, arrDisp });
+    // parsed departure/arrival times for display
     setT('d_dep',depDisp); setT('d_arr',arrDisp); setT('d_enroute',val('enroute',DEFAULTS.enroute));
     setT('d_time',(depDisp||'').replace(' UTC',''));
 
