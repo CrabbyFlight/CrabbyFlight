@@ -135,12 +135,6 @@
   .live-dot{width:10px;height:10px;background:red;border-radius:50%;display:inline-block;animation:pulse 1s infinite}
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
-  .top-row{display:flex;align-items:center;margin-bottom:5px}
-  .airport-info{display:flex;align-items:center;gap:5px}
-  .flight-info{display:flex;align-items:center;gap:8px}
-  .flight-label{color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,.9); font-weight:700}
-  .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
-  .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
 
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
   .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
@@ -482,7 +476,7 @@
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
 
-  <div id="embed_info" class="embed info" style="left:32px;top:80px;transform:scale(1)">
+  <div id="embed_info" class="embed info" style="display:none">
     <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
   </div>
 </div>
