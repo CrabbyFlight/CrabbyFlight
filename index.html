@@ -1058,15 +1058,15 @@
         sanitizeUTCField(editorEls['dep_utc']);
         sanitizeUTCField(editorEls['arr_utc']);
 
-        if (canSave) ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute']
+        if (canSave) ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute','dep_metar','arr_metar','enroute_wx']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
         if (meta?.note === 'utc_autosynced'){
           const depMsg = meta?.dep_src ? `DEP(${meta.dep_src})` : '';
           const arrMsg = meta?.arr_src ? `ARR(${meta.arr_src})` : '';
-          setSimBriefStatus(`Imported ✓ (UTC updated ${depMsg} ${arrMsg})`, false, true);
+          setSimBriefStatus(`Imported ✓ (UTC updated ${depMsg} ${arrMsg})` + (canSave ? '' : ' — sign in to publish'), false, true);
         } else {
-          setSimBriefStatus('Imported ✓ (UTC unchanged — manual)', false, true);
+          setSimBriefStatus('Imported ✓ (UTC unchanged — manual)' + (canSave ? '' : ' — sign in to publish'), false, true);
         }
       }catch(err){
         setSimBriefStatus(`Import failed: ${err?.message||err}`, true);
