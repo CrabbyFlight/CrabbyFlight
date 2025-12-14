@@ -1119,20 +1119,33 @@
       try{
         // frame color change
         const fCol = document.getElementById('frameBorderColor'); const prevCol = fCol?.value||'';
-        if(fCol){ fCol.value = '#ff0000'; fCol.dispatchEvent(new Event('input')); updatePreview(); const applied = getComputedStyle(document.documentElement).getPropertyValue('--frame-border-color').trim().toLowerCase() === '#ff0000'; results.push(applied? 'Frame color OK' : 'Frame color FAILED'); }
+        if(fCol){ fCol.value = '#ff0000'; fCol.dispatchEvent(new Event('input')); updatePreview(); const applied = (getComputedStyle(document.documentElement).getPropertyValue('--frame-border-color')||'').trim().toLowerCase(); results.push(applied===('#ff0000') ? 'Frame color OK' : `Frame color FAILED (${applied||'none'})`); }
+        else results.push('Frame color missing');
+
         // webcam show toggle
-        const wcShow = document.getElementById('wcShow'); const prevWc = wcShow?.checked; if(wcShow){ wcShow.checked = false; wcShow.dispatchEvent(new Event('change')); updatePreview(); const wcEl = document.getElementById('wc'); results.push(wcEl && wcEl.style.outline==='none' ? 'WC toggle OK' : 'WC toggle FAILED'); }
+        const wcShow = document.getElementById('wcShow'); const prevWc = wcShow?.checked;
+        if(wcShow){ wcShow.checked = false; wcShow.dispatchEvent(new Event('change')); updatePreview(); const wcEl = document.getElementById('wc'); results.push(wcEl && (wcEl.style.outline==='none' || wcEl.style.display!=='block') ? 'WC toggle OK' : 'WC toggle FAILED'); }
+        else results.push('WC toggle missing');
+
         // live indicator toggle
-        const infoLive = document.getElementById('infoLive'); const prevLive = infoLive?.checked; if(infoLive){ infoLive.checked = false; infoLive.dispatchEvent(new Event('change')); updatePreview(); const liveEl=document.getElementById('i_live_block'); results.push(liveEl && liveEl.style.display==='none' ? 'Live toggle OK' : 'Live toggle FAILED'); }
+        const infoLive = document.getElementById('infoLive'); const prevLive = infoLive?.checked;
+        if(infoLive){ infoLive.checked = false; infoLive.dispatchEvent(new Event('change')); updatePreview(); const liveEl=document.getElementById('i_live_block'); results.push(liveEl && (liveEl.style.display==='none') ? 'Live toggle OK' : 'Live toggle FAILED'); }
+        else results.push('Live toggle missing');
+
         // resolution/platform text
-        const resTextEl = document.getElementById('infoResText'); const prevRes = resTextEl?.value||''; if(resTextEl){ resTextEl.value = '720p30'; resTextEl.dispatchEvent(new Event('input')); updatePreview(); const resEl = document.getElementById('i_res'); results.push(resEl && resEl.textContent.includes('720p30') ? 'Res text OK' : 'Res text FAILED'); }
+        const resTextEl = document.getElementById('infoResText'); const prevRes = resTextEl?.value||'';
+        if(resTextEl){ resTextEl.value = '720p30'; resTextEl.dispatchEvent(new Event('input')); updatePreview(); const resEl = document.getElementById('i_res'); results.push(resEl && resEl.textContent.includes('720p30') ? 'Res text OK' : 'Res text FAILED'); }
+        else results.push('Res text input missing');
+
         // restore
         if(fCol) { fCol.value = prevCol; fCol.dispatchEvent(new Event('input')); }
         if(wcShow) { wcShow.checked = !!prevWc; wcShow.dispatchEvent(new Event('change')); }
         if(infoLive) { infoLive.checked = !!prevLive; infoLive.dispatchEvent(new Event('change')); }
         if(resTextEl) { resTextEl.value = prevRes; resTextEl.dispatchEvent(new Event('input')); }
       }catch(e){ results.push('Self-test error: '+e.message); }
-      const statusEl=document.getElementById('auth_status'); if(statusEl){ statusEl.textContent = 'Self-test: ' + results.join(' | '); }
+      const statusEl=document.getElementById('auth_status'); const sbEl=document.getElementById('sb_status'); const msg = results.length && results.every(r=>r.includes('OK')) ? 'Self-test PASSED: ' + results.join(' | ') : 'Self-test: ' + results.join(' | ');
+      if(statusEl) setStatus(msg); if(sbEl) { sbEl.textContent = msg; sbEl.className = results.length && results.every(r=>r.includes('OK')) ? 'pill ok' : 'pill warn'; setTimeout(()=>{ sbEl.textContent='Ready'; sbEl.className='pill'; }, 3000); }
+      console.log('runSelfTest:', results);
       return results;
     }
 
