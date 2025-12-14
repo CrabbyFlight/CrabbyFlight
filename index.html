@@ -803,6 +803,7 @@
     const arrMetar = pickText(doc, 'destination metar','destination weather','OFP destination metar','OFP destination weather');
     // SimBrief sometimes contains short enroute notes in 'route notes' or 'performance remarks'
     const enrouteWx = pickText(doc, 'route notes','enroute notes','OFP remarks','OFP enroute_notes','general remarks');
+    const computedEnroute = (enrouteWx && enrouteWx.trim()) ? enrouteWx : ((fmtCruise(cruiseFt) || '') || '') + (eteRaw ? (fmtCruise(cruiseFt) ? ` • ${formatEte(eteRaw)}` : formatEte(eteRaw)) : '');
     return {
       patch: {
         from: fmtLoc(fromName, fromIcao),
@@ -813,6 +814,7 @@
         airframe: (airframe||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw),
+        enroute_wx: computedEnroute || '',
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
         dep_metar: depMetar || '',
@@ -932,15 +934,23 @@
           to: editorEls['to']?.value || DEFAULTS.to,
           dep_utc: editorEls['dep_utc']?.value || DEFAULTS.dep_utc,
           arr_utc: editorEls['arr_utc']?.value || DEFAULTS.arr_utc,
+          aircraft: editorEls['aircraft']?.value || DEFAULTS.aircraft,
+          cruise: editorEls['cruise']?.value || DEFAULTS.cruise,
+          enroute_wx: editorEls['enroute_wx']?.value || '',
+          dep_metar: editorEls['dep_metar']?.value || '',
+          arr_metar: editorEls['arr_metar']?.value || '',
           flightVizEnabled: (editorEls['flightVizEnabled']?.checked ? 'on' : 'off'),
           flightTakeoffEpoch: editorEls['flightTakeoffEpoch']?.value || '',
           flightLanded: editorEls['flightLanded']?.value || 'off'
         };
+        // Update small in-editor previews of the flight and info/frame overlays
         renderFlightViz(previewD);
+        try{ renderInfo(previewD); }catch(e){}
+        try{ renderFrame(previewD); }catch(e){}
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','dep_metar','arr_metar','enroute_wx' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // 'Show on info overlay' option removed; visualization is shown on the info overlay when enabled
@@ -1016,16 +1026,22 @@
         const {patch, meta} = await importFromSimBrief(id);
         // SimBrief import meta available if needed for debugging
 
+        // Apply imported values into editor fields (set even empty strings to clear)
         Object.entries(patch).forEach(([k,val])=>{
           const el = editorEls[k];
-          if (el && val) el.value = val;
+          if (el) el.value = (typeof val === 'undefined' ? '' : val);
         });
 
+        // Normalize times before triggering preview updates
         sanitizeUTCField(editorEls['dep_utc']);
         sanitizeUTCField(editorEls['arr_utc']);
 
-        if (canSave) ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute','dep_metar','arr_metar','enroute_wx']
+        // Always trigger input events so the editor preview (and frame fallback) updates immediately
+        ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute','dep_metar','arr_metar','enroute_wx']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
+
+        // If signed in, save/publish the imported data
+        if (canSave) save();
 
         if (meta?.note === 'utc_autosynced'){
           const depMsg = meta?.dep_src ? `DEP(${meta.dep_src})` : '';
