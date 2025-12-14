@@ -182,7 +182,7 @@
   .frame-svg{position:absolute;inset:0;pointer-events:none}
   .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:12px;display:flex;align-items:center;gap:10px;font-weight:800;padding:8px 12px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);text-shadow:2px 2px 4px rgba(0,0,0,.9)}
   .frame-logo img{width:22px;height:22px}
-  .embed{position:absolute;transform-origin:top center}
+  .embed{position:absolute;transform-origin:top left}
   .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
 </style>
@@ -1186,11 +1186,17 @@
       }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      const infoX=getNum('infoX',null), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
       if(infoWrap){ 
-        if(!Number.isNaN(infoX) && usp.has('infoX')){ infoWrap.style.left=infoX+'px'; infoWrap.style.right='auto'; }
-        else { infoWrap.style.left='0'; infoWrap.style.right='0'; infoWrap.style.margin='0 auto'; }
-        infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; 
+        if(usp.has('infoX') && !Number.isNaN(infoX)){ 
+          infoWrap.style.left=infoX+'px'; 
+          infoWrap.style.transform=`scale(${infoScale})`; 
+        } else { 
+          infoWrap.style.left='50%'; 
+          infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; 
+        }
+        infoWrap.style.top=infoY+'px'; 
+        infoWrap.style.display='block'; 
       }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
