@@ -1389,9 +1389,10 @@
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
       // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
       try{
-        const enrouteTxt = (d?.enroute_wx || '').trim();
-        const depTxt = parseMetarSummary(d?.dep_metar||'');
-        const arrTxt = parseMetarSummary(d?.arr_metar||'');
+        const usp = new URLSearchParams(location.search);
+        const enrouteTxt = (usp.get('enroute') || d?.enroute_wx || '').trim();
+        const depTxt = parseMetarSummary(usp.get('dep_metar') || d?.dep_metar || '');
+        const arrTxt = parseMetarSummary(usp.get('arr_metar') || d?.arr_metar || '');
         if(infoWrap){
           let enEl = document.getElementById('embed_enroute');
           if(!enEl){ enEl = document.createElement('div'); enEl.id='embed_enroute'; enEl.style.position='absolute'; enEl.style.left='50%'; enEl.style.transform='translateX(-50%)'; enEl.style.top='6px'; enEl.style.fontSize='12px'; enEl.style.color='white'; enEl.style.opacity='.95'; enEl.style.pointerEvents='none'; infoWrap.appendChild(enEl); }
