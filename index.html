@@ -1075,7 +1075,7 @@
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoY=pad+topH;
     const infoScale=orNum('infoScale',1);
-    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; }
+    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%)`; infoWrap.style.display='block'; }
     if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
@@ -1185,7 +1185,7 @@
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoY=pad+topH;
       const infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; }
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%)`; infoWrap.style.display='block'; }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
