@@ -137,11 +137,6 @@
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
 
-  /* ATIS / METAR display */
-  .info-metar{margin-top:8px;font-size:13px;color:rgba(255,255,255,.92);opacity:.95}
-  .info-metar .raw{font-family:monospace;background:rgba(0,0,0,.2);padding:6px;border-radius:6px;display:block;margin-top:6px}
-
-
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
   .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
   .header svg{width:22px;height:22px}
@@ -300,23 +295,6 @@
       <div></div>
     </div>
 
-    <div class="grid" style="margin-top:8px">
-      <div>
-        <label for="infoATISKey">AVWX API key (optional)</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="infoATISKey" type="password" placeholder="sk_live_..." title="Stored locally in this browser only" style="flex:1">
-          <button id="infoATISToggle" type="button" title="Show/hide key" style="padding:8px;border-radius:8px">Show</button>
-          <button id="infoATISClear" type="button" title="Clear saved key" style="padding:8px;border-radius:8px">Clear</button>
-        </div>
-        <div class="hint">Optional: add <code>?atis=on&amp;atisKey=YOUR_KEY</code> to your overlay URL to show live ATIS/METAR. Don't paste secrets into public chat — rotate the key if you did.</div>
-      </div>
-      <div>
-        <label for="infoATIS">Show live ATIS</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoATIS" type="checkbox"><span class="hint">Fetch METAR for airports (requires API key)</span></div>
-      </div>
-      <div></div>
-    </div>
-
     <div class="card" style="margin-top:10px">
       <h3 style="margin:0 0 10px;font-size:18px">Frame and Webcam Settings</h3>
 
@@ -401,7 +379,6 @@
     <div class="info-left">
       <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
       <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
-        <div id="i_from_metar" class="info-metar" aria-live="polite"></div>
     </div>
 
     <div class="info-center">
@@ -421,7 +398,6 @@
     <div class="info-right">
       <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
       <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
-      <div id="i_to_metar" class="info-metar" aria-live="polite"></div>
     </div>
   </div>
 </div>
@@ -529,7 +505,7 @@
     <div class="modal-actions">
       <button id="close_modal" type="button">Close</button>
     </div>
-    <div class="hint">Tip: you can add <code>?x</code>, <code>?y</code>, <code>?scale</code> to these in OBS. To enable live ATIS/METAR, append <code>?atis=on&amp;atisKey=YOUR_KEY</code> (AVWX API).</div>
+    <div class="hint">Tip: you can add <code>?x</code>, <code>?y</code>, <code>?scale</code> to these in OBS.</div>
   </div>
 </div>
 
@@ -927,20 +903,6 @@
       }
     }catch(e){}
 
-    // Persist AVWX API key locally (not saved to DB)
-    try{
-      const atisKeyEl = document.getElementById('infoATISKey');
-      const atisToggle = document.getElementById('infoATIS');
-      if(atisKeyEl){ atisKeyEl.value = localStorage.getItem('cf_atis_key') || ''; atisKeyEl.addEventListener('input', ()=>{ try{ localStorage.setItem('cf_atis_key', atisKeyEl.value||''); }catch(e){} }); }
-      if(atisToggle){ atisToggle.addEventListener('change', ()=>{ try{ localStorage.setItem('cf_atis_enabled', atisToggle.checked? 'on':'off'); }catch(e){} }); const saved = localStorage.getItem('cf_atis_enabled'); if(saved) atisToggle.checked = (saved==='on'); }
-+      // show/hide & clear helpers
-+      try{
-+        const toggle = document.getElementById('infoATISToggle'); const clear = document.getElementById('infoATISClear');
-+        if(toggle){ toggle.addEventListener('click', ()=>{ if(atisKeyEl.type === 'password'){ atisKeyEl.type='text'; toggle.textContent='Hide'; } else { atisKeyEl.type='password'; toggle.textContent='Show'; } }); }
-+        if(clear){ clear.addEventListener('click', ()=>{ try{ localStorage.removeItem('cf_atis_key'); atisKeyEl.value=''; atisKeyEl.dispatchEvent(new Event('input')); }catch(e){} }); }
-+      }catch(e){}
-     }catch(e){}
-
     const byId = (id)=>document.getElementById(id);
     const openInNew = (url)=>{
       const w = window.open(url, '_blank');
@@ -1039,30 +1001,6 @@
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
-    tryRenderATIS(d);
-  }
-
-  async function fetchMetar(station, key){
-    if(!station || !key) return null;
-    try{
-      const res = await fetch(`https://avwx.rest/api/metar/${station}?options=translate`, { headers: { Authorization: `Bearer ${key}` } });
-      if(!res.ok) return null;
-      return await res.json();
-    }catch(e){ return null; }
-  }
-
-  function extractICAO(str){ if(!str) return null; const m = String(str).toUpperCase().match(/([A-Z]{4})/); return m?m[1]:null; }
-
-  async function tryRenderATIS(d){
-    const usp = new URLSearchParams(location.search);
-    const atisOn = (usp.get('atis')||'').toLowerCase() === 'on' || (d?.infoATIS === 'on') || (localStorage.getItem('cf_atis_enabled') === 'on');
-    if(!atisOn) return;
-    const key = usp.get('atisKey') || localStorage.getItem('cf_atis_key');
-    const showMsg = (id, msg) => { const el=document.getElementById(id); if(!el) return; el.innerHTML = `<div class="info-metar">${msg}</div>`; };
-    if(!key){ showMsg('i_from_metar', 'ATIS disabled (no API key). Add <code>?atis=on&amp;atisKey=YOUR_KEY</code>'); showMsg('i_to_metar', 'ATIS disabled (no API key).'); return; }
-    const from = extractICAO(d?.from||''); const to = extractICAO(d?.to||'');
-    if(from){ const m = await fetchMetar(from, key); if(m && m.raw){ showMsg('i_from_metar', `<strong>${from}:</strong> <span class="raw">${m.raw}</span>`); } else showMsg('i_from_metar', `No METAR for ${from}`); }
-    if(to){ const m2 = await fetchMetar(to, key); if(m2 && m2.raw){ showMsg('i_to_metar', `<strong>${to}:</strong> <span class="raw">${m2.raw}</span>`); } else showMsg('i_to_metar', `No METAR for ${to}`); }
   }
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
