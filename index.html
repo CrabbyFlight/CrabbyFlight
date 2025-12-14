@@ -148,7 +148,7 @@
   .flight-track .plane{position:absolute;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.98);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 10px rgba(0,0,0,.25)}
   .flight-phase{font-weight:700;color:#fff}
   .flight-meta{font-size:12px;color:rgba(255,255,255,.85);margin-top:4px;display:flex;justify-content:space-between;gap:8px}
-  .airport-weather{font-size:12px;color:rgba(255,255,255,.8);margin-top:6px}
+  .airport-weather{font-size:14px;font-weight:700;color:rgba(255,255,255,.9);margin-top:6px}
 
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
   .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
@@ -652,28 +652,30 @@
     // strip common leading tokens like 'GMT' or 'UTC'
     let cleaned = raw.replace(/^(?:GMT|UTC)\s*/i, '').trim();
     // also strip surrounding parentheses
-    cleaned = cleaned.replace(/[()]/g,'').trim();
-    // Now try common numeric forms
-    const m1 = cleaned.match(/^([+-]?)(\d{1,2}):?(\d{2})$/);
-    if(m1){ const sign=m1[1]==='-'?-1:1; return sign*(parseInt(m1[2],10)*60+parseInt(m1[3],10)); }
-    // forms like '+3' or '-3' or '3'
-    const m2 = cleaned.match(/^([+-]?)(\d{1,2})$/);
-    if(m2){ const sign=m2[1]==='-'?-1:1; const hrs=parseInt(m2[2],10); return sign*(hrs*60); }
-    // decimal hours like '+4.5'
-    const m3 = cleaned.match(/^([+-]?)(\d{1,2})\.(\d+)$/);
-    if(m3){ const sign=m3[1]==='-'?-1:1; const hrs=parseInt(m3[2],10); const mins = Math.round(parseFloat('0.'+(m3[3]||'0'))*60); return sign*(hrs*60+mins); }
-    // fallback for 3-4 digit numeric like 0100 or 530
-    const m4 = cleaned.match(/^([+-]?)(\d{3,4})$/);
-    if(m4){ const sign=m4[1]==='-'?-1:1; const num=parseInt(m4[2],10); const hrs=Math.floor(num/100), mins=num%100; return sign*(hrs*60+mins); }
-    return null;
-  }
-  function addMinutesHM(h,m,delta){
-    const total=h*60+m+delta;
-    const t=((total%(24*60))+(24*60))%(24*60);
-    return {h:Math.floor(t/60), m:t%60};
-  }
-  function formatEte(val){
-    const raw=(val||'').toString().trim();
+    let windStr = null; let precipStr = null; let cloudStr = null; let visStr = null; let tempStr = null; let altStr = null;
+    const windMatch = raw.match(/\b((?:\d{3}|VRB))(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+    if(windMatch){ const dirRaw = windMatch[1]; const dir = dirRaw === 'VRB' ? 'Variable' : `${dirRaw}°`; const sp = parseInt(windMatch[2],10); const gust = windMatch[3]?parseInt(windMatch[3],10):null; windStr = `Wind ${dir} ${sp} kt${gust?` (gusts ${gust} kt)`:''}`; }
+    if(/\bTS\b|\bTSTM\b/.test(raw)) precipStr = 'Thunderstorms';
+    else if(/\bSHRA\b|\bSH(RA|DZ)\b/.test(raw)) precipStr = 'Showery rain';
+    else if(/\bRA\b/.test(raw)) precipStr = 'Rain';
+    else if(/\bSN\b/.test(raw)) precipStr = 'Snow';
+    const visMatch = raw.match(/\b(\d{4})\b/) || raw.match(/\b(\d+(?:\.\d+)?)SM\b/i);
+    if(visMatch){ if(/SM/i.test(visMatch[0])){ const mi = parseFloat(visMatch[1]); visStr = `${Math.round(mi*1.609*10)/10} km`; } else { const v = parseInt(visMatch[1],10); visStr = v >= 9999 ? '10 km' : (v % 1000 === 0 ? `${v/1000} km` : `${(v/1000).toFixed(1)} km`); } }
+    const cloudMatch = raw.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
+    if(cloudMatch){ const code = cloudMatch[1]; const altitude = parseInt(cloudMatch[2],10)*100; const friendly = code==='FEW'?'Few':code==='SCT'?'Scattered':code==='BKN'?'Broken':'Overcast'; cloudStr = `${friendly} clouds at ~${altitude} ft`; }
+    else if(/CAVOK/i.test(raw) || /SKC|NOCLOUDS/i.test(raw)) cloudStr = 'Clear skies';
+    const tempMatch = raw.match(/\b(M?\d{1,2})\/(M?\d{1,2})\b/);
+    if(tempMatch){ const t = tempMatch[1].replace(/^M/,'-'); tempStr = `Temp ${t}°C`; }
+    const qMatch = raw.match(/\b(Q\d{4})\b/); const aMatch = raw.match(/\b(A\d{4})\b/);
+    if(qMatch) altStr = `Altimeter ${qMatch[1]}`; else if(aMatch) altStr = `Altimeter ${aMatch[1]}`;
+
+    const out = [];
+    if(windStr) out.push(windStr);
+    if(precipStr) out.push(precipStr);
+    else if(cloudStr) out.push(cloudStr);
+    else if(visStr) out.push(`Visibility ${visStr}`);
+    if(out.length < 3){ if(tempStr) out.push(tempStr); else if(altStr) out.push(altStr); }
+    return out.join(' • ');
     if(!raw) return '';
     let m=raw.match(/^(\d{1,2}):(\d{2})$/);
     if(m){ const hm=normalizeHM(parseInt(m[1],10), parseInt(m[2],10)); return `~${hm.h}h${hm.m?` ${hm.m}m`:''}`; }
@@ -1078,8 +1080,8 @@
     const arrSummary = summarizeMetarPlain(arrMet) || parseMetarSummary(arrMet);
     // ensure small elements under left/right airport blocks
     const leftWrap = document.querySelector('.info-left'); const rightWrap = document.querySelector('.info-right');
-    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.style.display = depSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
-    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.style.display = arrSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
+    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.style.display = depSummary ? 'block' : 'none'; el.style.fontSize='14px'; el.style.fontWeight='700'; }
+    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.style.display = arrSummary ? 'block' : 'none'; el.style.fontSize='14px'; el.style.fontWeight='700'; }
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
@@ -1440,12 +1442,12 @@
         const arrTxt = summarizeMetarPlain(usp.get('arr_metar') || d?.arr_metar || '') || parseMetarSummary(usp.get('arr_metar') || d?.arr_metar || '');
         if(infoWrap){
           let dEl = document.getElementById('embed_dep_weather');
-          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='12px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
+          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='14px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
           dEl.textContent = depTxt || '';
           dEl.style.display = depTxt ? 'block' : 'none';
 
           let aEl = document.getElementById('embed_arr_weather');
-          if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='12px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
+          if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='14px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
           aEl.textContent = arrTxt || '';
           aEl.style.display = arrTxt ? 'block' : 'none';
         }
