@@ -477,7 +477,7 @@
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
 
-  <div id="embed_info" class="embed info" style="display:none">
+  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
     <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
   </div>
 </div>
@@ -904,8 +904,11 @@
     }catch(e){}
 
     const byId = (id)=>document.getElementById(id);
-    const openInNew = (url)=> window.open(url, '_blank', 'noopener');
-    const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.onclick = fn; };
+    const openInNew = (url)=>{
+      const w = window.open(url, '_blank');
+      try{ if(w) w.opener = null; }catch(e){}
+    };
+    const bindIf = (id, fn)=>{ const el=byId(id); if(el) el.addEventListener('click', fn); };
 
     bindIf('openInfo',  ()=> openInNew(computeUrls().info));
     bindIf('openDep',   ()=> openInNew(computeUrls().dep));
@@ -1074,7 +1077,7 @@
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
-    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; }
+    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
     if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
@@ -1183,7 +1186,7 @@
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; }
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
@@ -1194,14 +1197,14 @@
   function bindAuthUI(){
     const emailEl = document.getElementById('auth_email');
     const passEl  = document.getElementById('auth_password');
-    document.getElementById('btn_signin').onclick = async ()=>{
+    document.getElementById('btn_signin')?.addEventListener('click', async ()=>{
       setStatus(''); try { await signInWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
       catch(e){ setStatus(e.message); }
-    };
-    document.getElementById('btn_signup').onclick = async ()=>{
+    });
+    document.getElementById('btn_signup')?.addEventListener('click', async ()=>{
       setStatus(''); try { await createUserWithEmailAndPassword(auth, (emailEl.value||'').trim(), passEl.value||''); }
       catch(e){ setStatus(e.message); }
-    };
+    });
   }
   bindAuthUI();
 
@@ -1247,12 +1250,12 @@
     document.getElementById('url_modal').classList.add('open');
   }
   function closeUrlModal(){ document.getElementById('url_modal').classList.remove('open'); }
-  document.getElementById('url_modal_bg').onclick = closeUrlModal;
-  document.getElementById('close_modal').onclick = closeUrlModal;
+  document.getElementById('url_modal_bg')?.addEventListener('click', closeUrlModal);
+  document.getElementById('close_modal')?.addEventListener('click', closeUrlModal);
   addEventListener('keydown', e=>{ if(e.key==='Escape') closeUrlModal(); });
-  document.getElementById('copy_info').onclick = ()=> copyFrom('url_info');
-  document.getElementById('copy_dep').onclick  = ()=> copyFrom('url_dep');
-  const cfr = document.getElementById('copy_frame'); if(cfr) cfr.onclick = ()=> copyFrom('url_frame');
+  document.getElementById('copy_info')?.addEventListener('click', ()=> copyFrom('url_info'));
+  document.getElementById('copy_dep')?.addEventListener('click', ()=> copyFrom('url_dep'));
+  const cfr = document.getElementById('copy_frame'); if(cfr) cfr.addEventListener('click', ()=> copyFrom('url_frame'));
   async function copyFrom(id){
     const el = document.getElementById(id);
     if(!el) return;
