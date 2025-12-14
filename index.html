@@ -1138,7 +1138,7 @@
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
     const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
       if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
-    if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
+    if (mode==='info' && (!Number.isNaN(x) || !Number.isNaN(y))) place(document.querySelector('#screen-info .info-box')?.parentElement);
     if (mode==='departures') place(document.getElementById('screen-departures'));
     if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
       document.querySelectorAll('.table .tr').forEach(tr=>{ if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')) tr.style.display='none'; });
