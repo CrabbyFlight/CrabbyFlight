@@ -1078,8 +1078,8 @@
     const arrSummary = summarizeMetarPlain(arrMet) || parseMetarSummary(arrMet);
     // ensure small elements under left/right airport blocks
     const leftWrap = document.querySelector('.info-left'); const rightWrap = document.querySelector('.info-right');
-    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.title = depMet||''; el.style.display = depSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
-    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.title = arrMet||''; el.style.display = arrSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
+    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.style.display = depSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
+    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.style.display = arrSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
@@ -1442,13 +1442,11 @@
           let dEl = document.getElementById('embed_dep_weather');
           if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='12px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
           dEl.textContent = depTxt || '';
-          dEl.title = usp.get('dep_metar') || d?.dep_metar || '';
           dEl.style.display = depTxt ? 'block' : 'none';
 
           let aEl = document.getElementById('embed_arr_weather');
           if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='12px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
           aEl.textContent = arrTxt || '';
-          aEl.title = usp.get('arr_metar') || d?.arr_metar || '';
           aEl.style.display = arrTxt ? 'block' : 'none';
         }
       }catch(e){}
