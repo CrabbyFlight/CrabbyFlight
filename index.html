@@ -1141,7 +1141,7 @@
       el.style.position='absolute'; el.style.display='block';
       if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
       if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
-    if (mode==='info' && (!Number.isNaN(x) || !Number.isNaN(y))) place(document.getElementById('screen-info'));
+    if (mode==='info' && (!Number.isNaN(x) || !Number.isNaN(y) || !Number.isNaN(s))) place(document.getElementById('screen-info'));
     if (mode==='departures') place(document.getElementById('screen-departures'));
     if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
       document.querySelectorAll('.table .tr').forEach(tr=>{ if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')) tr.style.display='none'; });
