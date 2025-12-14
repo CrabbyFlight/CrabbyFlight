@@ -1329,13 +1329,15 @@
     if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
     if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); hairRect.setAttribute('stroke', 'rgba(0,0,0,.6)'); }
 
-    const lg=document.getElementById('frame_logo');
-    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
-      const logoSaved = (v('logoShow','on') === 'on');
-      const logoParam = (usp.get('logoShow')||'').toLowerCase();
-      let logoShouldShow = logoSaved;
-      if(logoParam === 'on') logoShouldShow = true; else if (logoParam === 'off') logoShouldShow = false;
-      lg.style.display = logoShouldShow ? 'flex' : 'none'; }
+      const lg=document.getElementById('frame_logo');
+      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
+        // center the logo horizontally relative to the frame hole (same logic as info centering)
+        try{ lg.style.left = (holeX + (holeW/2)) + 'px'; lg.style.transform = 'translateX(-50%)'; lg.style.position = 'absolute'; lg.style.zIndex = 9999; }catch(e){}
+        const logoSaved = (v('logoShow','on') === 'on');
+        const logoParam = (usp.get('logoShow')||'').toLowerCase();
+        let logoShouldShow = logoSaved;
+        if(logoParam === 'on') logoShouldShow = true; else if (logoParam === 'off') logoShouldShow = false;
+        lg.style.display = logoShouldShow ? 'flex' : 'none'; }
 
     const wc=document.getElementById('wc');
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius = `${frameRadius}px`; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
@@ -1431,6 +1433,8 @@
 
       const lg=document.getElementById('frame_logo');
       if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
+        // center the logo horizontally relative to the frame hole
+        try{ lg.style.position = 'absolute'; lg.style.left = (holeX + (holeW/2)) + 'px'; lg.style.transform = 'translateX(-50%)'; lg.style.zIndex = 9999; }catch(e){}
         const logoParam=(usp.get('logoShow')||'').toLowerCase();
         if(logoParam === 'off') lg.style.display = 'none';
         else if(logoParam === 'on') lg.style.display = 'flex';
