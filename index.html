@@ -803,7 +803,10 @@
     const arrMetar = pickText(doc, 'destination metar','destination weather','OFP destination metar','OFP destination weather');
     // SimBrief sometimes contains short enroute notes in 'route notes' or 'performance remarks'
     const enrouteWx = pickText(doc, 'route notes','enroute notes','OFP remarks','OFP enroute_notes','general remarks');
+    // Try to pull short enroute hazard summaries from NOTAMDREC / NOTAM blocks (e.g., SIGMETs, turbulence, icing)
+    const enrouteHazardsSummary = summarizeEnrouteFromDoc(doc, cruiseFt);
     const computedEnroute = (enrouteWx && enrouteWx.trim()) ? enrouteWx : ((fmtCruise(cruiseFt) || '') || '') + (eteRaw ? (fmtCruise(cruiseFt) ? ` • ${formatEte(eteRaw)}` : formatEte(eteRaw)) : '');
+    const finalEnroute = (computedEnroute || '') + (enrouteHazardsSummary ? (computedEnroute ? ' • ' : '') + enrouteHazardsSummary : '');
     return {
       patch: {
         from: fmtLoc(fromName, fromIcao),
@@ -814,7 +817,7 @@
         airframe: (airframe||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw),
-        enroute_wx: computedEnroute || '',
+        enroute_wx: finalEnroute || '',
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
         dep_metar: depMetar || '',
@@ -1147,6 +1150,36 @@
     if(visMatch){ const v = visMatch[1]; pieces.push(v==='9999' ? 'Visibility: 10km+' : (v==='CAVOK' ? 'Visibility: 10km+' : `Visibility: ${v}`)); }
     if(qMatch) pieces.push(`Altimeter: ${qMatch[1]}`); else if(aMatch) pieces.push(`Altimeter: ${aMatch[1]}`);
     return pieces.join(' • ');
+  }
+
+  // Summarize enroute hazards from SimBrief OFP: search NOTAMDREC/NOTAM entries
+  function summarizeEnrouteFromDoc(doc, cruiseFt){
+    if(!doc) return '';
+    const cruiseNum = Number.parseInt(String(cruiseFt||'').replace(/\D/g,''),10) || null;
+    const nodes = Array.from(doc.querySelectorAll('notamdrec, notam'));
+    const kw = /turbul|turbulence|icing|ice|convect|thunder|lightning|sigmet|aermet|mountain wave|volcanic ash|ash|wind shear|shear|hail|severe|gust|tstm/i;
+    const seen = new Set();
+    const out = [];
+    for(const n of nodes){
+      const txt = (n.querySelector('notam_report')?.textContent || n.querySelector('notam_text')?.textContent || n.querySelector('notam_raw')?.textContent || '').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+      if(!txt) continue;
+      if(!kw.test(txt)) continue;
+      // crude altitude relevance check: skip items that only affect low altitudes below cruise
+      let affectsCruise = true;
+      const sfcRange = txt.match(/SFC\s*-\s*(\d{2,6})\s*(FT)?/i);
+      if(sfcRange && cruiseNum){ const upper = Number.parseInt(sfcRange[1],10); if(upper && upper < cruiseNum) affectsCruise = false; }
+      const abvFl = txt.match(/ABV\s*FL?(\d{2,3})/i);
+      if(abvFl && cruiseNum){ const fl = Number.parseInt(abvFl[1],10); if(fl && fl > (cruiseNum/100)) affectsCruise = false; }
+      if(!affectsCruise) continue;
+      const short = txt.length>220 ? txt.slice(0,220).trim()+'…' : txt;
+      if(seen.has(short)) continue;
+      seen.add(short);
+      out.push(short);
+      if(out.length>=3) break;
+    }
+    if(!out.length) return '';
+    // join into short inline summary
+    return out.map((s,i)=>`${i+1}. ${s}`).join(' | ');
   }
 
   function renderFlightViz(d){
