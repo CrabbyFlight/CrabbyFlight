@@ -67,8 +67,6 @@
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
   body.editor{background:var(--bg)!important}
   body.info,body.departures{background:transparent!important}
-  /* also show info overlay while in frame mode so it appears with the frame/logo */
-  body.frame #screen-info{display:block}
 
   /* Remove all text shadows from editor */
   .wrap,.card,label,input,select,button,h1,h2,h3,.footer{text-shadow:none!important}
@@ -121,8 +119,8 @@
   .auth-status{font-size:12px;color:#ffb4b4;min-height:18px}
   .auth-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 
-  .container{position:absolute;top:16px;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center;pointer-events:none}
-  .container .info-box{pointer-events:auto;z-index:1000}
+  .container{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center;pointer-events:none}
+  .container .info-box{pointer-events:auto;z-index:20}
   .info-left{text-align:left;display:flex;flex-direction:column;gap:6px;min-width:160px}
   .info-center{text-align:center;display:flex;flex-direction:column;gap:6px;padding:0 14px;flex-shrink:0;white-space:nowrap}
   .info-right{text-align:right;display:flex;flex-direction:column;gap:6px;min-width:160px}
@@ -143,8 +141,7 @@
   /* compact flight-track that sits at top of info box */
   .flight-track{position:absolute;left:50%;transform:translateX(-50%);top:8px;width:calc(100% - 40px);height:16px;background:transparent;border-radius:999px;display:flex;align-items:center;padding:4px 8px}
     /* slightly lower so there's a small visual gap between airports and the track */
-    /* Info box: solid background, no transparency, and visually merge with outer frame border */
-  .info-box{background:rgba(44,48,54,.85);border:1px solid rgba(0,0,0,.6);border-radius:var(--frame-border-radius,12px);box-shadow:0 12px 32px rgba(0,0,0,.4);color:#fff;padding:20px 32px;display:grid;grid-template-columns:1fr auto 1fr;gap:32px;align-items:start;max-width:1280px;width:min(95%,1280px);text-shadow:1px 1px 3px rgba(0,0,0,.8);backdrop-filter:blur(4px);box-sizing:border-box}
+    .info-box{position:relative;background:rgba(33,36,41,0.95);border:1px solid rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.12);color:#fff;padding:44px 14px 10px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;max-width:900px;width:min(94%,900px);backdrop-filter:blur(0);box-sizing:border-box}
     .flight-track{top:8px}
   .flight-track .bar{position:relative;flex:1;height:8px;background:transparent;border-radius:999px;overflow:hidden}
   .flight-track .bar .pos{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#FFA500,#FFD100);transition:width .25s linear;box-shadow:0 0 10px rgba(255,170,0,.12)}
@@ -241,7 +238,8 @@
         <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
       </div>
       <button id="btn_import_sb" class="primary" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
-      
+      <button id="btn_import_test" type="button" title="Run a local sample OFP import">Run Sample Import</button>
+      <button id="btn_run_tests" type="button" title="Run diagnostics and self-test">Run Tests</button>
       <span class="pill" id="sb_status">Ready</span>
     </div>
   </div>
@@ -410,8 +408,6 @@
   </div>
 </div>
 
-
-
 <!-- INFO OVERLAY -->
 <div id="screen-info" class="container">
   <div class="info-box">
@@ -526,12 +522,10 @@
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
 
-
-
-
+  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
+    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
+  </div>
 </div>
-
-
 
 <!-- URLs Modal -->
 <div id="url_modal" class="modal" aria-hidden="true">
@@ -598,13 +592,6 @@
   function applyMode(){
     document.body.classList.remove('editor','info','departures','frame');
     document.body.classList.add(mode);
-    try{
-      const info = document.getElementById('screen-info');
-      if(info){
-        // ensure the info overlay is visible here; in-frame merging handled by CSS
-        info.style.display = '';
-      }
-    }catch(e){}
   }
   applyMode();
 
@@ -863,9 +850,9 @@
 
     let t=null;
     function save(){
-      if (!signedInUser || !canSave){ setStatus('Sign in to publish changes'); return; }
+      if (!signedInUser || !canSave) return;
       clearTimeout(t);
-      t=setTimeout(()=>{ const key = signedInUser?.uid || room; return set(ref(db, `rooms/${key}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)); }, 180);
+      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
     }
     for(const k of FIELDS){ const el=editorEls[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
 
@@ -960,7 +947,7 @@
         try{ renderInfo(previewD); }catch(e){}
         try{ renderFrame(previewD); }catch(e){}
         // Send transient preview to any open info iframe so its slider reflects the change immediately
-        // embed iframe support removed; previews are handled by host overlay
+        try{ const infoIf = document.getElementById('info_iframe'); if(infoIf && infoIf.contentWindow){ infoIf.contentWindow.postMessage({type:'preview', previewD}, location.origin); } }catch(e){}
       }catch(e){}
     }
 
@@ -1079,11 +1066,77 @@
       }
     });
 
+    bindIf('btn_import_test', async ()=>{
+      try{
+        setSimBriefStatus('Running sample import…');
+        const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
+          <OFP>
+            <origin>
+              <icao_code>RJAA</icao_code>
+              <name>Narita</name>
+              <metar>RJAA 141200Z 22005KT 9999 SCT020 10/08 Q1015</metar>
+            </origin>
+            <destination>
+              <icao_code>RJBB</icao_code>
+              <name>Kansai</name>
+              <metar>RJBB 141400Z 26015G25KT 8000 -RA BKN030 12/09 Q1009</metar>
+            </destination>
+            <general>
+              <airline_icao>WAL</airline_icao>
+              <flight_number>113</flight_number>
+            </general>
+            <aircraft>
+              <name>A320-251N</name>
+              <reg>JA123A</reg>
+            </aircraft>
+            <performance>
+              <cruise_altitude>34000</cruise_altitude>
+            </performance>
+            <times>
+              <est_time_enroute>01:45</est_time_enroute>
+              <sched_out_zulu>14:30</sched_out_zulu>
+              <sched_in_zulu>16:15</sched_in_zulu>
+            </times>
+          </OFP>`;
 
+        const doc = new DOMParser().parseFromString(sampleXml,'application/xml');
+        const {patch,meta} = parseSimBriefDoc(doc);
 
+        // Apply into editor fields
+        Object.entries(patch).forEach(([k,val])=>{
+          const el = document.getElementById(k);
+          if(el) { el.value = (typeof val === 'undefined' ? '' : val); el.dispatchEvent(new Event('input')); }
+        });
+        sanitizeUTCField(document.getElementById('dep_utc'));
+        sanitizeUTCField(document.getElementById('arr_utc'));
+        setSimBriefStatus('Sample import applied', false, true);
+      }catch(e){ setSimBriefStatus('Sample import failed: '+e.message, true); }
+    });
 
+    // Developer: run a quick self-test of core UI bindings (non-destructive)
+    function runSelfTest(){
+      const results = [];
+      try{
+        // frame color change
+        const fCol = document.getElementById('frameBorderColor'); const prevCol = fCol?.value||'';
+        if(fCol){ fCol.value = '#ff0000'; fCol.dispatchEvent(new Event('input')); updatePreview(); const applied = getComputedStyle(document.documentElement).getPropertyValue('--frame-border-color').trim().toLowerCase() === '#ff0000'; results.push(applied? 'Frame color OK' : 'Frame color FAILED'); }
+        // webcam show toggle
+        const wcShow = document.getElementById('wcShow'); const prevWc = wcShow?.checked; if(wcShow){ wcShow.checked = false; wcShow.dispatchEvent(new Event('change')); updatePreview(); const wcEl = document.getElementById('wc'); results.push(wcEl && wcEl.style.outline==='none' ? 'WC toggle OK' : 'WC toggle FAILED'); }
+        // live indicator toggle
+        const infoLive = document.getElementById('infoLive'); const prevLive = infoLive?.checked; if(infoLive){ infoLive.checked = false; infoLive.dispatchEvent(new Event('change')); updatePreview(); const liveEl=document.getElementById('i_live_block'); results.push(liveEl && liveEl.style.display==='none' ? 'Live toggle OK' : 'Live toggle FAILED'); }
+        // resolution/platform text
+        const resTextEl = document.getElementById('infoResText'); const prevRes = resTextEl?.value||''; if(resTextEl){ resTextEl.value = '720p30'; resTextEl.dispatchEvent(new Event('input')); updatePreview(); const resEl = document.getElementById('i_res'); results.push(resEl && resEl.textContent.includes('720p30') ? 'Res text OK' : 'Res text FAILED'); }
+        // restore
+        if(fCol) { fCol.value = prevCol; fCol.dispatchEvent(new Event('input')); }
+        if(wcShow) { wcShow.checked = !!prevWc; wcShow.dispatchEvent(new Event('change')); }
+        if(infoLive) { infoLive.checked = !!prevLive; infoLive.dispatchEvent(new Event('change')); }
+        if(resTextEl) { resTextEl.value = prevRes; resTextEl.dispatchEvent(new Event('input')); }
+      }catch(e){ results.push('Self-test error: '+e.message); }
+      const statusEl=document.getElementById('auth_status'); if(statusEl){ statusEl.textContent = 'Self-test: ' + results.join(' | '); }
+      return results;
+    }
 
-
+    bindIf('btn_run_tests', ()=>{ const r = runSelfTest(); setTimeout(()=>runDiagnostics(),400); });
 
     // Flight control buttons
     bindIf('flightTakeoff', ()=>{ editorEls['flightTakeoffEpoch'].value = String(Date.now()); editorEls['flightLanded'].value = 'off'; save(); });
@@ -1327,15 +1380,13 @@
     if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
     if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); hairRect.setAttribute('stroke', 'rgba(0,0,0,.6)'); }
 
-      const lg=document.getElementById('frame_logo');
-      if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
-        // center the logo horizontally relative to the frame hole (same logic as info centering)
-        try{ lg.style.left = (holeX + (holeW/2)) + 'px'; lg.style.transform = 'translateX(-50%)'; lg.style.position = 'absolute'; lg.style.zIndex = 9999; }catch(e){}
-        const logoSaved = (v('logoShow','on') === 'on');
-        const logoParam = (usp.get('logoShow')||'').toLowerCase();
-        let logoShouldShow = logoSaved;
-        if(logoParam === 'on') logoShouldShow = true; else if (logoParam === 'off') logoShouldShow = false;
-        lg.style.display = logoShouldShow ? 'flex' : 'none'; }
+    const lg=document.getElementById('frame_logo');
+    if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
+      const logoSaved = (v('logoShow','on') === 'on');
+      const logoParam = (usp.get('logoShow')||'').toLowerCase();
+      let logoShouldShow = logoSaved;
+      if(logoParam === 'on') logoShouldShow = true; else if (logoParam === 'off') logoShouldShow = false;
+      lg.style.display = logoShouldShow ? 'flex' : 'none'; }
 
     const wc=document.getElementById('wc');
     if(wc){ wc.style.left=(wcX+pad)+'px'; wc.style.top=wcY+'px'; wc.style.width=wcW+'px'; wc.style.height=wcH+'px'; wc.style.display='block'; wc.style.borderRadius = `${frameRadius}px`; wc.style.outline = wcShowSaved ? `${bTh}px solid ${bCol}` : 'none'; wc.style.boxShadow = wcShowSaved ? '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)' : 'none'; }
@@ -1350,7 +1401,10 @@
       else imgEl.style.display = 'none';
     }
 
-    // Embedded info fallback removed; only the host `#screen-info` overlay is used
+    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
+    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
   function subscribe(){
@@ -1428,8 +1482,6 @@
 
       const lg=document.getElementById('frame_logo');
       if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
-        // center the logo horizontally relative to the frame hole
-        try{ lg.style.position = 'absolute'; lg.style.left = (holeX + (holeW/2)) + 'px'; lg.style.transform = 'translateX(-50%)'; lg.style.zIndex = 9999; }catch(e){}
         const logoParam=(usp.get('logoShow')||'').toLowerCase();
         if(logoParam === 'off') lg.style.display = 'none';
         else if(logoParam === 'on') lg.style.display = 'flex';
@@ -1443,25 +1495,28 @@
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
 
-      // Embedded iframe fallback removed; host `#screen-info` is used exclusively
-      // Align the info overlay to the visual center of the frame logo (more robust than hole coords)
+      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+      // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
       try{
-        const infoContainer = document.getElementById('screen-info');
-        const lg = document.getElementById('frame_logo');
-        const frameRoot = document.querySelector('.frame-root');
-        if(infoContainer && lg && frameRoot){
-          const lgRect = lg.getBoundingClientRect();
-          const frameRect = frameRoot.getBoundingClientRect();
-          const centerX = Math.round(lgRect.left + (lgRect.width/2) - frameRect.left);
-          infoContainer.style.position = 'absolute';
-          infoContainer.style.left = centerX + 'px';
-          infoContainer.style.top = (holeY + 6) + 'px';
-          infoContainer.style.transform = 'translateX(-50%)';
-          infoContainer.style.zIndex = 9999;
-          infoContainer.style.display = 'block';
+        const usp = new URLSearchParams(location.search);
+        const enrouteTxt = '';
+        const depTxt = summarizeMetarPlain(usp.get('dep_metar') || d?.dep_metar || '') || parseMetarSummary(usp.get('dep_metar') || d?.dep_metar || '');
+        const arrTxt = summarizeMetarPlain(usp.get('arr_metar') || d?.arr_metar || '') || parseMetarSummary(usp.get('arr_metar') || d?.arr_metar || '');
+        if(infoWrap){
+          let dEl = document.getElementById('embed_dep_weather');
+          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='14px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
+          dEl.textContent = depTxt || '';
+          dEl.style.display = depTxt ? 'block' : 'none';
+
+          let aEl = document.getElementById('embed_arr_weather');
+          if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='14px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
+          aEl.textContent = arrTxt || '';
+          aEl.style.display = arrTxt ? 'block' : 'none';
         }
       }catch(e){}
-      // Frame-level embed fallback removed — weather summaries are rendered only in the host overlay now
     }
     // METAR/ATIS timer removed — no-op
   }
@@ -1623,7 +1678,7 @@
         }
         applyOverlayOptions();
         // run diagnostics after auth state change so we can detect and auto-fix issues
-        try{ const issues=runDiagnostics(); }catch(e){}
+        try{ const issues=runDiagnostics(); if(signedInUser){ try{ const results = runSelfTest(); if(results && results.length) setStatus('Self-test: ' + results.join(' | ')); }catch(e){} } }catch(e){}
       });
     } else {
       subscribe();
