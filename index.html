@@ -526,9 +526,7 @@
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
 
-  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
-    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
-  </div>
+
 
 
 </div>
@@ -962,7 +960,7 @@
         try{ renderInfo(previewD); }catch(e){}
         try{ renderFrame(previewD); }catch(e){}
         // Send transient preview to any open info iframe so its slider reflects the change immediately
-        try{ const infoIf = document.getElementById('info_iframe'); if(infoIf && infoIf.contentWindow){ infoIf.contentWindow.postMessage({type:'preview', previewD}, location.origin); } }catch(e){}
+        // embed iframe support removed; previews are handled by host overlay
       }catch(e){}
     }
 
@@ -1352,10 +1350,7 @@
       else imgEl.style.display = 'none';
     }
 
-    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
-    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
-    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+    // Embedded info fallback removed; only the host `#screen-info` overlay is used
   }
 
   function subscribe(){
@@ -1448,11 +1443,7 @@
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
 
-      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; /* keep embed hidden by default to avoid duplicate rendering */ infoWrap.style.display='none'; infoWrap.setAttribute('aria-hidden','true'); }
-      /* Do not set info iframe src automatically — prefer the host DOM info overlay to avoid duplicate/early render */
-      /* if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; } */
+      // Embedded iframe fallback removed; host `#screen-info` is used exclusively
       // Align the info overlay to the visual center of the frame logo (more robust than hole coords)
       try{
         const infoContainer = document.getElementById('screen-info');
@@ -1470,24 +1461,7 @@
           infoContainer.style.display = 'block';
         }
       }catch(e){}
-      // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
-      try{
-        const usp = new URLSearchParams(location.search);
-        const enrouteTxt = '';
-        const depTxt = summarizeMetarPlain(usp.get('dep_metar') || d?.dep_metar || '') || parseMetarSummary(usp.get('dep_metar') || d?.dep_metar || '');
-        const arrTxt = summarizeMetarPlain(usp.get('arr_metar') || d?.arr_metar || '') || parseMetarSummary(usp.get('arr_metar') || d?.arr_metar || '');
-        if(infoWrap){
-          let dEl = document.getElementById('embed_dep_weather');
-          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='14px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
-          dEl.textContent = depTxt || '';
-          dEl.style.display = depTxt ? 'block' : 'none';
-
-          let aEl = document.getElementById('embed_arr_weather');
-          if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='14px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
-          aEl.textContent = arrTxt || '';
-          aEl.style.display = arrTxt ? 'block' : 'none';
-        }
-      }catch(e){}
+      // Frame-level embed fallback removed — weather summaries are rendered only in the host overlay now
     }
     // METAR/ATIS timer removed — no-op
   }
