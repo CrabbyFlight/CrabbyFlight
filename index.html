@@ -1178,12 +1178,12 @@
     const aMatch = raw.match(/\b(A\d{4})\b/);
     // Build a friendly, labeled summary for viewers
     const pieces = [];
-    if(windMatch){ const dir = windMatch[1].replace('VRB','Variable'); const gust = windMatch[3] ? ` (gusts ${windMatch[3]} kt)` : ''; const sp = windMatch[1].replace(/VRB/,'').slice(-3).replace(/^0+/,'') || ''; pieces.push(`Wind: ${dir}${sp?` ${sp} kt`:''}${gust}`); }
-    if(tempMatch){ const t = tempMatch[1].replace(/^M/,'-'); pieces.push(`Temp: ${t}°C`); }
-    if(cloudMatch){ const cls = cloudMatch[0]; const friendly = cls.replace(/^FEW/,'Few ').replace(/^SCT/,'Scattered ').replace(/^BKN/,'Broken ').replace(/^OVC/,'Overcast '); pieces.push(`Clouds: ${friendly}`); }
+    if(windMatch){ const dirRaw = windMatch[1]; const dir = dirRaw==='VRB' ? 'Variable' : String(parseInt(dirRaw,10)); const sp = windMatch[1].replace(/VRB/,'').slice(-3).replace(/^0+/,'')||''; const gust = windMatch[3]?parseInt(windMatch[3],10):null; pieces.push(`Wind ${dir} ${sp?`${sp}kt`:''}${gust?` G${gust}kt`:''}`); }
+    if(tempMatch){ const t = tempMatch[1].replace(/^M/,'-'); pieces.push(`Temp ${t}°C`); }
+    if(cloudMatch){ const cls = cloudMatch[0]; const friendly = cls.replace(/^FEW/,'Few').replace(/^SCT/,'Scattered').replace(/^BKN/,'Broken').replace(/^OVC/,'Overcast'); pieces.push(`${friendly} clouds`); }
     else if(/CAVOK/i.test(raw) || /SKC|NOCLOUDS/i.test(raw)) { pieces.push('Clouds: Clear'); }
-    if(visMatch){ const v = visMatch[1]; pieces.push(v==='9999' ? 'Visibility: 10km+' : (v==='CAVOK' ? 'Visibility: 10km+' : `Visibility: ${v}`)); }
-    if(qMatch) pieces.push(`Altimeter: ${qMatch[1]}`); else if(aMatch) pieces.push(`Altimeter: ${aMatch[1]}`);
+    if(visMatch){ if(/SM/i.test(visMatch[0])){ const mi = parseFloat(visMatch[1]); pieces.push(`Visibility ${Math.round(mi*1.609*10)/10} km`); } else { const v = visMatch[1]; pieces.push(v==='9999' ? 'Visibility 10 km+' : `Visibility ${v}`); } }
+    if(qMatch) pieces.push(`${qMatch[1]}`); else if(aMatch) pieces.push(`${aMatch[1]}`);
     return pieces.join(' • ');
   }
 
@@ -1195,26 +1195,26 @@
     // quick checks
     if(/CAVOK/i.test(raw) || /SKC|NOCLOUDS/i.test(raw)) return 'Clear skies';
     const parts = [];
-    // wind
-    const windMatch = raw.match(/\b((?:\d{3}|VRB)\d{2,3})(G(\d{2,3}))?KT\b/);
-    if(windMatch){ const dir = windMatch[1].replace('VRB','Variable'); const gust = windMatch[3]?parseInt(windMatch[3],10):null; const sp = windMatch[1].replace(/VRB/,'').slice(-3).replace(/^0+/,'')||'0'; parts.push(`Wind ${dir}${sp?` ${sp} kt`:''}${gust?` (gusts ${gust} kt)`:''}`); }
+    // wind (format: 'Wind 260 15kt' and include gusts as 'G25kt')
+    const windMatch = raw.match(/\b((?:\d{3}|VRB))(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+    if(windMatch){ const dirRaw = windMatch[1]; const dir = dirRaw === 'VRB' ? 'Variable' : String(parseInt(dirRaw,10)); const sp = parseInt(windMatch[2],10); const gust = windMatch[3]?parseInt(windMatch[3],10):null; parts.push(`Wind ${dir} ${sp}kt${gust?` G${gust}kt`:''}`); }
     // precipitation / thunderstorms
     if(/TS|TSTM/.test(raw)) parts.push('Thunderstorms');
     else if(/SHRA|SH(RA|DZ)/.test(raw)) parts.push('Showery rain');
     else if(/RA/.test(raw)) parts.push('Rain');
     else if(/SN/.test(raw)) parts.push('Snow');
-    // visibility
-    const visMatch = raw.match(/\b(\d{4}|\d+SM|CAVOK)\b/);
-    if(visMatch){ const v=visMatch[1]; parts.push(v==='9999' ? 'Visibility 10km+' : (v==='CAVOK'?'Visibility 10km+':`Visibility ${v}`)); }
-    // clouds
+    // visibility (normalize to km and use a readable unit)
+    const visMatch = raw.match(/\b(\d{4})\b/) || raw.match(/\b(\d+(?:\.\d+)?)SM\b/i);
+    if(visMatch){ if(/SM/i.test(visMatch[0])){ const mi = parseFloat(visMatch[1]); parts.push(`Visibility ${Math.round(mi*1.609*10)/10} km`); } else { const v = parseInt(visMatch[1],10); parts.push(v>=9999 ? 'Visibility 10 km+' : (v%1000===0?`Visibility ${v/1000} km`:`Visibility ${(v/1000).toFixed(1)} km`)); } }
+    // clouds (drop altitude; keep concise)
     const cloudMatch = raw.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
-    if(cloudMatch){ const code = cloudMatch[1]; const h = parseInt(cloudMatch[2],10)*100; const friendly = code==='FEW'?'Few':code==='SCT'?'Scattered':code==='BKN'?'Broken':'Overcast'; parts.push(`${friendly} clouds at ~${Math.round(h/100)}00 ft`); }
+    if(cloudMatch){ const code = cloudMatch[1]; const friendly = code==='FEW'?'Few':code==='SCT'?'Scattered':code==='BKN'?'Broken':'Overcast'; parts.push(`${friendly} clouds`); }
     // temp
     const tempMatch = raw.match(/\b(M?\d{1,2})\/(M?\d{1,2})\b/);
     if(tempMatch){ const t=tempMatch[1].replace(/^M/,'-'); parts.push(`Temp ${t}°C`); }
     // altimeter
     const qMatch = raw.match(/\b(Q\d{4})\b/); const aMatch = raw.match(/\b(A\d{4})\b/);
-    if(qMatch) parts.push(`Altimeter ${qMatch[1]}`); else if(aMatch) parts.push(`Altimeter ${aMatch[1]}`);
+    if(qMatch) parts.push(`${qMatch[1]}`); else if(aMatch) parts.push(`${aMatch[1]}`);
     // shorten and join
     const out = parts.join(' • ');
     return out.length? out : (raw.slice(0,180) + (raw.length>180? '…':''));
@@ -1392,31 +1392,29 @@
           if (typeof val === 'undefined') continue;
           if (el.type === 'checkbox') el.checked = (String(val) === 'on'); else el.value = val;
         }
-        // Keep border width slider in sync when data loads from DB
-        try{
-          const rangeEl = document.getElementById('frameBorderWidth_range');
-          const numEl = document.getElementById('frameBorderWidth');
-          if(rangeEl && numEl){
-            const v = parseInt(numEl.value||DEFAULTS.frameBorderWidth||'6',10) || 6;
-            rangeEl.value = v;
-          }
-        }catch(e){}
-        sanitizeUTCField(document.getElementById('dep_utc'));
-        sanitizeUTCField(document.getElementById('arr_utc'));
+          let windStr = null, precipStr = null, cloudStr = null, visStr = null, tempStr = null, altStr = null;
+          const windMatch = raw.match(/\b((?:\d{3}|VRB))(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+          if(windMatch){ const dirRaw = windMatch[1]; const dir = dirRaw === 'VRB' ? 'Variable' : String(parseInt(dirRaw,10)); const sp = parseInt(windMatch[2],10); const gust = windMatch[3]?parseInt(windMatch[3],10):null; windStr = `Wind ${dir} ${sp}kt${gust?` G${gust}kt`:''}`; }
+          if(/\bTS\b|\bTSTM\b/.test(raw)) precipStr = 'Thunderstorms';
+          else if(/\bSHRA\b|\bSH(RA|DZ)\b/.test(raw)) precipStr = 'Showery rain';
+          else if(/\bRA\b/.test(raw)) precipStr = 'Rain';
+          else if(/\bSN\b/.test(raw)) precipStr = 'Snow';
+          const visMatch = raw.match(/\b(\d{4})\b/) || raw.match(/\b(\d+(?:\.\d+)?)SM\b/i);
+          if(visMatch){ if(/SM/i.test(visMatch[0])){ const mi = parseFloat(visMatch[1]); visStr = `${Math.round(mi*1.609*10)/10} km`; } else { const v = parseInt(visMatch[1],10); visStr = v>=9999 ? '10 km+' : (v%1000===0?`${v/1000} km`:`${(v/1000).toFixed(1)} km`); } }
+          const cloudMatch = raw.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
+          if(cloudMatch){ const code = cloudMatch[1]; const friendly = code==='FEW'?'Few':code==='SCT'?'Scattered':code==='BKN'?'Broken':'Overcast'; cloudStr = `${friendly} clouds`; }
+          const tempMatch = raw.match(/\b(M?\d{1,2})\/(M?\d{1,2})\b/);
+          if(tempMatch){ const t=tempMatch[1].replace(/^M/,'-'); tempStr = `Temp ${t}°C`; }
+          const qMatch = raw.match(/\b(Q\d{4})\b/); const aMatch = raw.match(/\b(A\d{4})\b/);
+          if(qMatch) altStr = `${qMatch[1]}`; else if(aMatch) altStr = `${aMatch[1]}`;
 
-        const presetEl = document.getElementById('wcPreset');
-        const wEl = document.getElementById('wcW'); const hEl = document.getElementById('wcH');
-        const key = `${wEl?.value||''}x${hEl?.value||''}`;
-        if (presetEl){
-          if (![...presetEl.options].some(o=>o.value===presetEl.value)) presetEl.value = key;
-          const presetHidden = document.getElementById('wcPreset');
-          if (presetHidden) presetHidden.value = presetEl.value;
-        }
-        // Ensure preview picks up new values loaded from DB
-        try{ setTimeout(()=>{ updatePreview(); }, 8); }catch(e){}
-      }
-
-      if (!firstPaint) {
+          const out = [];
+          if(windStr) out.push(windStr);
+          if(precipStr) out.push(precipStr);
+          else if(cloudStr) out.push(cloudStr);
+          else if(visStr) out.push(`Visibility ${visStr}`);
+          if(out.length < 3){ if(tempStr) out.push(tempStr); else if(altStr) out.push(altStr); }
+          return out.join(' • ') || (raw.slice(0,180) + (raw.length>180? '…':''));
         document.body.classList.add('ready');
         firstPaint = true;
         canSave = true;
