@@ -804,7 +804,8 @@
     // SimBrief sometimes contains short enroute notes in 'route notes' or 'performance remarks'
     const enrouteWx = pickText(doc, 'route notes','enroute notes','OFP remarks','OFP enroute_notes','general remarks');
     // Try to pull short enroute hazard summaries from NOTAMDREC / NOTAM blocks (e.g., SIGMETs, turbulence, icing)
-    const enrouteHazardsSummary = summarizeEnrouteFromDoc(doc, cruiseFt, dep, eteRaw);
+    let enrouteHazardsSummary = '';
+    try{ enrouteHazardsSummary = summarizeEnrouteFromDoc(doc, cruiseFt, dep, eteRaw); }catch(e){ console.warn('summarizeEnrouteFromDoc failed', e); enrouteHazardsSummary = ''; }
     const computedEnroute = (enrouteWx && enrouteWx.trim()) ? enrouteWx : ((fmtCruise(cruiseFt) || '') || '') + (eteRaw ? (fmtCruise(cruiseFt) ? ` • ${formatEte(eteRaw)}` : formatEte(eteRaw)) : '');
     // If the SimBrief provided enroute note, prefer that. Otherwise use hazard summary if present.
     let finalEnroute = '';
