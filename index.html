@@ -238,8 +238,7 @@
         <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
       </div>
       <button id="btn_import_sb" class="primary" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
-      <button id="btn_import_test" type="button" title="Run a local sample OFP import">Run Sample Import</button>
-      <button id="btn_run_tests" type="button" title="Run diagnostics and self-test">Run Tests</button>
+      
       <span class="pill" id="sb_status">Ready</span>
     </div>
   </div>
@@ -850,9 +849,9 @@
 
     let t=null;
     function save(){
-      if (!signedInUser || !canSave) return;
+      if (!signedInUser || !canSave){ setStatus('Sign in to publish changes'); return; }
       clearTimeout(t);
-      t=setTimeout(()=>set(ref(db, `rooms/${room}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)), 180);
+      t=setTimeout(()=>{ const key = signedInUser?.uid || room; return set(ref(db, `rooms/${key}`), read()).catch(err=>setStatus(`Save failed: ${err.message}`)); }, 180);
     }
     for(const k of FIELDS){ const el=editorEls[k]; if(!el) continue; el.addEventListener('input', save); el.addEventListener('change', save); }
 
@@ -1066,111 +1065,11 @@
       }
     });
 
-    bindIf('btn_import_test', async ()=>{
-      try{
-        setSimBriefStatus('Running sample import…');
-        const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
-          <OFP>
-            <origin>
-              <icao_code>RJAA</icao_code>
-              <name>Narita</name>
-              <metar>RJAA 141200Z 22005KT 9999 SCT020 10/08 Q1015</metar>
-            </origin>
-            <destination>
-              <icao_code>RJBB</icao_code>
-              <name>Kansai</name>
-              <metar>RJBB 141400Z 26015G25KT 8000 -RA BKN030 12/09 Q1009</metar>
-            </destination>
-            <general>
-              <airline_icao>WAL</airline_icao>
-              <flight_number>113</flight_number>
-            </general>
-            <aircraft>
-              <name>A320-251N</name>
-              <reg>JA123A</reg>
-            </aircraft>
-            <performance>
-              <cruise_altitude>34000</cruise_altitude>
-            </performance>
-            <times>
-              <est_time_enroute>01:45</est_time_enroute>
-              <sched_out_zulu>14:30</sched_out_zulu>
-              <sched_in_zulu>16:15</sched_in_zulu>
-            </times>
-          </OFP>`;
 
-        const doc = new DOMParser().parseFromString(sampleXml,'application/xml');
-        const {patch,meta} = parseSimBriefDoc(doc);
 
-        // Apply into editor fields
-        Object.entries(patch).forEach(([k,val])=>{
-          const el = document.getElementById(k);
-          if(el) { el.value = (typeof val === 'undefined' ? '' : val); el.dispatchEvent(new Event('input')); }
-        });
-        sanitizeUTCField(document.getElementById('dep_utc'));
-        sanitizeUTCField(document.getElementById('arr_utc'));
-        setSimBriefStatus('Sample import applied', false, true);
-      }catch(e){ setSimBriefStatus('Sample import failed: '+e.message, true); }
-    });
 
-    // Developer: run a quick self-test of core UI bindings (non-destructive)
-    function runSelfTest(){
-      return new Promise((resolve)=>{
-        const results = [];
-        try{
-          // collect references and previous values
-          const fCol = document.getElementById('frameBorderColor'); const prevCol = fCol?.value||'';
-          const wcShow = document.getElementById('wcShow'); const prevWc = wcShow?.checked;
-          const infoLive = document.getElementById('infoLive'); const prevLive = infoLive?.checked;
-          const resTextEl = document.getElementById('infoResText'); const prevRes = resTextEl?.value||'';
 
-          // perform changes
-          if(fCol){ fCol.value = '#ff0000'; fCol.dispatchEvent(new Event('input')); }
-          if(wcShow){ wcShow.checked = false; wcShow.dispatchEvent(new Event('change')); }
-          if(infoLive){ infoLive.checked = false; infoLive.dispatchEvent(new Event('change')); }
-          if(resTextEl){ resTextEl.value = '720p30'; resTextEl.dispatchEvent(new Event('input')); }
 
-          updatePreview(); // apply immediately
-
-          // wait briefly to allow rendering and computed styles to settle
-          setTimeout(()=>{
-            try{
-              // frame color: check preview border stroke (reliable)
-              const previewBorderRect = document.getElementById('borderRect');
-              if(previewBorderRect){ const stroke = (previewBorderRect.getAttribute('stroke')||'').trim().toLowerCase(); results.push(stroke==='#ff0000' ? 'Frame color OK' : `Frame color FAILED (${stroke||'none'})`); }
-              else results.push('Frame preview element missing');
-
-              // webcam toggle
-              const wcEl = document.getElementById('wc');
-              if(wcShow){ const outline = (wcEl?.style.outline||'').trim(); const display = (wcEl?.style.display||'').trim(); results.push((outline==='' || display!=='block') ? 'WC toggle OK' : 'WC toggle FAILED'); } else results.push('WC toggle missing');
-
-              // live indicator
-              const liveEl = document.getElementById('i_live_block');
-              if(infoLive){ const disp = window.getComputedStyle(liveEl||document.documentElement).display; results.push(disp==='none' ? 'Live toggle OK' : 'Live toggle FAILED'); } else results.push('Live toggle missing');
-
-              // res/platform text
-              const resEl = document.getElementById('i_res');
-              if(resTextEl){ results.push(resEl && resEl.textContent.includes('720p30') ? 'Res text OK' : 'Res text FAILED'); } else results.push('Res text input missing');
-
-            }catch(e){ results.push('Self-test error: '+e.message); }
-
-            // restore everything
-            try{ if(fCol){ fCol.value = prevCol; fCol.dispatchEvent(new Event('input')); } }catch(e){}
-            try{ if(wcShow){ wcShow.checked = !!prevWc; wcShow.dispatchEvent(new Event('change')); } }catch(e){}
-            try{ if(infoLive){ infoLive.checked = !!prevLive; infoLive.dispatchEvent(new Event('change')); } }catch(e){}
-            try{ if(resTextEl){ resTextEl.value = prevRes; resTextEl.dispatchEvent(new Event('input')); } }catch(e){}
-            try{ updatePreview(); }catch(e){}
-
-            const statusEl=document.getElementById('auth_status'); const sbEl=document.getElementById('sb_status'); const msg = results.length && results.every(r=>r.includes('OK')) ? 'Self-test PASSED: ' + results.join(' | ') : 'Self-test: ' + results.join(' | ');
-            if(statusEl) setStatus(msg); if(sbEl) { sbEl.textContent = msg; sbEl.className = results.length && results.every(r=>r.includes('OK')) ? 'pill ok' : 'pill warn'; setTimeout(()=>{ sbEl.textContent='Ready'; sbEl.className='pill'; }, 3000); }
-            console.log('runSelfTest:', results);
-            resolve(results);
-          }, 150);
-        }catch(e){ console.error('runSelfTest failed:', e); resolve(['Self-test failed: '+e.message]); }
-      });
-    }
-
-    bindIf('btn_run_tests', ()=>{ runSelfTest().then(()=>setTimeout(()=>runDiagnostics(),400)); });
 
     // Flight control buttons
     bindIf('flightTakeoff', ()=>{ editorEls['flightTakeoffEpoch'].value = String(Date.now()); editorEls['flightLanded'].value = 'off'; save(); });
@@ -1712,7 +1611,7 @@
         }
         applyOverlayOptions();
         // run diagnostics after auth state change so we can detect and auto-fix issues
-        try{ const issues=runDiagnostics(); if(signedInUser){ try{ runSelfTest().then(results=>{ if(results && results.length) setStatus('Self-test: ' + results.join(' | ')); }); }catch(e){} } }catch(e){}
+        try{ const issues=runDiagnostics(); }catch(e){}
       });
     } else {
       subscribe();
