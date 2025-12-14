@@ -63,15 +63,19 @@
   body.ready #inapp-splash{opacity:0;pointer-events:none}
 
   html,body{margin:0;padding:0;height:100%;background:transparent!important;color:var(--ink);
-    font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
   body.editor{background:var(--bg)!important}
   body.info,body.departures{background:transparent!important}
+
+  /* Remove all text shadows from editor */
+  .wrap,.card,label,input,select,button,h1,h2,h3,.footer{text-shadow:none!important}
 
   .wrap{max-width:1180px;margin:0 auto;padding:28px;background:var(--bg)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:12px 0;box-shadow:var(--shadow)}
   h1{margin:0 0 18px;font-size:26px;font-weight:700;letter-spacing:.2px;color:var(--ink)}
   label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:8px 0 8px}
-  input,select{width:100%;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px 12px;height:44px;box-sizing:border-box;outline:none;appearance:none}
+  input,select{width:100%;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px 12px;height:44px;box-sizing:border-box;outline:none;appearance:none;font-family:inherit}
   /* ensure checkboxes render normally instead of inheriting text input styles */
   input[type="checkbox"]{width:18px;height:18px;box-sizing:content-box;padding:0;margin:0 8px 0 0;background:transparent;border:1px solid var(--line);border-radius:4px;appearance:none;cursor:pointer;display:inline-block;vertical-align:middle}
   input[type="checkbox"]:checked{background:var(--brand);border-color:var(--brand)}
@@ -80,7 +84,7 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap)}
   .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
-  button{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:8px;cursor:pointer;transition:filter .12s ease,transform .02s ease}
+  button{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:8px;cursor:pointer;transition:filter .12s ease,transform .02s ease;font-family:inherit;font-size:14px;font-weight:500}
   button:hover{filter:brightness(.98)}
   button.primary{background:var(--brand);border-color:transparent;color:white}
   /* Make sure primary buttons stay legible in dark mode */
@@ -89,7 +93,7 @@
   button:active{transform:translateY(1px)}
 
   /* Footer links */
-  #screen-editor .footer{margin:24px 0 12px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;text-align:center}
+  #screen-editor .footer{margin:24px 0 12px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;text-align:center;font-weight:500;letter-spacing:0.2px}
   .footer a{color:var(--muted);text-decoration:none;transition:color .15s ease}
   .footer a:hover{color:var(--ink)}
   .footer .sep{margin:0 8px;color:var(--line)}
@@ -117,7 +121,13 @@
 
   .container{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center;pointer-events:none}
   .container .info-box{pointer-events:auto;z-index:20}
-  .info-box{background:rgba(44,48,54,.62);border:1px solid rgba(0,0,0,.6);border-radius:var(--frame-border-radius,12px);box-shadow:var(--shadow);color:#fff;font-size:18px;padding:12px 18px;line-height:1.4;display:inline-block;width:min(95%,1280px);max-width:1280px;text-shadow:2px 2px 4px rgba(0,0,0,.9);backdrop-filter:blur(2px);box-sizing:border-box}
+  .info-box{background:rgba(44,48,54,.85);border:1px solid rgba(0,0,0,.6);border-radius:var(--frame-border-radius,12px);box-shadow:0 12px 32px rgba(0,0,0,.4);color:#fff;padding:20px 32px;display:grid;grid-template-columns:1fr auto 1fr;gap:32px;align-items:start;max-width:1280px;width:min(95%,1280px);text-shadow:1px 1px 3px rgba(0,0,0,.8);backdrop-filter:blur(4px);box-sizing:border-box}
+  .info-left{text-align:left;display:flex;flex-direction:column;gap:6px;min-width:240px}
+  .info-center{text-align:center;display:flex;flex-direction:column;gap:8px;padding:0 28px;border-left:1px solid rgba(255,255,255,.2);border-right:1px solid rgba(255,255,255,.2);flex-shrink:0;white-space:nowrap}
+  .info-right{text-align:right;display:flex;flex-direction:column;gap:6px;min-width:240px}
+  .info-airport{font-size:26px;font-weight:700;color:#FFA500;letter-spacing:.3px;line-height:1.2;white-space:nowrap}
+  .info-time{font-size:15px;color:rgba(255,255,255,.9);font-weight:600}
+  .info-time strong{font-weight:700;margin-right:4px}
   .plane-icon{vertical-align:middle;margin:0 5px;transform:rotate(90deg);width:16px;height:16px}
 
   @keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}100%{transform:scale(1);opacity:1}}
@@ -126,12 +136,6 @@
   .live-dot{width:10px;height:10px;background:red;border-radius:50%;display:inline-block;animation:pulse 1s infinite}
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
-  .top-row{display:flex;align-items:center;margin-bottom:5px}
-  .airport-info{display:flex;align-items:center;gap:5px}
-  .flight-info{display:flex;align-items:center;gap:8px}
-  .flight-label{color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,.9); font-weight:700}
-  .separator-diamond{width:6px;height:6px;background:#fff;transform:rotate(45deg);display:inline-block;margin:0 8px}
-  .bottom-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
 
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
   .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
@@ -167,7 +171,7 @@
   .sheet{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:560px;max-width:92vw;padding:18px 18px 14px;box-shadow:var(--shadow)}
   .sheet h3{margin:0 0 8px;font-size:20px}
   .url-row{display:grid;grid-template-columns:84px 1fr auto;gap:10px;align-items:center;margin:10px 0}
-  .url-row code{color:#cfcfcf}
+  .url-row code{color:var(--muted);font-family:inherit;font-size:13px;font-weight:600}
   .url-row input{height:42px}
   .modal-actions{display:flex;justify-content:flex-end;margin-top:8px}
 
@@ -372,27 +376,28 @@
 <!-- INFO OVERLAY -->
 <div id="screen-info" class="container">
   <div class="info-box">
-    <div class="top-row">
-      <div class="airport-info">
-        <span class="dynamic" id="i_from">Oslo (ENGM)</span>
-        <svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V9l-8 5v2l8-1v4l-2 .5v1l-3-1 3 1v-1l-2-.5v-4l8 1z"/></svg>
-        <span class="dynamic" id="i_to">Liverpool (EGGP)</span>
+    <div class="info-left">
+      <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
+      <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
+    </div>
+
+    <div class="info-center">
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px">
+        <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
       </div>
-      <span class="separator-diamond"></span>
-      <div class="flight-info">
-        <span class="flight-label">Flight:</span> <span class="dynamic" id="i_flight">POR9392</span>
+      <div style="font-size:15px;line-height:1.6">
+        <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
+        <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">24,000ft</span> | <strong>Time:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
+        <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
+        <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
       </div>
     </div>
 
-    <div class="bottom-row">
-      <strong class="flight-label">Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320neo</span> |
-      <strong class="flight-label">Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span> |
-      <strong class="flight-label">Time en route:</strong> <span class="dynamic" id="i_enroute">~2hrs</span>
-    </div>
-
-    <div class="bottom-row" style="margin-top:3px; gap:10px;">
-      <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
-      <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+    <div class="info-right">
+      <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
+      <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
     </div>
   </div>
 </div>
@@ -472,7 +477,7 @@
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
 
-  <div id="embed_info" class="embed info" style="left:32px;top:80px;transform:scale(1)">
+  <div id="embed_info" class="embed info" style="display:none">
     <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
   </div>
 </div>
@@ -966,6 +971,7 @@
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
     setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
+    setT('i_dep_utc',val('dep_utc',DEFAULTS.dep_utc)); setT('i_arr_utc',val('arr_utc',DEFAULTS.arr_utc));
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
     const frameRadiusSaved = val('frameBorderRadius', DEFAULTS.frameBorderRadius);
     try{ document.documentElement.style.setProperty('--frame-border-color', frameColSaved); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadiusSaved}px`); }catch(e){}
@@ -992,13 +998,6 @@
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
-    try{
-      if (mode === 'info'){
-        const usp=new URLSearchParams(location.search);
-        const hasY = usp.get('y') !== null && usp.get('y') !== '';
-        if (!hasY){ const bTh = parseFloat((d?.frameBorderWidth) || DEFAULTS.frameBorderWidth || 6); const el=document.querySelector('#screen-info .container'); if(el) el.style.top = `${-6 - Math.round(bTh/2)}px`; }
-      }
-    }catch(e){}
   }
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
@@ -1074,9 +1073,8 @@
     }
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-    const infoBTh = orNum('bTh', orNum('frameBorderWidth', parseFloat(DEFAULTS.frameBorderWidth)||6));
-    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY', holeY + 6 - Math.round(infoBTh/2)), infoScale=orNum('infoScale',1);
-    if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; }
+    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
+    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; }
     if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
@@ -1139,12 +1137,7 @@
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
     const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
       if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
-    if (mode==='info'){
-      const el = document.querySelector('#screen-info .info-box')?.parentElement;
-      const hasY = usp.get('y') !== null && usp.get('y') !== '';
-      if (!hasY && el){ const bTh = parseFloat(usp.get('bTh') || usp.get('frameBorderWidth') || '6'); el.style.top = `${-6 - Math.round(bTh/2)}px`; }
-      place(el);
-    }
+    if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
     if (mode==='departures') place(document.getElementById('screen-departures'));
     if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
       document.querySelectorAll('.table .tr').forEach(tr=>{ if(!tr.classList.contains('real') && !tr.previousElementSibling?.classList.contains('th')) tr.style.display='none'; });
@@ -1189,9 +1182,8 @@
       }
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-      const bTh = getNum('frameBorderWidth', 6);
-      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY', holeY + 6 - Math.round(bTh/2)), infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.left=infoX+'px'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; }
+      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
