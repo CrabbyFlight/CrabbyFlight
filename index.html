@@ -148,6 +148,7 @@
   .flight-track .plane{position:absolute;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.98);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 10px rgba(0,0,0,.25)}
   .flight-phase{font-weight:700;color:#fff}
   .flight-meta{font-size:12px;color:rgba(255,255,255,.85);margin-top:4px;display:flex;justify-content:space-between;gap:8px}
+  .airport-weather{font-size:12px;color:rgba(255,255,255,.8);margin-top:6px}
 
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
   .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
@@ -1096,18 +1097,39 @@
     const depMet = val('dep_metar',''); const arrMet = val('arr_metar',''); const enrWx = val('enroute_wx','');
     const condElId = 'i_conditions';
     let condEl = document.getElementById(condElId);
-    if(!condEl){
-      condEl = document.createElement('div'); condEl.id = condElId; condEl.style.marginTop = '6px'; condEl.style.fontSize = '12px'; condEl.style.opacity = '.9';
-      const center = document.querySelector('.info-center'); if(center) center.appendChild(condEl);
-    }
+    if(!condEl){ condEl = document.createElement('div'); condEl.id = condElId; condEl.style.marginTop = '6px'; condEl.style.fontSize = '12px'; condEl.style.opacity = '.9'; const center = document.querySelector('.info-center'); if(center) center.appendChild(condEl); }
     if(depMet || arrMet || enrWx){
       const parts = [];
-      if(depMet) parts.push(`Dep: ${depMet}`);
-      if(enrWx) parts.push(`${enrWx}`);
-      if(arrMet) parts.push(`Arr: ${arrMet}`);
+      if(enrWx) parts.push(enrWx);
       condEl.textContent = parts.join(' • ');
       condEl.style.display = 'block';
     } else if(condEl){ condEl.style.display = 'none'; }
+
+    // Airport-specific weather summaries (compact, parsed from METAR if present)
+    const parseMetar = (m)=>{
+      if(!m) return '';
+      const raw = String(m).trim();
+      // quick tokens
+      const windMatch = raw.match(/(\b(?:\d{3}|VRB)\d{2,3}(?:G\d{2,3})?KT\b)/);
+      const visMatch = raw.match(/\b(\d{4}|\d+SM|CAVOK)\b/);
+      const cloudMatch = raw.match(/\b(MFEW|FEW|SCT|BKN|OVC)\d{3}\b/);
+      const tempMatch = raw.match(/\b(\d{1,2}\/\d{1,2})\b/);
+      const qMatch = raw.match(/\b(Q\d{4})\b/);
+      const pieces = [];
+      if(windMatch) pieces.push(windMatch[1].replace('KT',' kt'));
+      if(visMatch){ const v = visMatch[1]; pieces.push(v==='9999' ? 'Vis: 10km+' : (v==='CAVOK' ? 'CAVOK' : v)); }
+      if(cloudMatch) pieces.push(cloudMatch[0]);
+      if(tempMatch){ const t=tempMatch[1].replace('/','°/'); const arr = t.split('°/'); pieces.push(`${arr[0]}°C`); }
+      if(qMatch) pieces.push(qMatch[1].replace('Q','Q'));
+      return pieces.join(' • ');
+    };
+
+    const depSummary = parseMetar(depMet);
+    const arrSummary = parseMetar(arrMet);
+    // ensure small elements under left/right airport blocks
+    const leftWrap = document.querySelector('.info-left'); const rightWrap = document.querySelector('.info-right');
+    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.style.display = depSummary ? 'block' : 'none'; }
+    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.style.display = arrSummary ? 'block' : 'none'; }
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
