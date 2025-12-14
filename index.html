@@ -818,8 +818,7 @@
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
         dep_metar: depMetar || '',
-        arr_metar: arrMetar || '',
-        enroute_wx: enrouteWx || '',
+        arr_metar: arrMetar || ''
       },
       meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source, dep_raw: dep?.raw, arr_raw: arr?.raw, dep_hm: dep?.hm, arr_hm: arr?.hm, dep_offMin: dep?.offMin, arr_offMin: arr?.offMin, aircraft_raw: aircraft, airframe_raw: airframe }
     };
