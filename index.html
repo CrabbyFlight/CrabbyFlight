@@ -193,8 +193,8 @@
   .frame-svg{position:absolute;inset:0;pointer-events:none}
   .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:12px;display:flex;align-items:center;gap:10px;font-weight:800;padding:8px 12px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);text-shadow:2px 2px 4px rgba(0,0,0,.9)}
   .frame-logo img{width:22px;height:22px}
-  .embed{position:absolute;left:50%;transform:translateX(-50%);transform-origin:top center}
-  .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
+  .embed{position:absolute;left:0;transform-origin:top left}
+  .embed iframe{width:1920px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
 </style>
 </head>
@@ -1403,7 +1403,7 @@
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
-    if(infoWrap){ infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+    if(infoWrap){ infoWrap.style.top=infoY+'px'; if(infoScale !== 1) infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
     if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
@@ -1497,7 +1497,7 @@
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+      if(infoWrap){ infoWrap.style.top=infoY+'px'; if(infoScale !== 1) infoWrap.style.transform=`scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
       // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
       try{
