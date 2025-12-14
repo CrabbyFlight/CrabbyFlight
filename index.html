@@ -238,6 +238,7 @@
         <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
       </div>
       <button id="btn_import_sb" class="primary" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
+      <button id="btn_import_test" type="button" title="Run a local sample OFP import">Run Sample Import</button>
       <span class="pill" id="sb_status">Ready</span>
     </div>
   </div>
@@ -778,6 +779,48 @@
     const doc=new DOMParser().parseFromString(xmlText,'application/xml');
     if(doc.querySelector('parsererror')) throw new Error('XML parse error');
 
+    return parseSimBriefDoc(doc);
+
+
+  // Extract useful fields from a parsed SimBrief XML document
+  function parseSimBriefDoc(doc){
+    const fromIcao = pickText(doc,'OFP origin icao_code','origin icao_code','general orig_icao');
+    const fromName = pickText(doc,'OFP origin name','origin name','general orig_name','origin city');
+    const toIcao   = pickText(doc,'OFP destination icao_code','destination icao_code','general dest_icao');
+    const toName   = pickText(doc,'OFP destination name','destination name','general dest_name','destination city');
+
+    const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
+    const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
+    const aircraft = pickText(doc,'OFP aircraft name','aircraft name','aircraft type','OFP aircraft icao_code','aircraft icao_code','general aircraft_icao');
+    const airframe = pickText(doc,'aircraft reg','reg','OFP aircraft reg','general reg');
+    const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
+    const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
+
+    const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
+    const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:'') : '';
+
+    const dep = getUtcTime(doc, 'dep');
+    const arr = getUtcTime(doc, 'arr');
+    const depMetar = pickText(doc, 'origin metar','origin weather','OFP origin metar','OFP origin weather');
+    const arrMetar = pickText(doc, 'destination metar','destination weather','OFP destination metar','OFP destination weather');
+
+    return {
+      patch: {
+        from: fmtLoc(fromName, fromIcao),
+        to:   fmtLoc(toName, toIcao),
+        flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
+        aircraft: (aircraft||'').toString().trim(),
+        airframe: (airframe||'').toUpperCase(),
+        cruise: fmtCruise(cruiseFt),
+        enroute: formatEte(eteRaw),
+        dep_utc: (dep?.label||'').toString().trim(),
+        arr_utc: (arr?.label||'').toString().trim(),
+        dep_metar: depMetar || '',
+        arr_metar: arrMetar || ''
+      },
+      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source }
+    };
+  }
     const fromIcao = pickText(doc,'OFP origin icao_code','origin icao_code','general orig_icao');
     const fromName = pickText(doc,'OFP origin name','origin name','general orig_name','origin city');
     const toIcao   = pickText(doc,'OFP destination icao_code','destination icao_code','general dest_icao');
@@ -1049,6 +1092,53 @@
       }catch(err){
         setSimBriefStatus(`Import failed: ${err?.message||err}`, true);
       }
+    });
+
+    bindIf('btn_import_test', async ()=>{
+      try{
+        setSimBriefStatus('Running sample import…');
+        const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
+          <OFP>
+            <origin>
+              <icao_code>RJAA</icao_code>
+              <name>Narita</name>
+              <metar>RJAA 141200Z 22005KT 9999 SCT020 10/08 Q1015</metar>
+            </origin>
+            <destination>
+              <icao_code>RJBB</icao_code>
+              <name>Kansai</name>
+              <metar>RJBB 141400Z 26015G25KT 8000 -RA BKN030 12/09 Q1009</metar>
+            </destination>
+            <general>
+              <airline_icao>WAL</airline_icao>
+              <flight_number>113</flight_number>
+            </general>
+            <aircraft>
+              <name>A320-251N</name>
+              <reg>JA123A</reg>
+            </aircraft>
+            <performance>
+              <cruise_altitude>34000</cruise_altitude>
+            </performance>
+            <times>
+              <est_time_enroute>01:45</est_time_enroute>
+              <sched_out_zulu>14:30</sched_out_zulu>
+              <sched_in_zulu>16:15</sched_in_zulu>
+            </times>
+          </OFP>`;
+
+        const doc = new DOMParser().parseFromString(sampleXml,'application/xml');
+        const {patch,meta} = parseSimBriefDoc(doc);
+
+        // Apply into editor fields
+        Object.entries(patch).forEach(([k,val])=>{
+          const el = document.getElementById(k);
+          if(el) { el.value = (typeof val === 'undefined' ? '' : val); el.dispatchEvent(new Event('input')); }
+        });
+        sanitizeUTCField(document.getElementById('dep_utc'));
+        sanitizeUTCField(document.getElementById('arr_utc'));
+        setSimBriefStatus('Sample import applied', false, true);
+      }catch(e){ setSimBriefStatus('Sample import failed: '+e.message, true); }
     });
 
     // Flight control buttons
