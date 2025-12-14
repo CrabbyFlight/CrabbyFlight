@@ -375,10 +375,7 @@
           <label for="flightVizEnabled">Enable visualization</label>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizEnabled" type="checkbox"><span class="hint">Show a live progress bar for the flight</span></div>
         </div>
-        <div>
-          <label for="flightVizShow">Show on info overlay</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizShow" type="checkbox" checked><span class="hint">Display on the compact info overlay</span><span id="flightVizShow_note" class="hint" style="margin-left:6px;font-size:12px;opacity:.85">(requires 'Enable visualization')</span></div>
-        </div>
+        <!-- Removed 'Show on info overlay' checkbox: visualization is shown on the info overlay when enabled -->
 
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
@@ -616,14 +613,14 @@
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","dep_metar","arr_metar","enroute_wx","frameBorderColor","frameBorderRadius",
     "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme",
-    "flightVizEnabled","flightVizShow","flightTakeoffEpoch","flightLanded"];
+    "flightVizEnabled","flightTakeoffEpoch","flightLanded"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", dep_metar:'', arr_metar:'', enroute_wx:'', frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast",
-    flightVizEnabled: "off", flightVizShow: "on", flightTakeoffEpoch: "", flightLanded: "off" };
+    flightVizEnabled: "off", flightTakeoffEpoch: "", flightLanded: "off" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -936,7 +933,6 @@
           dep_utc: editorEls['dep_utc']?.value || DEFAULTS.dep_utc,
           arr_utc: editorEls['arr_utc']?.value || DEFAULTS.arr_utc,
           flightVizEnabled: (editorEls['flightVizEnabled']?.checked ? 'on' : 'off'),
-          flightVizShow: (editorEls['flightVizShow']?.checked ? 'on' : 'off'),
           flightTakeoffEpoch: editorEls['flightTakeoffEpoch']?.value || '',
           flightLanded: editorEls['flightLanded']?.value || 'off'
         };
@@ -944,41 +940,10 @@
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','flightVizShow' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
-    // Sync the 'Show on info overlay' control with whether visualization is enabled and whether schedule data exists
-    try{
-      const vEn = editorEls['flightVizEnabled'];
-      const vShow = editorEls['flightVizShow'];
-      const vNote = document.getElementById('flightVizShow_note');
-      const hasSchedule = ()=>{
-        const dep = (editorEls['dep_utc']?.value||'').trim();
-        const arr = (editorEls['arr_utc']?.value||'').trim();
-        const depD = parseHMToUTCDate(dep); const arrD = parseHMToUTCDate(arr);
-        if(!depD || !arrD) return false;
-        if(arrD.getTime() <= depD.getTime()) arrD.setUTCDate(arrD.getUTCDate()+1);
-        return arrD.getTime() > depD.getTime();
-      };
-      const syncFlightVizShowState = ()=>{
-        if(!vEn || !vShow) return;
-        const en = (vEn.checked === true);
-        const sched = hasSchedule();
-        // disabled if viz feature is off OR schedule missing
-        vShow.disabled = !en || !sched;
-        // If schedule missing, ensure it's unchecked so enabling show has a visible effect when schedule appears
-        if(!sched) vShow.checked = false;
-        if(vNote){
-          if(!en) { vNote.textContent = "(requires 'Enable visualization')"; vNote.style.display='inline'; }
-          else if(!sched) { vNote.textContent = "(no schedule — hidden until dep/arr set)"; vNote.style.display='inline'; }
-          else { vNote.style.display='none'; }
-        }
-      };
-      syncFlightVizShowState();
-      if(vEn) vEn.addEventListener('change', ()=>{ syncFlightVizShowState(); save(); updatePreview(); });
-      // re-sync when dep/arr fields change
-      ['dep_utc','arr_utc'].forEach(id=>{ const el=editorEls[id]; if(el) el.addEventListener('input', ()=>{ syncFlightVizShowState(); save(); updatePreview(); }); });
-    }catch(e){}
+    // 'Show on info overlay' option removed; visualization is shown on the info overlay when enabled
 
     // Frame border width slider sync
     try{
@@ -1166,8 +1131,7 @@
     const container = document.getElementById('flightViz');
     if(!container) return;
     const enabled = (String(d?.flightVizEnabled||'off') === 'on');
-    const show = (String(d?.flightVizShow||'on') !== 'off');
-    if(!enabled || !show){ container.style.display='none'; return; }
+    if(!enabled){ container.style.display='none'; return; }
     container.style.display='block';
     const dep = parseHMToUTCDate(d?.dep_utc || DEFAULTS.dep_utc);
     const arr = parseHMToUTCDate(d?.arr_utc || DEFAULTS.arr_utc);
