@@ -371,7 +371,7 @@
         </div>
         <div>
           <label for="flightVizShow">Show on info overlay</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizShow" type="checkbox" checked><span class="hint">Display on the compact info overlay</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizShow" type="checkbox" checked><span class="hint">Display on the compact info overlay</span><span id="flightVizShow_note" class="hint" style="margin-left:6px;font-size:12px;opacity:.85">(requires 'Enable visualization')</span></div>
         </div>
 
       </div>
@@ -932,6 +932,39 @@
 
     [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','flightVizShow' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
+
+    // Sync the 'Show on info overlay' control with whether visualization is enabled and whether schedule data exists
+    try{
+      const vEn = editorEls['flightVizEnabled'];
+      const vShow = editorEls['flightVizShow'];
+      const vNote = document.getElementById('flightVizShow_note');
+      const hasSchedule = ()=>{
+        const dep = (editorEls['dep_utc']?.value||'').trim();
+        const arr = (editorEls['arr_utc']?.value||'').trim();
+        const depD = parseHMToUTCDate(dep); const arrD = parseHMToUTCDate(arr);
+        if(!depD || !arrD) return false;
+        if(arrD.getTime() <= depD.getTime()) arrD.setUTCDate(arrD.getUTCDate()+1);
+        return arrD.getTime() > depD.getTime();
+      };
+      const syncFlightVizShowState = ()=>{
+        if(!vEn || !vShow) return;
+        const en = (vEn.checked === true);
+        const sched = hasSchedule();
+        // disabled if viz feature is off OR schedule missing
+        vShow.disabled = !en || !sched;
+        // If schedule missing, ensure it's unchecked so enabling show has a visible effect when schedule appears
+        if(!sched) vShow.checked = false;
+        if(vNote){
+          if(!en) { vNote.textContent = "(requires 'Enable visualization')"; vNote.style.display='inline'; }
+          else if(!sched) { vNote.textContent = "(no schedule — hidden until dep/arr set)"; vNote.style.display='inline'; }
+          else { vNote.style.display='none'; }
+        }
+      };
+      syncFlightVizShowState();
+      if(vEn) vEn.addEventListener('change', ()=>{ syncFlightVizShowState(); save(); updatePreview(); });
+      // re-sync when dep/arr fields change
+      ['dep_utc','arr_utc'].forEach(id=>{ const el=editorEls[id]; if(el) el.addEventListener('input', ()=>{ syncFlightVizShowState(); save(); updatePreview(); }); });
+    }catch(e){}
 
     // Frame border width slider sync
     try{
