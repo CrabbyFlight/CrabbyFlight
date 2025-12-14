@@ -141,6 +141,8 @@
   .flight-track{width:100%;height:38px;background:rgba(255,255,255,.04);border-radius:999px;display:flex;align-items:center;padding:6px 10px;gap:8px}
   /* compact flight-track that sits at top of info box */
   .flight-track{position:absolute;left:50%;transform:translateX(-50%);top:8px;width:calc(100% - 40px);height:16px;background:transparent;border-radius:999px;display:flex;align-items:center;padding:4px 8px}
+  /* slightly lower so there's a small visual gap between airports and the track */
+  .flight-track{top:14px}
   .flight-track .bar{position:relative;flex:1;height:8px;background:transparent;border-radius:999px;overflow:hidden}
   .flight-track .bar .pos{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#FFA500,#FFD100);transition:width .25s linear;box-shadow:0 0 10px rgba(255,170,0,.12)}
   .flight-track .plane{position:absolute;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.98);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 10px rgba(0,0,0,.25)}
@@ -371,16 +373,11 @@
           <label for="flightVizShow">Show on info overlay</label>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizShow" type="checkbox" checked><span class="hint">Display on the compact info overlay</span></div>
         </div>
-        <div>
-          <label for="flightVizSpeed">Playback speed</label>
-          <input id="flightVizSpeed" type="number" min="0.1" step="0.1" value="1" placeholder="1">
-        </div>
+
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-        <button id="flightOnRunway" type="button">On runway</button>
         <button id="flightTakeoff" type="button">Takeoff</button>
         <button id="flightLanded" type="button">Landed</button>
-        <button id="flightReset" type="button">Reset</button>
       </div>
     </div>
 
@@ -613,14 +610,14 @@
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius",
     "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme",
-    "flightVizEnabled","flightVizShow","flightVizSpeed","flightTakeoffEpoch","flightLanded"];
+    "flightVizEnabled","flightVizShow","flightTakeoffEpoch","flightLanded"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast",
-    flightVizEnabled: "off", flightVizShow: "on", flightVizSpeed: "1", flightTakeoffEpoch: "", flightLanded: "off" };
+    flightVizEnabled: "off", flightVizShow: "on", flightTakeoffEpoch: "", flightLanded: "off" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -933,7 +930,7 @@
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','flightVizShow','flightVizSpeed' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','flightVizShow' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // Frame border width slider sync
@@ -1031,10 +1028,8 @@
     });
 
     // Flight control buttons
-    bindIf('flightOnRunway', ()=>{ editorEls['flightTakeoffEpoch'].value = ''; editorEls['flightLanded'].value = 'off'; save(); });
     bindIf('flightTakeoff', ()=>{ editorEls['flightTakeoffEpoch'].value = String(Date.now()); editorEls['flightLanded'].value = 'off'; save(); });
     bindIf('flightLanded', ()=>{ editorEls['flightLanded'].value = 'on'; save(); });
-    bindIf('flightReset', ()=>{ editorEls['flightTakeoffEpoch'].value = ''; editorEls['flightLanded'].value = 'off'; save(); });
 
   }
 
@@ -1122,9 +1117,8 @@
     const landed = (String(d?.flightLanded||'off') === 'on');
     const startTime = takeoffEpoch ? new Date(takeoffEpoch) : dep;
     const total = arr.getTime() - dep.getTime();
-    const speed = Math.max(0.1, parseFloat(d?.flightVizSpeed || DEFAULTS.flightVizSpeed || '1'));
     const rawElapsed = now.getTime() - startTime.getTime();
-    const elapsed = Math.max(0, Math.min(total, Math.round(rawElapsed * speed)));
+    const elapsed = Math.max(0, Math.min(total, rawElapsed));
     const pct = landed ? 100 : Math.round((elapsed/total)*100);
     const posEl = document.getElementById('flightPos'); const plane = document.getElementById('flightPlane');
     posEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
@@ -1132,19 +1126,41 @@
     try{ const bar = document.getElementById('flightBar'); const rect = bar.getBoundingClientRect(); const px = (pct/100) * rect.width; plane.style.left = px + 'px'; }catch(e){}
     document.getElementById('flightFrom').textContent = d?.from || DEFAULTS.from;
     document.getElementById('flightTo').textContent = d?.to || DEFAULTS.to;
-    // determine phase
-    const frac = Math.max(0, Math.min(1, elapsed / Math.max(1, total)));
+    // determine phase using SimBrief cruise altitude + enroute (if available)
+    const parseEteToMinutes = (s)=>{
+      if(!s) return null; const raw = String(s).replace(/^[~\s]+/,'').trim();
+      const m = raw.match(/(\d+)h\s*(\d+)?m?/i);
+      if(m) return parseInt(m[1],10)*60 + (m[2]?parseInt(m[2],10):0);
+      const m2 = raw.match(/(\d+)m$/i);
+      if(m2) return parseInt(m2[1],10);
+      const num = parseInt(raw.replace(/\D/g,''),10); if(Number.isFinite(num) && num>0) return num;
+      return null;
+    };
+    const parseCruiseFeet = (s)=>{ if(!s) return null; const m=s.toString().replace(/[,\s]/g,'').match(/(\d{3,6})/); return m?parseInt(m[1],10):null };
+    const totalMins = (()=>{ const ete = parseEteToMinutes(d?.enroute||''); if(ete) return ete; const tmins = Math.round(total/60000); return tmins || null; })();
+    let climbMins = null, descentMins = null;
+    const cruiseFt = parseCruiseFeet(d?.cruise);
+    if(cruiseFt){ const climbRate = 1500; climbMins = Math.max(2, Math.round(cruiseFt / climbRate)); descentMins = climbMins; }
+    if(totalMins){ // ensure climb+descent reasonable
+      const maxEdge = Math.max(2, Math.round(totalMins * 0.25));
+      if(climbMins === null) climbMins = Math.max(2, Math.round(totalMins * 0.12));
+      climbMins = Math.min(climbMins, maxEdge);
+      descentMins = Math.min(descentMins || climbMins, maxEdge);
+    }
+    const elapsedMins = Math.round(elapsed/60000);
     let phase = 'Scheduled';
     if(landed) phase = 'Landed';
     else if(takeoffEpoch){
-      if(frac < 0.02) phase = 'Takeoff';
-      else if(frac < 0.20) phase = 'Climb';
-      else if(frac < 0.85) phase = 'Cruise';
-      else if(frac < 0.98) phase = 'Descent';
-      else phase = 'Landing';
-    } else {
-      phase = (now < dep) ? 'Scheduled' : 'Boarding';
-    }
+      if(elapsedMins < 1) phase = 'Takeoff';
+      else if(climbMins !== null && elapsedMins < climbMins) phase = 'Climb';
+      else {
+        const afterClimb = elapsedMins - (climbMins||0);
+        const cruiseMins = (totalMins ? Math.max(0, totalMins - (climbMins||0) - (descentMins||0)) : null);
+        if(cruiseMins !== null && afterClimb < cruiseMins) phase = 'Cruise';
+        else if(descentMins !== null && (totalMins - elapsedMins) <= descentMins) phase = 'Descent';
+        else phase = 'Cruise';
+      }
+    } else { phase = (now < dep) ? 'Scheduled' : 'Boarding'; }
     const cruiseText = d?.cruise ? ` • ${d.cruise}` : '';
     const phEl = document.getElementById('flightPhase'); if(phEl) phEl.textContent = phase + cruiseText;
   }
