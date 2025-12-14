@@ -146,7 +146,9 @@
   .flight-track{position:absolute;left:50%;transform:translateX(-50%);top:8px;width:calc(100% - 40px);height:16px;background:transparent;border-radius:999px;display:flex;align-items:center;padding:4px 8px}
     /* slightly lower so there's a small visual gap between airports and the track */
     /* Info box: solid background, no transparency, and visually merge with outer frame border */
-    .info-box{position:relative;background:var(--info-bg);border:none;border-radius:var(--frame-border-radius,12px);border-top-left-radius:28px;border-top-right-radius:28px;box-shadow:none;color:#fff;padding:20px 14px 10px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;max-width:900px;width:min(94%,900px);backdrop-filter:none;box-sizing:border-box;margin-top:-12px}
+    .info-box{position:relative;background:var(--info-bg);border:none;border-radius:var(--frame-border-radius,12px);box-shadow:none;color:#fff;padding:20px 14px 10px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;max-width:900px;width:min(94%,900px);backdrop-filter:none;box-sizing:border-box;margin-top:-8px}
+    /* cover tiny SVG hair/stroke by adding an upward extension matching the matte */
+    .info-box::before{content:"";position:absolute;left:-8px;right:-8px;height:10px;top:-10px;background:var(--info-bg);border-top-left-radius:28px;border-top-right-radius:28px;box-shadow:none;border:none}
     .flight-track{top:8px}
   .flight-track .bar{position:relative;flex:1;height:8px;background:transparent;border-radius:999px;overflow:hidden}
   .flight-track .bar .pos{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#FFA500,#FFD100);transition:width .25s linear;box-shadow:0 0 10px rgba(255,170,0,.12)}
@@ -541,57 +543,7 @@
         frame.parentElement.insertBefore(info, frame.nextSibling);
       }
 
-      // If there's an SVG frame with a hole, embed the info into a foreignObject inside the SVG so it sits truly inside the hole
-      const svg = document.querySelector('.frame-svg');
-      const hole = document.getElementById('hole');
-      if(svg && hole && info){
-        const ns = 'http://www.w3.org/2000/svg';
-        const x = parseFloat(hole.getAttribute('x')||0);
-        const y = parseFloat(hole.getAttribute('y')||0);
-        const w = parseFloat(hole.getAttribute('width')||1920);
-        const h = parseFloat(hole.getAttribute('height')||1080);
 
-        // Slight inset so the info visually sits flush with inner edge
-        const inset = 8;
-        const fo = document.createElementNS(ns, 'foreignObject');
-        fo.setAttribute('id', 'svg_info_fo');
-        fo.setAttribute('x', String(x + inset));
-        fo.setAttribute('y', String(y - inset));
-        fo.setAttribute('width', String(w - inset*2));
-        fo.setAttribute('height', String(120 + inset));
-        fo.style.overflow = 'visible';
-        fo.setAttribute('pointer-events','none');
-
-        const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-        div.setAttribute('id','svg_info_inner');
-        div.style.width = '100%';
-        div.style.height = '100%';
-        div.style.pointerEvents = 'auto';
-
-        // clone current info box into the foreignObject
-        const origBox = info.querySelector('.info-box');
-        if(origBox){
-          const clone = origBox.cloneNode(true);
-          clone.style.marginTop = '0';
-          clone.style.pointerEvents = 'auto';
-          div.appendChild(clone);
-          fo.appendChild(div);
-          // append after existing SVG children so it renders on top
-          svg.appendChild(fo);
-
-          // keep the foreign copy in sync with the editor-managed info box
-          const mo = new MutationObserver(()=>{
-            const newClone = origBox.cloneNode(true);
-            newClone.style.marginTop = '0';
-            while(div.firstChild) div.removeChild(div.firstChild);
-            div.appendChild(newClone);
-          });
-          mo.observe(origBox,{subtree:true,childList:true,characterData:true});
-
-          // hide the original screen-info while in frame mode to avoid duplication
-          if(document.body.classList.contains('frame')){ info.style.display = 'none'; }
-        }
-      }
     }catch(e){console.warn('frame embedding failed',e)}
   });
 </script>
@@ -663,13 +615,9 @@
     document.body.classList.add(mode);
     try{
       const info = document.getElementById('screen-info');
-      const fo = document.getElementById('svg_info_fo');
-      if(mode==='frame'){
-        if(info) info.style.display='none';
-        if(fo) fo.style.display='block';
-      } else {
-        if(info) info.style.display='';
-        if(fo) fo.style.display='none';
+      if(info){
+        // ensure the info overlay is visible here; in-frame merging handled by CSS
+        info.style.display = '';
       }
     }catch(e){}
   }
