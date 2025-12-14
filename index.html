@@ -1452,18 +1452,20 @@
       const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
       if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
-      // When viewing the frame overlay, anchor the info overlay to the frame hole so it's centered
+      // Align the info overlay to the visual center of the frame logo (more robust than hole coords)
       try{
         const infoContainer = document.getElementById('screen-info');
-        if(infoContainer){
-          // Position relative to frame hole coordinates so it aligns with the logo
+        const lg = document.getElementById('frame_logo');
+        const frameRoot = document.querySelector('.frame-root');
+        if(infoContainer && lg && frameRoot){
+          const lgRect = lg.getBoundingClientRect();
+          const frameRect = frameRoot.getBoundingClientRect();
+          const centerX = Math.round(lgRect.left + (lgRect.width/2) - frameRect.left);
           infoContainer.style.position = 'absolute';
-          infoContainer.style.left = (holeX + (holeW/2)) + 'px';
-          // small inset so it sits visually inside the frame top edge
+          infoContainer.style.left = centerX + 'px';
           infoContainer.style.top = (holeY + 6) + 'px';
           infoContainer.style.transform = 'translateX(-50%)';
           infoContainer.style.zIndex = 9999;
-          // ensure visible in frame mode
           infoContainer.style.display = 'block';
         }
       }catch(e){}
