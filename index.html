@@ -1063,12 +1063,9 @@
     const condElId = 'i_conditions';
     let condEl = document.getElementById(condElId);
     if(!condEl){ condEl = document.createElement('div'); condEl.id = condElId; condEl.style.marginTop = '6px'; condEl.style.fontSize = '12px'; condEl.style.opacity = '.9'; const center = document.querySelector('.info-center'); if(center) center.appendChild(condEl); }
-    if(depMet || arrMet || enrWx){
-      const parts = [];
-      if(enrWx) parts.push(enrWx);
-      condEl.textContent = parts.join(' • ');
-      condEl.style.display = 'block';
-    } else if(condEl){ condEl.style.display = 'none'; }
+    // Enroute summary (center) — show text plainly for viewers
+    if(enrWx){ condEl.textContent = enrWx; condEl.style.display = 'block'; condEl.style.fontSize='13px'; condEl.style.fontWeight='700'; }
+    else if(condEl){ condEl.style.display = 'none'; }
 
     // Airport-specific weather summaries (compact, parsed from METAR if present)
     // (parsing now done by `parseMetarSummary` helper)
@@ -1077,8 +1074,8 @@
     const arrSummary = parseMetarSummary(arrMet);
     // ensure small elements under left/right airport blocks
     const leftWrap = document.querySelector('.info-left'); const rightWrap = document.querySelector('.info-right');
-    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.style.display = depSummary ? 'block' : 'none'; }
-    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.style.display = arrSummary ? 'block' : 'none'; }
+    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.title = depMet||''; el.style.display = depSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
+    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.title = arrMet||''; el.style.display = arrSummary ? 'block' : 'none'; el.style.fontSize='12px'; el.style.fontWeight='600'; }
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
@@ -1115,17 +1112,25 @@
   function parseMetarSummary(m){
     if(!m) return '';
     const raw = String(m).trim();
-    const windMatch = raw.match(/(\b(?:\d{3}|VRB)\d{2,3}(?:G\d{2,3})?KT\b)/);
+    // wind: 24010KT or VRB03KT or 24010G20KT
+    const windMatch = raw.match(/\b((?:\d{3}|VRB)\d{2,3})(G(\d{2,3}))?KT\b/);
+    // visibility: 9999 or 10SM or CAVOK
     const visMatch = raw.match(/\b(\d{4}|\d+SM|CAVOK)\b/);
+    // cloud layers (take most significant)
     const cloudMatch = raw.match(/\b(FEW|SCT|BKN|OVC)\d{3}\b/);
-    const tempMatch = raw.match(/\b(\d{1,2}\/\d{1,2})\b/);
+    // temperature/dewpoint pair like 09/04 or M02/M05
+    const tempMatch = raw.match(/\b(M?\d{1,2})\/(M?\d{1,2})\b/);
+    // altimeter Q1009 or A2992
     const qMatch = raw.match(/\b(Q\d{4})\b/);
+    const aMatch = raw.match(/\b(A\d{4})\b/);
+    // Build a friendly, labeled summary for viewers
     const pieces = [];
-    if(windMatch) pieces.push(windMatch[1].replace('KT',' kt'));
-    if(visMatch){ const v = visMatch[1]; pieces.push(v==='9999' ? 'Vis: 10km+' : (v==='CAVOK' ? 'CAVOK' : v)); }
-    if(cloudMatch) pieces.push(cloudMatch[0]);
-    if(tempMatch){ const t=tempMatch[1].replace('/','°/'); const arr = t.split('°/'); pieces.push(`${arr[0]}°C`); }
-    if(qMatch) pieces.push(qMatch[1]);
+    if(windMatch){ const dir = windMatch[1].replace('VRB','Variable'); const gust = windMatch[3] ? ` (gusts ${windMatch[3]} kt)` : ''; const sp = windMatch[1].replace(/VRB/,'').slice(-3).replace(/^0+/,'') || ''; pieces.push(`Wind: ${dir}${sp?` ${sp} kt`:''}${gust}`); }
+    if(tempMatch){ const t = tempMatch[1].replace(/^M/,'-'); pieces.push(`Temp: ${t}°C`); }
+    if(cloudMatch){ const cls = cloudMatch[0]; const friendly = cls.replace(/^FEW/,'Few ').replace(/^SCT/,'Scattered ').replace(/^BKN/,'Broken ').replace(/^OVC/,'Overcast '); pieces.push(`Clouds: ${friendly}`); }
+    else if(/CAVOK/i.test(raw) || /SKC|NOCLOUDS/i.test(raw)) { pieces.push('Clouds: Clear'); }
+    if(visMatch){ const v = visMatch[1]; pieces.push(v==='9999' ? 'Visibility: 10km+' : (v==='CAVOK' ? 'Visibility: 10km+' : `Visibility: ${v}`)); }
+    if(qMatch) pieces.push(`Altimeter: ${qMatch[1]}`); else if(aMatch) pieces.push(`Altimeter: ${aMatch[1]}`);
     return pieces.join(' • ');
   }
 
@@ -1397,16 +1402,17 @@
           let enEl = document.getElementById('embed_enroute');
           if(!enEl){ enEl = document.createElement('div'); enEl.id='embed_enroute'; enEl.style.position='absolute'; enEl.style.left='50%'; enEl.style.transform='translateX(-50%)'; enEl.style.top='6px'; enEl.style.fontSize='12px'; enEl.style.color='white'; enEl.style.opacity='.95'; enEl.style.pointerEvents='none'; infoWrap.appendChild(enEl); }
           enEl.textContent = enrouteTxt || '';
+          enEl.title = (usp.get('enroute') || d?.enroute_wx || '');
           enEl.style.display = enrouteTxt ? 'block' : 'none';
-
-          let dEl = document.getElementById('embed_dep_weather');
-          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='12px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
+        enEl.style.fontSize='13px'; enEl.style.fontWeight='700';
           dEl.textContent = depTxt || '';
+          dEl.title = usp.get('dep_metar') || d?.dep_metar || '';
           dEl.style.display = depTxt ? 'block' : 'none';
 
           let aEl = document.getElementById('embed_arr_weather');
           if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='12px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
           aEl.textContent = arrTxt || '';
+          aEl.title = usp.get('arr_metar') || d?.arr_metar || '';
           aEl.style.display = arrTxt ? 'block' : 'none';
         }
       }catch(e){}
