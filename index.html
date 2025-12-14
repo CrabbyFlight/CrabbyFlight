@@ -137,6 +137,15 @@
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
 
+  /* Flight visualization */
+  .flight-track{width:100%;height:38px;background:rgba(255,255,255,.04);border-radius:999px;display:flex;align-items:center;padding:6px 10px;gap:8px}
+  .flight-track{position:relative;width:100%;height:38px;background:rgba(255,255,255,.04);border-radius:999px;display:flex;align-items:center;padding:6px 10px;gap:8px}
+  .flight-track .bar{position:relative;flex:1;height:12px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden}
+  .flight-track .bar .pos{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#FFA500,#FFD100);transition:width .25s linear}
+  .flight-track .plane{position:absolute;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+  .flight-phase{font-weight:700;color:#fff}
+  .flight-meta{font-size:12px;color:rgba(255,255,255,.85);margin-top:6px;display:flex;justify-content:space-between;gap:8px}
+
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
   .header{background:var(--brand);color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
   .header svg{width:22px;height:22px}
@@ -316,6 +325,8 @@
 
       <input id="wcW" type="hidden" value="1280">
       <input id="wcH" type="hidden" value="720">
+      <input id="flightTakeoffEpoch" type="hidden" value="">
+      <input id="flightLanded" type="hidden" value="off">
 
       <div class="grid-3">
         <div><label for="frameBorderColor">Frame Border Color</label><input id="frameBorderColor" type="color" value="#3d434b"></div>
@@ -345,6 +356,30 @@
           <label for="logoShow">Show frame logo</label>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="logoShow" type="checkbox" checked><span class="hint">Show the CrabbyFlight logo on the frame</span></div>
         </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <h3 style="margin:0 0 10px;font-size:18px">Flight Visualization</h3>
+      <div class="grid-3">
+        <div>
+          <label for="flightVizEnabled">Enable visualization</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizEnabled" type="checkbox"><span class="hint">Show a live progress bar for the flight</span></div>
+        </div>
+        <div>
+          <label for="flightVizShow">Show on info overlay</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizShow" type="checkbox" checked><span class="hint">Display on the compact info overlay</span></div>
+        </div>
+        <div>
+          <label for="flightVizSpeed">Playback speed</label>
+          <input id="flightVizSpeed" type="number" min="0.1" step="0.1" value="1" placeholder="1">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <button id="flightOnRunway" type="button">On runway</button>
+        <button id="flightTakeoff" type="button">Takeoff</button>
+        <button id="flightLanded" type="button">Landed</button>
+        <button id="flightReset" type="button">Reset</button>
       </div>
     </div>
 
@@ -384,6 +419,16 @@
     <div class="info-center">
       <div style="font-size:18px;font-weight:700;margin-bottom:2px">
         <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
+      </div>
+      <div id="flightViz" style="width:100%;max-width:900px;margin-top:8px;display:none">
+        <div class="flight-track" role="region" aria-label="Flight progress">
+          <div class="bar" id="flightBar"><div class="pos" id="flightPos"></div></div>
+          <div class="plane" id="flightPlane" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#111" d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1A.5.5 0 0 0 11 3.5V9l-8 5v2l8-1v4l2-.5v1l3-1-3 1v-1l2-.5v-4l8 1z"/></svg>
+          </div>
+        </div>
+        <div class="flight-meta" id="flightMeta"><div id="flightFrom">—</div><div id="flightPhase" class="flight-phase" aria-live="polite">—</div><div id="flightTo">—</div></div>
++      <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:6px" id="flightETA">ETA —</div>
       </div>
       <div style="font-size:15px;line-height:1.6">
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
@@ -566,13 +611,15 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius",
-    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme"];
+    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme",
+    "flightVizEnabled","flightVizShow","flightVizSpeed","flightTakeoffEpoch","flightLanded"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
-    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
+    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast",
+    flightVizEnabled: "off", flightVizShow: "on", flightVizSpeed: "1", flightTakeoffEpoch: "", flightLanded: "off" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -869,9 +916,23 @@
           afkImg.style.display = 'none';
         }
       }
+      // Render an editor preview of flight viz
+      try{
+        const previewD = {
+          from: editorEls['from']?.value || DEFAULTS.from,
+          to: editorEls['to']?.value || DEFAULTS.to,
+          dep_utc: editorEls['dep_utc']?.value || DEFAULTS.dep_utc,
+          arr_utc: editorEls['arr_utc']?.value || DEFAULTS.arr_utc,
+          flightVizEnabled: (editorEls['flightVizEnabled']?.checked ? 'on' : 'off'),
+          flightVizShow: (editorEls['flightVizShow']?.checked ? 'on' : 'off'),
+          flightTakeoffEpoch: editorEls['flightTakeoffEpoch']?.value || '',
+          flightLanded: editorEls['flightLanded']?.value || 'off'
+        };
+        renderFlightViz(previewD);
+      }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','flightVizShow','flightVizSpeed' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // Frame border width slider sync
@@ -968,6 +1029,12 @@
       }
     });
 
+    // Flight control buttons
+    bindIf('flightOnRunway', ()=>{ editorEls['flightTakeoffEpoch'].value = ''; editorEls['flightLanded'].value = 'off'; save(); });
+    bindIf('flightTakeoff', ()=>{ editorEls['flightTakeoffEpoch'].value = String(Date.now()); editorEls['flightLanded'].value = 'off'; save(); });
+    bindIf('flightLanded', ()=>{ editorEls['flightLanded'].value = 'on'; save(); });
+    bindIf('flightReset', ()=>{ editorEls['flightTakeoffEpoch'].value = ''; editorEls['flightLanded'].value = 'off'; save(); });
+
   }
 
   function renderInfo(d){
@@ -1001,6 +1068,83 @@
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
+    // Update flight viz (if enabled) after populating fields
+    try{ renderFlightViz(d); }catch(e){}
+    // Fetch METARs periodically if enabled (first attempt on render)
+    try{ scheduleMetarRefresh(d); }catch(e){}
+  }
+
+  async function fetchAVWXMetar(station, key){
+    if(!station || !key) return null;
+    try{
+      const res = await fetch(`https://avwx.rest/api/metar/${station}?options=translate`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' } });
+      if(!res.ok) return null;
+      return await res.json();
+    }catch(e){ return null; }
+  }
+
+  let metarTimer = null;
+  function scheduleMetarRefresh(d){
+    try{ if(metarTimer){ clearInterval(metarTimer); metarTimer = null; } }catch(e){}
+    const usp = new URLSearchParams(location.search);
+    const atisOn = (usp.get('atis')||'').toLowerCase() === 'on' || (localStorage.getItem('cf_atis_enabled') === 'on') || (d?.infoATIS === 'on');
+    if(!atisOn) return;
+    // immediate fetch
+    tryRenderATIS(d);
+    // refresh every 5 minutes by default
+    const ms = Math.max(60000, parseInt(usp.get('atisRefresh')||'300000',10));
+    metarTimer = setInterval(()=>{ try{ tryRenderATIS(d); }catch(e){} }, ms);
+  }
+
+  function parseHMToUTCDate(hmStr){
+    const hm = parseHHMM(hmStr);
+    if(!hm) return null;
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hm.h, hm.m, 0));
+  }
+
+  function renderFlightViz(d){
+    const container = document.getElementById('flightViz');
+    if(!container) return;
+    const enabled = (String(d?.flightVizEnabled||'off') === 'on');
+    const show = (String(d?.flightVizShow||'on') !== 'off');
+    if(!enabled || !show){ container.style.display='none'; return; }
+    container.style.display='block';
+    const dep = parseHMToUTCDate(d?.dep_utc || DEFAULTS.dep_utc);
+    const arr = parseHMToUTCDate(d?.arr_utc || DEFAULTS.arr_utc);
+    if(!dep || !arr){ document.getElementById('flightMeta').textContent = 'Schedule missing'; return; }
+    if(arr.getTime() <= dep.getTime()) arr.setUTCDate(arr.getUTCDate()+1);
+    const now = new Date();
+    const takeoffEpoch = parseInt(d?.flightTakeoffEpoch||'0',10) || 0;
+    const landed = (String(d?.flightLanded||'off') === 'on');
+    const startTime = takeoffEpoch ? new Date(takeoffEpoch) : dep;
+    const total = arr.getTime() - dep.getTime();
+    const speed = Math.max(0.1, parseFloat(d?.flightVizSpeed || DEFAULTS.flightVizSpeed || '1'));
+    const rawElapsed = now.getTime() - startTime.getTime();
+    const elapsed = Math.max(0, Math.min(total, Math.round(rawElapsed * speed)));
+    const pct = landed ? 100 : Math.round((elapsed/total)*100);
+    const posEl = document.getElementById('flightPos'); const plane = document.getElementById('flightPlane');
+    posEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    // move plane (fallback: place at end if metrics unavailable)
+    try{ const bar = document.getElementById('flightBar'); const rect = bar.getBoundingClientRect(); const px = (pct/100) * rect.width; plane.style.left = px + 'px'; }catch(e){}
+    document.getElementById('flightFrom').textContent = d?.from || DEFAULTS.from;
+    document.getElementById('flightTo').textContent = d?.to || DEFAULTS.to;
+    const eta = new Date(dep.getTime() + Math.round((pct/100)*total));
+    document.getElementById('flightETA').textContent = `ETA ${String(eta.getUTCHours()).padStart(2,'0')}:${String(eta.getUTCMinutes()).padStart(2,'0')} UTC`;
+    // determine phase
+    const frac = Math.max(0, Math.min(1, elapsed / Math.max(1, total)));
+    let phase = 'Scheduled';
+    if(landed) phase = 'Landed';
+    else if(takeoffEpoch){
+      if(frac < 0.02) phase = 'Takeoff';
+      else if(frac < 0.20) phase = 'Climb';
+      else if(frac < 0.85) phase = 'Cruise';
+      else if(frac < 0.98) phase = 'Descent';
+      else phase = 'Landing';
+    } else {
+      phase = (now < dep) ? 'Scheduled' : 'Boarding';
+    }
+    const phEl = document.getElementById('flightPhase'); if(phEl) phEl.textContent = phase;
   }
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
@@ -1084,12 +1228,22 @@
   function subscribe(){
     if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
     const r = ref(db, `rooms/${room}`);
+    let lastData = null;
+    let flightVizTimer = null;
     dbUnsub = onValue(r, snap=>{
       const data = snap.val() || DEFAULTS;
+      lastData = data;
 
       if (mode==='info') renderInfo(data);
       if (mode==='departures') renderDepartures(data);
       if (mode==='frame') renderFrame(data);
+
+      // ensure the flight visualization updates in real time while in an overlay mode
+      try{ if(mode==='info' || mode==='frame'){
+          if(flightVizTimer) clearInterval(flightVizTimer);
+          flightVizTimer = setInterval(()=>{ try{ renderFlightViz(lastData); }catch(e){} }, 1000);
+        } else { if(flightVizTimer){ clearInterval(flightVizTimer); flightVizTimer = null; } }
+      }catch(e){}
 
       if (mode==='editor') {
         for(const k of FIELDS){
@@ -1189,6 +1343,8 @@
       if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
+    // stop METAR refresh when leaving info/frame overlays
+    try{ if(mode!=='info' && mode!=='frame' && metarTimer){ clearInterval(metarTimer); metarTimer=null; } }catch(e){}
   }
 
   function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }

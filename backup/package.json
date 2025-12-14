@@ -1,0 +1,11 @@
+{
+  "name": "crabbyflight",
+  "version": "0.0.0",
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.10.0"
+  },
+  "scripts": {
+    "format": "prettier --write \"index.html\""
+  }
+}
