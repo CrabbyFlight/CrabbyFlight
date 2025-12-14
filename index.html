@@ -1450,8 +1450,9 @@
 
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
-      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; /* keep embed hidden by default to avoid duplicate rendering */ infoWrap.style.display='none'; infoWrap.setAttribute('aria-hidden','true'); }
+      /* Do not set info iframe src automatically — prefer the host DOM info overlay to avoid duplicate/early render */
+      /* if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; } */
       // Align the info overlay to the visual center of the frame logo (more robust than hole coords)
       try{
         const infoContainer = document.getElementById('screen-info');
