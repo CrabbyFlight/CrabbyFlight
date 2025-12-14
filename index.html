@@ -532,7 +532,7 @@
 </div>
 
 <script>
-  // Ensure the info overlay is rendered after the frame so it visually sits on top
+  // Ensure the info overlay is rendered after the frame so it visually sits on top OR embedded into the frame hole for a perfect merge
   document.addEventListener('DOMContentLoaded', ()=>{
     try{
       const info = document.getElementById('screen-info');
@@ -540,7 +540,59 @@
       if(info && frame && frame.parentElement){
         frame.parentElement.insertBefore(info, frame.nextSibling);
       }
-    }catch(e){}
+
+      // If there's an SVG frame with a hole, embed the info into a foreignObject inside the SVG so it sits truly inside the hole
+      const svg = document.querySelector('.frame-svg');
+      const hole = document.getElementById('hole');
+      if(svg && hole && info){
+        const ns = 'http://www.w3.org/2000/svg';
+        const x = parseFloat(hole.getAttribute('x')||0);
+        const y = parseFloat(hole.getAttribute('y')||0);
+        const w = parseFloat(hole.getAttribute('width')||1920);
+        const h = parseFloat(hole.getAttribute('height')||1080);
+
+        // Slight inset so the info visually sits flush with inner edge
+        const inset = 8;
+        const fo = document.createElementNS(ns, 'foreignObject');
+        fo.setAttribute('id', 'svg_info_fo');
+        fo.setAttribute('x', String(x + inset));
+        fo.setAttribute('y', String(y - inset));
+        fo.setAttribute('width', String(w - inset*2));
+        fo.setAttribute('height', String(120 + inset));
+        fo.style.overflow = 'visible';
+        fo.setAttribute('pointer-events','none');
+
+        const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+        div.setAttribute('id','svg_info_inner');
+        div.style.width = '100%';
+        div.style.height = '100%';
+        div.style.pointerEvents = 'auto';
+
+        // clone current info box into the foreignObject
+        const origBox = info.querySelector('.info-box');
+        if(origBox){
+          const clone = origBox.cloneNode(true);
+          clone.style.marginTop = '0';
+          clone.style.pointerEvents = 'auto';
+          div.appendChild(clone);
+          fo.appendChild(div);
+          // append after existing SVG children so it renders on top
+          svg.appendChild(fo);
+
+          // keep the foreign copy in sync with the editor-managed info box
+          const mo = new MutationObserver(()=>{
+            const newClone = origBox.cloneNode(true);
+            newClone.style.marginTop = '0';
+            while(div.firstChild) div.removeChild(div.firstChild);
+            div.appendChild(newClone);
+          });
+          mo.observe(origBox,{subtree:true,childList:true,characterData:true});
+
+          // hide the original screen-info while in frame mode to avoid duplication
+          if(document.body.classList.contains('frame')){ info.style.display = 'none'; }
+        }
+      }
+    }catch(e){console.warn('frame embedding failed',e)}
   });
 </script>
 
@@ -609,6 +661,17 @@
   function applyMode(){
     document.body.classList.remove('editor','info','departures','frame');
     document.body.classList.add(mode);
+    try{
+      const info = document.getElementById('screen-info');
+      const fo = document.getElementById('svg_info_fo');
+      if(mode==='frame'){
+        if(info) info.style.display='none';
+        if(fo) fo.style.display='block';
+      } else {
+        if(info) info.style.display='';
+        if(fo) fo.style.display='none';
+      }
+    }catch(e){}
   }
   applyMode();
 
