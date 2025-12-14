@@ -282,11 +282,8 @@
     <div class="grid">
       <div><label for="dep_metar">Departure METAR (from SimBrief)</label><input id="dep_metar" placeholder="EGGP 141450Z 24010KT 9999 SCT030 09/04 Q1013" /></div>
       <div><label for="arr_metar">Arrival METAR (from SimBrief)</label><input id="arr_metar" placeholder="EGPH 141550Z 26012KT 9999 BKN040 08/03 Q1011" /></div>
-      <div><label for="enroute_wx">Enroute summary</label><input id="enroute_wx" placeholder="Light turbulence, tailwinds ~15kts" /></div>
     </div>
-    <div class="grid">
-      <div><label for="enroute">Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
-    </div>
+    
     <div class="grid-3" style="margin-top:8px">
       <div>
         <label for="infoLive">Show live indicator</label>
@@ -611,12 +608,12 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","dep_metar","arr_metar","enroute_wx","frameBorderColor","frameBorderRadius",
+  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","dep_metar","arr_metar","frameBorderColor","frameBorderRadius",
     "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme",
     "flightVizEnabled","flightTakeoffEpoch","flightLanded"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", dep_metar:'', arr_metar:'', enroute_wx:'', frameBorderColor: "#3d434b", frameBorderRadius: "28",
+    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", dep_metar:'', arr_metar:'', frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast",
@@ -802,22 +799,7 @@
     const depMetar = pickText(doc, 'origin metar','origin weather','OFP origin metar','OFP origin weather');
     const arrMetar = pickText(doc, 'destination metar','destination weather','OFP destination metar','OFP destination weather');
     // SimBrief sometimes contains short enroute notes in 'route notes' or 'performance remarks'
-    const enrouteWx = pickText(doc, 'route notes','enroute notes','OFP remarks','OFP enroute_notes','general remarks');
-    // Try to pull short enroute hazard summaries from NOTAMDREC / NOTAM blocks (e.g., SIGMETs, turbulence, icing)
-    let enrouteHazardsSummary = '';
-    try{ enrouteHazardsSummary = summarizeEnrouteFromDoc(doc, cruiseFt, dep, eteRaw); }catch(e){ console.warn('summarizeEnrouteFromDoc failed', e); enrouteHazardsSummary = ''; }
-    const computedEnroute = (enrouteWx && enrouteWx.trim()) ? enrouteWx : ((fmtCruise(cruiseFt) || '') || '') + (eteRaw ? (fmtCruise(cruiseFt) ? ` • ${formatEte(eteRaw)}` : formatEte(eteRaw)) : '');
-    // If the SimBrief provided enroute note, prefer that. Otherwise use hazard summary if present.
-    let finalEnroute = '';
-    if(enrouteWx && enrouteWx.trim()) finalEnroute = enrouteWx.trim();
-    else if(enrouteHazardsSummary && enrouteHazardsSummary.trim()) finalEnroute = enrouteHazardsSummary.trim();
-    else {
-      // If we only have a cruise/ETE stub (e.g., "34,000ft • ~1h 23m"), prefer hiding the field rather than showing raw NOTAM dumps
-      const cruiseOnly = /^\s*\d{1,3}(?:,?\d{3})?ft(?:\s*•\s*~)?/i.test(computedEnroute || '');
-      finalEnroute = cruiseOnly ? '' : (computedEnroute || '');
-    }
-    // keep it succinct
-    if(finalEnroute && finalEnroute.length>220) finalEnroute = finalEnroute.slice(0,220).trim()+'…';
+    // Enroute summary field removed per user request; we will not import/surface enroute text.
     return {
       patch: {
         from: fmtLoc(fromName, fromIcao),
@@ -828,7 +810,7 @@
         airframe: (airframe||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw),
-        enroute_wx: finalEnroute || '',
+        // enroute summary removed per user request
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
         dep_metar: depMetar || '',
@@ -949,7 +931,6 @@
           arr_utc: editorEls['arr_utc']?.value || DEFAULTS.arr_utc,
           aircraft: editorEls['aircraft']?.value || DEFAULTS.aircraft,
           cruise: editorEls['cruise']?.value || DEFAULTS.cruise,
-          enroute_wx: editorEls['enroute_wx']?.value || '',
           dep_metar: editorEls['dep_metar']?.value || '',
           arr_metar: editorEls['arr_metar']?.value || '',
           flightVizEnabled: (editorEls['flightVizEnabled']?.checked ? 'on' : 'off'),
@@ -963,7 +944,7 @@
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','dep_metar','arr_metar','enroute_wx' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','dep_metar','arr_metar' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // 'Show on info overlay' option removed; visualization is shown on the info overlay when enabled
@@ -1050,7 +1031,7 @@
         sanitizeUTCField(editorEls['arr_utc']);
 
         // Always trigger input events so the editor preview (and frame fallback) updates immediately
-        ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute','dep_metar','arr_metar','enroute_wx']
+        ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','dep_metar','arr_metar']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
         // If signed in, save/publish the imported data
@@ -1086,15 +1067,9 @@
     const aircraftSaved = val('aircraft', DEFAULTS.aircraft);
     const airframeSaved = val('airframe', '');
     const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
-    setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
-    // flight condition display
-    const depMet = val('dep_metar',''); const arrMet = val('arr_metar',''); const enrWx = val('enroute_wx','');
-    const condElId = 'i_conditions';
-    let condEl = document.getElementById(condElId);
-    if(!condEl){ condEl = document.createElement('div'); condEl.id = condElId; condEl.style.marginTop = '6px'; condEl.style.fontSize = '12px'; condEl.style.opacity = '.9'; const center = document.querySelector('.info-center'); if(center) center.appendChild(condEl); }
-    // Enroute summary (center) — show text plainly for viewers
-    if(enrWx){ condEl.textContent = enrWx; condEl.style.display = 'block'; condEl.style.fontSize='13px'; condEl.style.fontWeight='700'; }
-    else if(condEl){ condEl.style.display = 'none'; }
+    setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise));
+    // flight condition display (only show dep/arr METAR summaries)
+    const depMet = val('dep_metar',''); const arrMet = val('arr_metar','');
 
     // Airport-specific weather summaries (compact, parsed from METAR if present)
     // (parsing now done by `parseMetarSummary` helper)
@@ -1164,98 +1139,7 @@
   }
 
   // Summarize enroute hazards from SimBrief OFP: search NOTAMDREC/NOTAM entries and filter by time/alt
-  function summarizeEnrouteFromDoc(doc, cruiseFt, depObj, eteRaw){
-    if(!doc) return '';
-    const cruiseNum = Number.parseInt(String(cruiseFt||'').replace(/\D/g,''),10) || null;
-    const nodes = Array.from(doc.querySelectorAll('notamdrec, notam'));
-    const kw = /turbul|turbulence|icing|ice|convect|tstm|thunder|lightning|sigmet|aermet|mountain wave|volcanic ash|ash|wind shear|shear|hail|severe|gust|unmanned|uas|uav|drone|u\/s|closed|closure/i;
-    const seen = new Set();
-    const hazards = [];
-
-    // compute approximate route window (UTC) using dep time + ETE
-    const routeStart = depObj ? parseHMToUTCDate(depObj.label || (depObj.hm ? `${String(depObj.hm.h).padStart(2,'0')}:${String(depObj.hm.m).padStart(2,'0')}` : '')) : null;
-    const eteMins = parseEteToMinutes(eteRaw);
-    const routeEnd = routeStart && eteMins ? new Date(routeStart.getTime() + eteMins*60000) : null;
-
-    for(const n of nodes){
-      const txt = (n.querySelector('notam_report')?.textContent || n.querySelector('notam_text')?.textContent || n.querySelector('notam_raw')?.textContent || '').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
-      if(!txt) continue;
-      if(!kw.test(txt)) continue;
-
-      // Determine effective/expire times from common tags if present
-      let eff=null, exp=null;
-      const effTags = ['notam_effective_dtg','notam_created_dtg','date_effective','date_created'];
-      const expTags = ['notam_expire_dtg','notam_expire','date_expire','date_expire'];
-      for(const t of effTags){ const v = n.querySelector(t)?.textContent; if(v){ eff = parseSimBriefDtg(v); break; } }
-      for(const t of expTags){ const v = n.querySelector(t)?.textContent; if(v){ exp = parseSimBriefDtg(v); break; } }
-      // fallback: try to extract date ranges from the text like '26 NOV 15:00 2025 UNTIL 03 MAR 11:00 2026'
-      if(!eff || !exp){
-        const m = txt.match(/(\d{1,2}\s+\w{3}\s+\d{4}\s+\d{2}:\d{2})\s+UNTIL\s+(\d{1,2}\s+\w{3}\s+\d{4}\s+\d{2}:\d{2})/i);
-        if(m){ try{ eff = new Date(m[1] + ' UTC'); exp = new Date(m[2] + ' UTC'); }catch(e){} }
-      }
-
-      // time relevance check: if both windows exist, require an overlap with route window
-      if(routeStart && routeEnd && eff && exp){ if(exp < routeStart || eff > routeEnd) continue; }
-
-      // altitude relevance: skip items that only affect low altitudes
-      let affectsCruise = true;
-      const sfcRange = txt.match(/SFC\s*-\s*(\d{2,6})\s*(FT)?/i);
-      if(sfcRange && cruiseNum){ const upper = Number.parseInt(sfcRange[1],10); if(upper && upper < cruiseNum) affectsCruise = false; }
-      const abvFl = txt.match(/ABV\s*FL?(\d{2,3})/i);
-      if(abvFl && cruiseNum){ const fl = Number.parseInt(abvFl[1],10); if(fl && fl > (cruiseNum/100)) affectsCruise = false; }
-      if(!affectsCruise) continue;
-
-      // map to short friendly tags
-      const tags = [];
-      if(/turbul/i.test(txt)){
-        const sev = /severe|sev\.?/i.test(txt) ? 'Severe' : /moderate/i.test(txt) ? 'Moderate' : 'Light';
-        tags.push(`${sev} turbulence`);
-      }
-      if(/icing|ice/i.test(txt)){
-        const sev = /severe|moderate/i.test(txt) ? 'Icing likely' : 'Icing possible';
-        tags.push(sev);
-      }
-      if(/convect|tstm|thunder/i.test(txt)) tags.push('Convective/TS storms');
-      if(/volcanic ash|ash/i.test(txt)) tags.push('Volcanic ash');
-      if(/mountain wave/i.test(txt)) tags.push('Mountain wave');
-      if(/wind shear|shear|gust/i.test(txt)) tags.push('Wind shear/strong gusts');
-      if(/unmanned|uas|uav|drone/i.test(txt)) tags.push('UAS activity');
-      if(/sigmet|aermet/i.test(txt)) tags.push('SIGMET/AIRMET');
-
-      if(tags.length===0){ const cue = txt.split(/\.|\,|;/)[0]; if(cue){ const adminLike = /\b(REF|AIP|ATTACH|NOTAM|CONTINUED)\b/i.test(cue); if(!adminLike) tags.push(cue.length>80?cue.slice(0,80)+'…':cue); } }
-
-      for(const t of tags){ if(!seen.has(t)){ seen.add(t); hazards.push(t); } }
-      if(hazards.length>=3) break;
-    }
-
-    if(!hazards.length) return '';
-    return hazards.join(' • ');
-  }
-
-  function parseEteToMinutes(eteRaw){
-    if(!eteRaw) return null;
-    const raw=(eteRaw||'').toString().trim();
-    const m = raw.match(/^(\d{1,2}):(\d{2})$/);
-    if(m) return parseInt(m[1],10)*60 + parseInt(m[2],10);
-    if(/^\d+$/.test(raw)){
-      const num=parseInt(raw,10);
-      if(raw.length===4 && num<=2359){ return Math.floor(num/100)*60 + (num%100); }
-      return num>600? Math.round(num/60):num;
-    }
-    return null;
-  }
-
-  function parseSimBriefDtg(dtg){
-    if(!dtg) return null;
-    const s = dtg.toString().trim();
-    const m = s.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/);
-    if(m) return new Date(Date.UTC(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5])));
-    const iso = Date.parse(s);
-    if(!isNaN(iso)) return new Date(iso);
-    const mm = s.match(/(\d{1,2}\s+\w{3}\s+\d{4}\s+\d{2}:\d{2})/i);
-    if(mm) try{ return new Date(mm[1]+' UTC'); }catch(e){}
-    return null;
-  }
+  // Enroute summary functionality removed — only dep/arr METARs are shown
 
   function renderFlightViz(d){
     const container = document.getElementById('flightViz');
@@ -1330,7 +1214,7 @@
     const depDisp = parseTimeUTC(depRaw) || DEFAULTS.dep_utc;
     const arrDisp = parseTimeUTC(arrRaw) || DEFAULTS.arr_utc;
     // parsed departure/arrival times for display
-    setT('d_dep',depDisp); setT('d_arr',arrDisp); setT('d_enroute',val('enroute',DEFAULTS.enroute));
+    setT('d_dep',depDisp); setT('d_arr',arrDisp);
     setT('d_time',(depDisp||'').replace(' UTC',''));
 
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
@@ -1518,16 +1402,12 @@
       // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
       try{
         const usp = new URLSearchParams(location.search);
-        const enrouteTxt = (usp.get('enroute') || d?.enroute_wx || '').trim();
+        const enrouteTxt = '';
         const depTxt = parseMetarSummary(usp.get('dep_metar') || d?.dep_metar || '');
         const arrTxt = parseMetarSummary(usp.get('arr_metar') || d?.arr_metar || '');
         if(infoWrap){
-          let enEl = document.getElementById('embed_enroute');
-          if(!enEl){ enEl = document.createElement('div'); enEl.id='embed_enroute'; enEl.style.position='absolute'; enEl.style.left='50%'; enEl.style.transform='translateX(-50%)'; enEl.style.top='6px'; enEl.style.fontSize='12px'; enEl.style.color='white'; enEl.style.opacity='.95'; enEl.style.pointerEvents='none'; infoWrap.appendChild(enEl); }
-          enEl.textContent = enrouteTxt || '';
-          enEl.title = (usp.get('enroute') || d?.enroute_wx || '');
-          enEl.style.display = enrouteTxt ? 'block' : 'none';
-        enEl.style.fontSize='13px'; enEl.style.fontWeight='700';
+          let dEl = document.getElementById('embed_dep_weather');
+          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='12px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
           dEl.textContent = depTxt || '';
           dEl.title = usp.get('dep_metar') || d?.dep_metar || '';
           dEl.style.display = depTxt ? 'block' : 'none';
