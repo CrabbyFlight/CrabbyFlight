@@ -303,8 +303,12 @@
     <div class="grid" style="margin-top:8px">
       <div>
         <label for="infoATISKey">AVWX API key (optional)</label>
-        <input id="infoATISKey" placeholder="sk_live_..." title="Stored locally in this browser only">
-        <div class="hint">Optional: add <code>?atis=on&amp;atisKey=YOUR_KEY</code> to your overlay URL to show live ATIS/METAR.</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="infoATISKey" type="password" placeholder="sk_live_..." title="Stored locally in this browser only" style="flex:1">
+          <button id="infoATISToggle" type="button" title="Show/hide key" style="padding:8px;border-radius:8px">Show</button>
+          <button id="infoATISClear" type="button" title="Clear saved key" style="padding:8px;border-radius:8px">Clear</button>
+        </div>
+        <div class="hint">Optional: add <code>?atis=on&amp;atisKey=YOUR_KEY</code> to your overlay URL to show live ATIS/METAR. Don't paste secrets into public chat — rotate the key if you did.</div>
       </div>
       <div>
         <label for="infoATIS">Show live ATIS</label>
@@ -929,7 +933,13 @@
       const atisToggle = document.getElementById('infoATIS');
       if(atisKeyEl){ atisKeyEl.value = localStorage.getItem('cf_atis_key') || ''; atisKeyEl.addEventListener('input', ()=>{ try{ localStorage.setItem('cf_atis_key', atisKeyEl.value||''); }catch(e){} }); }
       if(atisToggle){ atisToggle.addEventListener('change', ()=>{ try{ localStorage.setItem('cf_atis_enabled', atisToggle.checked? 'on':'off'); }catch(e){} }); const saved = localStorage.getItem('cf_atis_enabled'); if(saved) atisToggle.checked = (saved==='on'); }
-    }catch(e){}
++      // show/hide & clear helpers
++      try{
++        const toggle = document.getElementById('infoATISToggle'); const clear = document.getElementById('infoATISClear');
++        if(toggle){ toggle.addEventListener('click', ()=>{ if(atisKeyEl.type === 'password'){ atisKeyEl.type='text'; toggle.textContent='Hide'; } else { atisKeyEl.type='password'; toggle.textContent='Show'; } }); }
++        if(clear){ clear.addEventListener('click', ()=>{ try{ localStorage.removeItem('cf_atis_key'); atisKeyEl.value=''; atisKeyEl.dispatchEvent(new Event('input')); }catch(e){} }); }
++      }catch(e){}
+     }catch(e){}
 
     const byId = (id)=>document.getElementById(id);
     const openInNew = (url)=>{
