@@ -67,6 +67,8 @@
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
   body.editor{background:var(--bg)!important}
   body.info,body.departures{background:transparent!important}
+  /* also show info overlay while in frame mode so it appears with the frame/logo */
+  body.frame #screen-info{display:block}
 
   /* Remove all text shadows from editor */
   .wrap,.card,label,input,select,button,h1,h2,h3,.footer{text-shadow:none!important}
@@ -410,6 +412,45 @@
 
 
 
+<!-- INFO OVERLAY -->
+<div id="screen-info" class="container">
+  <div class="info-box">
+    <div class="info-left">
+      <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
+      <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
+    </div>
+
+    <div class="info-center">
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px">
+        <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
+      </div>
+      <div id="flightViz" style="width:100%;max-width:900px;display:none">
+        <div class="flight-track" role="region" aria-label="Flight progress">
+          <div class="bar" id="flightBar"><div class="pos" id="flightPos"></div></div>
+          <div class="plane" id="flightPlane" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#111" d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1A.5.5 0 0 0 11 3.5V9l-8 5v2l8-1v4l2-.5v1l3-1-3 1v-1l2-.5v-4l8 1z"/></svg>
+          </div>
+        </div>
+        <div class="flight-meta" id="flightMeta"><div id="flightFrom">—</div><div id="flightPhase" class="flight-phase" aria-live="polite">—</div><div id="flightTo">—</div></div>
+
+      </div>
+      <div style="font-size:15px;line-height:1.6">
+        <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
+        <div><strong>Time:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
+        <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
+        <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+      </div>
+    </div>
+
+    <div class="info-right">
+      <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
+      <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- DEPARTURES OVERLAY -->
 <div id="screen-departures" class="board" aria-live="polite">
   <div class="header">
@@ -489,44 +530,7 @@
     <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
   </div>
 
-  <!-- INFO OVERLAY (moved inside frame-root so it centers relative to frame) -->
-  <div id="screen-info" class="container">
-    <div class="info-box">
-      <div class="info-left">
-        <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
-        <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
-      </div>
 
-      <div class="info-center">
-        <div style="font-size:18px;font-weight:700;margin-bottom:2px">
-          <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
-        </div>
-        <div id="flightViz" style="width:100%;max-width:900px;display:none">
-          <div class="flight-track" role="region" aria-label="Flight progress">
-            <div class="bar" id="flightBar"><div class="pos" id="flightPos"></div></div>
-            <div class="plane" id="flightPlane" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#111" d="M21 16v-2l-8-5V3.5a.5.5 0 0 0-.5-.5h-1A.5.5 0 0 0 11 3.5V9l-8 5v2l8-1v4l2-.5v1l3-1-3 1v-1l2-.5v-4l8 1z"/></svg>
-            </div>
-          </div>
-          <div class="flight-meta" id="flightMeta"><div id="flightFrom">—</div><div id="flightPhase" class="flight-phase" aria-live="polite">—</div><div id="flightTo">—</div></div>
-
-        </div>
-        <div style="font-size:15px;line-height:1.6">
-          <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
-          <div><strong>Time:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
-          <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
-          <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
-        </div>
-      </div>
-
-      <div class="info-right">
-        <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
-        <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
-      </div>
-    </div>
-  </div>
 </div>
 
 
