@@ -1167,7 +1167,7 @@
     if(!doc) return '';
     const cruiseNum = Number.parseInt(String(cruiseFt||'').replace(/\D/g,''),10) || null;
     const nodes = Array.from(doc.querySelectorAll('notamdrec, notam'));
-    const kw = /turbul|turbulence|icing|ice|convect|tstm|thunder|lightning|sigmet|aermet|mountain wave|volcanic ash|ash|wind shear|shear|hail|severe|gust|unmanned|uas|uav|drone|u/s|closed|closure/i;
+    const kw = /turbul|turbulence|icing|ice|convect|tstm|thunder|lightning|sigmet|aermet|mountain wave|volcanic ash|ash|wind shear|shear|hail|severe|gust|unmanned|uas|uav|drone|u\/s|closed|closure/i;
     const seen = new Set();
     const hazards = [];
 
