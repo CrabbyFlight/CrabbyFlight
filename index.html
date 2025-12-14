@@ -804,9 +804,19 @@
     // SimBrief sometimes contains short enroute notes in 'route notes' or 'performance remarks'
     const enrouteWx = pickText(doc, 'route notes','enroute notes','OFP remarks','OFP enroute_notes','general remarks');
     // Try to pull short enroute hazard summaries from NOTAMDREC / NOTAM blocks (e.g., SIGMETs, turbulence, icing)
-    const enrouteHazardsSummary = summarizeEnrouteFromDoc(doc, cruiseFt);
+    const enrouteHazardsSummary = summarizeEnrouteFromDoc(doc, cruiseFt, dep, eteRaw);
     const computedEnroute = (enrouteWx && enrouteWx.trim()) ? enrouteWx : ((fmtCruise(cruiseFt) || '') || '') + (eteRaw ? (fmtCruise(cruiseFt) ? ` • ${formatEte(eteRaw)}` : formatEte(eteRaw)) : '');
-    const finalEnroute = (computedEnroute || '') + (enrouteHazardsSummary ? (computedEnroute ? ' • ' : '') + enrouteHazardsSummary : '');
+    // If the SimBrief provided enroute note, prefer that. Otherwise use hazard summary if present.
+    let finalEnroute = '';
+    if(enrouteWx && enrouteWx.trim()) finalEnroute = enrouteWx.trim();
+    else if(enrouteHazardsSummary && enrouteHazardsSummary.trim()) finalEnroute = enrouteHazardsSummary.trim();
+    else {
+      // If we only have a cruise/ETE stub (e.g., "34,000ft • ~1h 23m"), prefer hiding the field rather than showing raw NOTAM dumps
+      const cruiseOnly = /^\s*\d{1,3}(?:,?\d{3})?ft(?:\s*•\s*~)?/i.test(computedEnroute || '');
+      finalEnroute = cruiseOnly ? '' : (computedEnroute || '');
+    }
+    // keep it succinct
+    if(finalEnroute && finalEnroute.length>220) finalEnroute = finalEnroute.slice(0,220).trim()+'…';
     return {
       patch: {
         from: fmtLoc(fromName, fromIcao),
@@ -1152,34 +1162,98 @@
     return pieces.join(' • ');
   }
 
-  // Summarize enroute hazards from SimBrief OFP: search NOTAMDREC/NOTAM entries
-  function summarizeEnrouteFromDoc(doc, cruiseFt){
+  // Summarize enroute hazards from SimBrief OFP: search NOTAMDREC/NOTAM entries and filter by time/alt
+  function summarizeEnrouteFromDoc(doc, cruiseFt, depObj, eteRaw){
     if(!doc) return '';
     const cruiseNum = Number.parseInt(String(cruiseFt||'').replace(/\D/g,''),10) || null;
     const nodes = Array.from(doc.querySelectorAll('notamdrec, notam'));
-    const kw = /turbul|turbulence|icing|ice|convect|thunder|lightning|sigmet|aermet|mountain wave|volcanic ash|ash|wind shear|shear|hail|severe|gust|tstm/i;
+    const kw = /turbul|turbulence|icing|ice|convect|tstm|thunder|lightning|sigmet|aermet|mountain wave|volcanic ash|ash|wind shear|shear|hail|severe|gust|unmanned|uas|uav|drone|u/s|closed|closure/i;
     const seen = new Set();
-    const out = [];
+    const hazards = [];
+
+    // compute approximate route window (UTC) using dep time + ETE
+    const routeStart = depObj ? parseHMToUTCDate(depObj.label || (depObj.hm ? `${String(depObj.hm.h).padStart(2,'0')}:${String(depObj.hm.m).padStart(2,'0')}` : '')) : null;
+    const eteMins = parseEteToMinutes(eteRaw);
+    const routeEnd = routeStart && eteMins ? new Date(routeStart.getTime() + eteMins*60000) : null;
+
     for(const n of nodes){
       const txt = (n.querySelector('notam_report')?.textContent || n.querySelector('notam_text')?.textContent || n.querySelector('notam_raw')?.textContent || '').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
       if(!txt) continue;
       if(!kw.test(txt)) continue;
-      // crude altitude relevance check: skip items that only affect low altitudes below cruise
+
+      // Determine effective/expire times from common tags if present
+      let eff=null, exp=null;
+      const effTags = ['notam_effective_dtg','notam_created_dtg','date_effective','date_created'];
+      const expTags = ['notam_expire_dtg','notam_expire','date_expire','date_expire'];
+      for(const t of effTags){ const v = n.querySelector(t)?.textContent; if(v){ eff = parseSimBriefDtg(v); break; } }
+      for(const t of expTags){ const v = n.querySelector(t)?.textContent; if(v){ exp = parseSimBriefDtg(v); break; } }
+      // fallback: try to extract date ranges from the text like '26 NOV 15:00 2025 UNTIL 03 MAR 11:00 2026'
+      if(!eff || !exp){
+        const m = txt.match(/(\d{1,2}\s+\w{3}\s+\d{4}\s+\d{2}:\d{2})\s+UNTIL\s+(\d{1,2}\s+\w{3}\s+\d{4}\s+\d{2}:\d{2})/i);
+        if(m){ try{ eff = new Date(m[1] + ' UTC'); exp = new Date(m[2] + ' UTC'); }catch(e){} }
+      }
+
+      // time relevance check: if both windows exist, require an overlap with route window
+      if(routeStart && routeEnd && eff && exp){ if(exp < routeStart || eff > routeEnd) continue; }
+
+      // altitude relevance: skip items that only affect low altitudes
       let affectsCruise = true;
       const sfcRange = txt.match(/SFC\s*-\s*(\d{2,6})\s*(FT)?/i);
       if(sfcRange && cruiseNum){ const upper = Number.parseInt(sfcRange[1],10); if(upper && upper < cruiseNum) affectsCruise = false; }
       const abvFl = txt.match(/ABV\s*FL?(\d{2,3})/i);
       if(abvFl && cruiseNum){ const fl = Number.parseInt(abvFl[1],10); if(fl && fl > (cruiseNum/100)) affectsCruise = false; }
       if(!affectsCruise) continue;
-      const short = txt.length>220 ? txt.slice(0,220).trim()+'…' : txt;
-      if(seen.has(short)) continue;
-      seen.add(short);
-      out.push(short);
-      if(out.length>=3) break;
+
+      // map to short friendly tags
+      const tags = [];
+      if(/turbul/i.test(txt)){
+        const sev = /severe|sev\.?/i.test(txt) ? 'Severe' : /moderate/i.test(txt) ? 'Moderate' : 'Light';
+        tags.push(`${sev} turbulence`);
+      }
+      if(/icing|ice/i.test(txt)){
+        const sev = /severe|moderate/i.test(txt) ? 'Icing likely' : 'Icing possible';
+        tags.push(sev);
+      }
+      if(/convect|tstm|thunder/i.test(txt)) tags.push('Convective/TS storms');
+      if(/volcanic ash|ash/i.test(txt)) tags.push('Volcanic ash');
+      if(/mountain wave/i.test(txt)) tags.push('Mountain wave');
+      if(/wind shear|shear|gust/i.test(txt)) tags.push('Wind shear/strong gusts');
+      if(/unmanned|uas|uav|drone/i.test(txt)) tags.push('UAS activity');
+      if(/sigmet|aermet/i.test(txt)) tags.push('SIGMET/AIRMET');
+
+      if(tags.length===0){ const cue = txt.split(/\.|\,|;/)[0]; if(cue){ const adminLike = /\b(REF|AIP|ATTACH|NOTAM|CONTINUED)\b/i.test(cue); if(!adminLike) tags.push(cue.length>80?cue.slice(0,80)+'…':cue); } }
+
+      for(const t of tags){ if(!seen.has(t)){ seen.add(t); hazards.push(t); } }
+      if(hazards.length>=3) break;
     }
-    if(!out.length) return '';
-    // join into short inline summary
-    return out.map((s,i)=>`${i+1}. ${s}`).join(' | ');
+
+    if(!hazards.length) return '';
+    return hazards.join(' • ');
+  }
+
+  function parseEteToMinutes(eteRaw){
+    if(!eteRaw) return null;
+    const raw=(eteRaw||'').toString().trim();
+    const m = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if(m) return parseInt(m[1],10)*60 + parseInt(m[2],10);
+    if(/^\d+$/.test(raw)){
+      const num=parseInt(raw,10);
+      if(raw.length===4 && num<=2359){ return Math.floor(num/100)*60 + (num%100); }
+      return num>600? Math.round(num/60):num;
+    }
+    return null;
+  }
+
+  function parseSimBriefDtg(dtg){
+    if(!dtg) return null;
+    const s = dtg.toString().trim();
+    const m = s.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/);
+    if(m) return new Date(Date.UTC(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5])));
+    const iso = Date.parse(s);
+    if(!isNaN(iso)) return new Date(iso);
+    const mm = s.match(/(\d{1,2}\s+\w{3}\s+\d{4}\s+\d{2}:\d{2})/i);
+    if(mm) try{ return new Date(mm[1]+' UTC'); }catch(e){}
+    return null;
   }
 
   function renderFlightViz(d){
