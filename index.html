@@ -1137,10 +1137,21 @@
     }
     const emoji = getWeatherEmoji(metar);
     const summary = summarizeMetarPlain(metar) || parseMetarSummary(metar);
-    el.textContent = emoji ? `${emoji} ${summary}` : summary;
+    el.textContent = summary;
     el.style.display = summary ? 'block' : 'none';
     el.style.fontSize = '14px';
     el.style.fontWeight = '700';
+    
+    // Update airport name with weather emoji (after the name)
+    const airportElId = type === 'dep' ? 'i_from' : 'i_to';
+    const airportEl = document.getElementById(airportElId);
+    if (airportEl && emoji) {
+      // Store original text if not already stored
+      if (!airportEl.dataset.originalText) {
+        airportEl.dataset.originalText = airportEl.textContent;
+      }
+      airportEl.textContent = `${airportEl.dataset.originalText} ${emoji}`;
+    }
   }
 
   // Periodic METAR refresh (runs in info mode)
@@ -1173,7 +1184,15 @@
   function renderInfo(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
-    setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
+    
+    // Set airport names and store original text for emoji prepending
+    const fromText = val('from',DEFAULTS.from);
+    const toText = val('to',DEFAULTS.to);
+    const fromEl = document.getElementById('i_from');
+    const toEl = document.getElementById('i_to');
+    if (fromEl) { fromEl.textContent = fromText; fromEl.dataset.originalText = fromText; }
+    if (toEl) { toEl.textContent = toText; toEl.dataset.originalText = toText; }
+    
     setT('i_dep_utc',val('dep_utc',DEFAULTS.dep_utc)); setT('i_arr_utc',val('arr_utc',DEFAULTS.arr_utc));
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
     const frameRadiusSaved = val('frameBorderRadius', DEFAULTS.frameBorderRadius);
