@@ -230,30 +230,47 @@
 
   <!-- SimBrief Integration -->
   <div class="card">
+    <h3 style="margin:0 0 14px;font-size:18px">SimBrief Import</h3>
     <div class="sb-row">
       <div>
-        <label for="simbrief_id">SimBrief PilotID or Username</label>
+        <label for="simbrief_id">PilotID or Username</label>
         <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
       </div>
       <button id="btn_import_sb" class="primary" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
-      <button id="btn_import_test" type="button" title="Run a local sample OFP import">Run Sample Import</button>
-      <button id="btn_run_tests" type="button" title="Run diagnostics and self-test">Run Tests</button>
       <span class="pill" id="sb_status">Ready</span>
     </div>
   </div>
 
+  <!-- Flight Details -->
   <div class="card">
+    <h3 style="margin:0 0 14px;font-size:18px">Flight Details</h3>
     <div class="grid">
       <div><label for="from">From</label><input id="from" placeholder="Oslo (ENGM)"></div>
       <div><label for="to">To</label><input id="to" placeholder="Liverpool (EGGP)"></div>
     </div>
-    <div class="grid">
-      <div><label for="flight">Flight</label><input id="flight" placeholder="POR9392"></div>
+    <div class="grid-3">
+      <div><label for="flight">Flight Number</label><input id="flight" placeholder="POR9392"></div>
+      <div><label for="aircraft">Aircraft</label><input id="aircraft" placeholder="A320-251N"></div>
+      <div><label for="airframe">Registration</label><input id="airframe" placeholder="G-WALI"></div>
+    </div>
+    <div class="grid-3">
+      <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
+      <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
+      <div><label for="cruise">Cruise Altitude</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
     <div class="grid">
-      <div><label for="gate">Gate (Departures)</label><input id="gate" placeholder="B12"></div>
+      <div><label for="dep_metar">Departure METAR</label><input id="dep_metar" placeholder="EGGP 141450Z 24010KT 9999 SCT030 09/04 Q1013" /></div>
+      <div><label for="arr_metar">Arrival METAR</label><input id="arr_metar" placeholder="EGPH 141550Z 26012KT 9999 BKN040 08/03 Q1011" /></div>
+    </div>
+  </div>
+
+  <!-- Departures Board Settings -->
+  <div class="card">
+    <h3 style="margin:0 0 14px;font-size:18px">Departures Board</h3>
+    <div class="grid-3">
+      <div><label for="gate">Gate</label><input id="gate" placeholder="B12"></div>
       <div>
-        <label for="status">Status (Departures)</label>
+        <label for="status">Status</label>
         <select id="status">
           <option value="on-time">ON TIME</option>
           <option value="boarding">BOARDING</option>
@@ -263,55 +280,39 @@
           <option value="custom">Custom…</option>
         </select>
       </div>
+      <div id="customRow" style="display:none">
+        <label for="status_custom">Custom status</label>
+        <input id="status_custom" placeholder="e.g. DIVERTED TO EDI">
+      </div>
     </div>
+  </div>
 
-    <div class="grid" id="customRow" style="display:none">
-      <div><label for="status_custom">Custom status text</label><input id="status_custom" placeholder="e.g. DIVERTED TO EDI"></div>
-      <div><label>&nbsp;</label><input disabled value="Shown on the board as blue badge"></div>
-    </div>
-
-    <div class="grid">
-      <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
-      <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
-    </div>
+  <!-- Info Overlay Settings -->
+  <div class="card">
+    <h3 style="margin:0 0 14px;font-size:18px">Info Overlay</h3>
     <div class="grid-3">
-      <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320-251N"></div>
-      <div><label for="airframe">Airframe (Reg)</label><input id="airframe" placeholder="G-WALI"></div>
-      <div><label for="cruise">Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
-    </div>
-    <div class="grid">
-      <div><label for="dep_metar">Departure METAR (from SimBrief)</label><input id="dep_metar" placeholder="EGGP 141450Z 24010KT 9999 SCT030 09/04 Q1013" /></div>
-      <div><label for="arr_metar">Arrival METAR (from SimBrief)</label><input id="arr_metar" placeholder="EGPH 141550Z 26012KT 9999 BKN040 08/03 Q1011" /></div>
-    </div>
-    
-    <div class="grid-3" style="margin-top:8px">
       <div>
-        <label for="infoLive">Show live indicator</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoLive" type="checkbox" checked><span class="hint">Show the LIVE indicator on the info overlay</span></div>
+        <label for="infoLive">Live indicator</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoLive" type="checkbox" checked><span class="hint">Show LIVE badge</span></div>
       </div>
       <div>
-        <label for="infoRes">Show resolution</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoRes" type="checkbox" checked><span class="hint">Display resolution text (e.g., 1080p60FPS)</span></div>
+        <label for="infoRes">Resolution</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoRes" type="checkbox" checked><span class="hint">Show resolution</span></div>
       </div>
       <div>
-        <label for="infoPlatform">Show platform</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Display platform text (macOS + OneCast)</span></div>
+        <label for="infoPlatform">Platform</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Show platform</span></div>
       </div>
     </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div>
-        <label for="infoResText">Resolution text</label>
-        <input id="infoResText" placeholder="1080p60FPS">
-      </div>
-      <div>
-        <label for="infoPlatformText">Platform text</label>
-        <input id="infoPlatformText" placeholder="macOS + OneCast">
-      </div>
-      <div></div>
+    <div class="grid" style="margin-top:8px">
+      <div><label for="infoResText">Resolution text</label><input id="infoResText" placeholder="1080p60FPS"></div>
+      <div><label for="infoPlatformText">Platform text</label><input id="infoPlatformText" placeholder="macOS + OneCast"></div>
     </div>
+  </div>
 
-    <div class="card" style="margin-top:10px">
-      <h3 style="margin:0 0 10px;font-size:18px">Frame and Webcam Settings</h3>
+  <!-- Frame & Webcam Settings -->
+  <div class="card">
+    <h3 style="margin:0 0 14px;font-size:18px">Frame &amp; Webcam</h3>
 
       <div class="grid-3">
         <div>
@@ -357,31 +358,32 @@
 
 
 
-      <div class="grid-3" style="margin-top:10px">
-        <div>
-          <label for="logoShow">Show frame logo</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="logoShow" type="checkbox" checked><span class="hint">Show the CrabbyFlight logo on the frame</span></div>
-        </div>
+    <div class="grid-3" style="margin-top:10px">
+      <div>
+        <label for="logoShow">Frame logo</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="logoShow" type="checkbox" checked><span class="hint">Show CrabbyFlight logo</span></div>
       </div>
     </div>
+  </div>
 
-    <div class="card" style="margin-top:10px">
-      <h3 style="margin:0 0 10px;font-size:18px">Flight Visualization</h3>
-      <div class="grid-3">
-        <div>
-          <label for="flightVizEnabled">Enable visualization</label>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizEnabled" type="checkbox"><span class="hint">Show a live progress bar for the flight</span></div>
-        </div>
-        <!-- Removed 'Show on info overlay' checkbox: visualization is shown on the info overlay when enabled -->
-
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-        <button id="flightTakeoff" type="button">Takeoff</button>
-        <button id="flightLanded" type="button">Landed</button>
+  <!-- Flight Visualization -->
+  <div class="card">
+    <h3 style="margin:0 0 14px;font-size:18px">Flight Visualization</h3>
+    <div class="grid-3">
+      <div>
+        <label for="flightVizEnabled">Enable visualization</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="flightVizEnabled" type="checkbox"><span class="hint">Show live progress bar</span></div>
       </div>
     </div>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+      <button id="flightTakeoff" type="button">Takeoff</button>
+      <button id="flightLanded" type="button">Landed</button>
+    </div>
+  </div>
 
-    <div class="btns">
+  <!-- Actions -->
+  <div class="card">
+    <div class="btns" style="margin-top:0">
       <button id="openInfo" type="button">Open Info</button>
       <button id="openDep" type="button">Open Departures</button>
       <button id="openFrame" type="button">Open Frame</button>
@@ -396,13 +398,14 @@
       </div>
       <button id="btn_signout" type="button" style="margin-left:8px">Sign out</button>
     </div>
-    <div class="footer">
+  </div>
+
+  <div class="footer">
       <a href="about.html" target="_blank" rel="noopener">About</a>
       <span class="sep">|</span>
       <a href="README.md" target="_blank" rel="noopener">README</a>
       <span class="sep">|</span>
       <a href="license.txt" target="_blank" rel="noopener">License</a>
-    </div>
   </div>
 </div>
 
@@ -1050,89 +1053,11 @@
         // If signed in, save/publish the imported data
         if (canSave) save();
 
-        if (meta?.note === 'utc_autosynced'){
-          const depMsg = meta?.dep_src ? `DEP(${meta.dep_src})` : '';
-          const arrMsg = meta?.arr_src ? `ARR(${meta.arr_src})` : '';
-          setSimBriefStatus(`Imported ✓ (UTC updated ${depMsg} ${arrMsg})` + (canSave ? '' : ' — sign in to publish'), false, true);
-        } else {
-          setSimBriefStatus('Imported ✓ (UTC unchanged — manual)' + (canSave ? '' : ' — sign in to publish'), false, true);
-        }
+        setSimBriefStatus('Imported ✓' + (canSave ? '' : ' — sign in to publish'), false, true);
       }catch(err){
         setSimBriefStatus(`Import failed: ${err?.message||err}`, true);
       }
     });
-
-    bindIf('btn_import_test', async ()=>{
-      try{
-        setSimBriefStatus('Running sample import…');
-        const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
-          <OFP>
-            <origin>
-              <icao_code>RJAA</icao_code>
-              <name>Narita</name>
-              <metar>RJAA 141200Z 22005KT 9999 SCT020 10/08 Q1015</metar>
-            </origin>
-            <destination>
-              <icao_code>RJBB</icao_code>
-              <name>Kansai</name>
-              <metar>RJBB 141400Z 26015G25KT 8000 -RA BKN030 12/09 Q1009</metar>
-            </destination>
-            <general>
-              <airline_icao>WAL</airline_icao>
-              <flight_number>113</flight_number>
-            </general>
-            <aircraft>
-              <name>A320-251N</name>
-              <reg>JA123A</reg>
-            </aircraft>
-            <performance>
-              <cruise_altitude>34000</cruise_altitude>
-            </performance>
-            <times>
-              <est_time_enroute>01:45</est_time_enroute>
-              <sched_out_zulu>14:30</sched_out_zulu>
-              <sched_in_zulu>16:15</sched_in_zulu>
-            </times>
-          </OFP>`;
-
-        const doc = new DOMParser().parseFromString(sampleXml,'application/xml');
-        const {patch,meta} = parseSimBriefDoc(doc);
-
-        // Apply into editor fields
-        Object.entries(patch).forEach(([k,val])=>{
-          const el = document.getElementById(k);
-          if(el) { el.value = (typeof val === 'undefined' ? '' : val); el.dispatchEvent(new Event('input')); }
-        });
-        sanitizeUTCField(document.getElementById('dep_utc'));
-        sanitizeUTCField(document.getElementById('arr_utc'));
-        setSimBriefStatus('Sample import applied', false, true);
-      }catch(e){ setSimBriefStatus('Sample import failed: '+e.message, true); }
-    });
-
-    // Developer: run a quick self-test of core UI bindings (non-destructive)
-    function runSelfTest(){
-      const results = [];
-      try{
-        // frame color change
-        const fCol = document.getElementById('frameBorderColor'); const prevCol = fCol?.value||'';
-        if(fCol){ fCol.value = '#ff0000'; fCol.dispatchEvent(new Event('input')); updatePreview(); const applied = getComputedStyle(document.documentElement).getPropertyValue('--frame-border-color').trim().toLowerCase() === '#ff0000'; results.push(applied? 'Frame color OK' : 'Frame color FAILED'); }
-        // webcam show toggle
-        const wcShow = document.getElementById('wcShow'); const prevWc = wcShow?.checked; if(wcShow){ wcShow.checked = false; wcShow.dispatchEvent(new Event('change')); updatePreview(); const wcEl = document.getElementById('wc'); results.push(wcEl && wcEl.style.outline==='none' ? 'WC toggle OK' : 'WC toggle FAILED'); }
-        // live indicator toggle
-        const infoLive = document.getElementById('infoLive'); const prevLive = infoLive?.checked; if(infoLive){ infoLive.checked = false; infoLive.dispatchEvent(new Event('change')); updatePreview(); const liveEl=document.getElementById('i_live_block'); results.push(liveEl && liveEl.style.display==='none' ? 'Live toggle OK' : 'Live toggle FAILED'); }
-        // resolution/platform text
-        const resTextEl = document.getElementById('infoResText'); const prevRes = resTextEl?.value||''; if(resTextEl){ resTextEl.value = '720p30'; resTextEl.dispatchEvent(new Event('input')); updatePreview(); const resEl = document.getElementById('i_res'); results.push(resEl && resEl.textContent.includes('720p30') ? 'Res text OK' : 'Res text FAILED'); }
-        // restore
-        if(fCol) { fCol.value = prevCol; fCol.dispatchEvent(new Event('input')); }
-        if(wcShow) { wcShow.checked = !!prevWc; wcShow.dispatchEvent(new Event('change')); }
-        if(infoLive) { infoLive.checked = !!prevLive; infoLive.dispatchEvent(new Event('change')); }
-        if(resTextEl) { resTextEl.value = prevRes; resTextEl.dispatchEvent(new Event('input')); }
-      }catch(e){ results.push('Self-test error: '+e.message); }
-      const statusEl=document.getElementById('auth_status'); if(statusEl){ statusEl.textContent = 'Self-test: ' + results.join(' | '); }
-      return results;
-    }
-
-    bindIf('btn_run_tests', ()=>{ const r = runSelfTest(); setTimeout(()=>runDiagnostics(),400); });
 
     // Flight control buttons
     bindIf('flightTakeoff', ()=>{ editorEls['flightTakeoffEpoch'].value = String(Date.now()); editorEls['flightLanded'].value = 'off'; save(); });
@@ -1678,8 +1603,7 @@
           setStatus('Signed in');
         }
         applyOverlayOptions();
-        // run diagnostics after auth state change so we can detect and auto-fix issues
-        try{ const issues=runDiagnostics(); if(signedInUser){ try{ const results = runSelfTest(); if(results && results.length) setStatus('Self-test: ' + results.join(' | ')); }catch(e){} } }catch(e){}
+        try{ runDiagnostics(); }catch(e){}
       });
     } else {
       subscribe();
