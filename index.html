@@ -395,6 +395,7 @@
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
         <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span></div>
       </div>
+      <div id="i_flight_summary" style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px;font-style:italic;text-align:center"></div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
         <span id="i_res">1080p60FPS</span>
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
@@ -1147,6 +1148,85 @@
     if (emojiEl) {
       emojiEl.textContent = emoji || '';
     }
+    
+    // Update flight summary after both METARs are cached
+    updateFlightSummary();
+  }
+
+  // Generate a flight conditions summary based on both departure and arrival METARs
+  function updateFlightSummary() {
+    const summaryEl = document.getElementById('i_flight_summary');
+    if (!summaryEl) return;
+    
+    const depMetar = metarCache.dep.metar;
+    const arrMetar = metarCache.arr.metar;
+    
+    if (!depMetar && !arrMetar) {
+      summaryEl.textContent = '';
+      return;
+    }
+    
+    const conditions = [];
+    const combined = `${depMetar} ${arrMetar}`.toUpperCase();
+    
+    // Turbulence assessment
+    let turbulence = 'Smooth air expected';
+    if (/\bTS\b|TSTM|CB\b|TCU\b/.test(combined)) {
+      turbulence = 'Severe turbulence possible';
+    } else if (/G\d{2,}KT/.test(combined)) {
+      // Gusty winds
+      const gustMatch = combined.match(/G(\d{2,})KT/);
+      const gust = gustMatch ? parseInt(gustMatch[1], 10) : 0;
+      if (gust >= 30) turbulence = 'Moderate to severe turbulence';
+      else if (gust >= 20) turbulence = 'Light to moderate turbulence';
+      else turbulence = 'Light turbulence possible';
+    } else {
+      // Check sustained winds
+      const windMatch = combined.match(/\b(?:\d{3}|VRB)(\d{2,3})KT\b/);
+      if (windMatch) {
+        const speed = parseInt(windMatch[1], 10);
+        if (speed >= 25) turbulence = 'Moderate turbulence likely';
+        else if (speed >= 15) turbulence = 'Light chop possible';
+      }
+    }
+    conditions.push(turbulence);
+    
+    // Wind summary (average of both airports)
+    const windSpeeds = [];
+    const windMatches = combined.matchAll(/\b(?:\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/g);
+    for (const m of windMatches) {
+      windSpeeds.push(parseInt(m[1], 10));
+      if (m[2]) windSpeeds.push(parseInt(m[2], 10));
+    }
+    if (windSpeeds.length > 0) {
+      const avgWind = Math.round(windSpeeds.reduce((a,b) => a+b, 0) / windSpeeds.length);
+      const maxWind = Math.max(...windSpeeds);
+      if (maxWind >= 25) {
+        conditions.push(`Strong winds up to ${maxWind}kt`);
+      } else if (avgWind >= 10) {
+        conditions.push(`Winds ${avgWind}-${maxWind}kt`);
+      } else {
+        conditions.push('Light winds');
+      }
+    }
+    
+    // Visibility/weather conditions
+    if (/\bTS\b|TSTM/.test(combined)) {
+      conditions.push('Thunderstorms en route');
+    } else if (/\+RA|\+SN/.test(combined)) {
+      conditions.push('Heavy precipitation');
+    } else if (/\bRA\b|\bSN\b|\bSHRA\b/.test(combined)) {
+      conditions.push('Precipitation expected');
+    } else if (/\bFG\b|\bBR\b/.test(combined)) {
+      conditions.push('Reduced visibility');
+    } else if (/CAVOK|SKC|CLR/.test(combined) && !/RA|SN|TS/.test(combined)) {
+      conditions.push('Clear skies');
+    }
+    
+    // Build the summary (limit to 2-3 items for readability)
+    const summary = conditions.slice(0, 3).join(' • ');
+    summaryEl.textContent = summary;
+    summaryEl.style.display = summary ? 'block' : 'none';
   }
 
   // Periodic METAR refresh (runs in info mode)
