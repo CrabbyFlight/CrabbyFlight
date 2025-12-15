@@ -1065,6 +1065,67 @@
     }
   }
 
+  // Determine weather emoji based on METAR conditions
+  function getWeatherEmoji(metar) {
+    if (!metar) return '';
+    const raw = String(metar).toUpperCase();
+    
+    // Check if it's currently night (rough estimate based on METAR time or current UTC)
+    let isNight = false;
+    const timeMatch = raw.match(/\b\d{2}(\d{2})(\d{2})Z\b/);
+    if (timeMatch) {
+      const hour = parseInt(timeMatch[1], 10);
+      // Rough night estimate: 18:00-06:00 UTC
+      isNight = hour >= 18 || hour < 6;
+    } else {
+      // Fallback to current UTC time
+      const nowHour = new Date().getUTCHours();
+      isNight = nowHour >= 18 || nowHour < 6;
+    }
+
+    // Priority order: severe weather first, then precipitation, then clouds/clear
+    
+    // Thunderstorms
+    if (/\bTS\b|TSTM/.test(raw)) return '⛈️';
+    
+    // Heavy precipitation
+    if (/\+RA|\+SN|\+SHRA/.test(raw)) return '🌧️';
+    
+    // Snow
+    if (/\bSN\b|BLSN/.test(raw)) return '🌨️';
+    
+    // Rain/drizzle
+    if (/\bRA\b|\bDZ\b|SHRA|SHRADZ/.test(raw)) return '🌧️';
+    
+    // Freezing conditions
+    if (/\bFZ|\bIC\b/.test(raw)) return '🥶';
+    
+    // Fog/mist/haze (low visibility)
+    if (/\bFG\b|\bBR\b|\bHZ\b|\bMIFG\b/.test(raw)) return '🌫️';
+    
+    // Very strong winds (25kt+)
+    const windMatch = raw.match(/\b(?:\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+    if (windMatch) {
+      const speed = parseInt(windMatch[1], 10);
+      const gust = windMatch[2] ? parseInt(windMatch[2], 10) : 0;
+      if (speed >= 25 || gust >= 35) return '💨';
+    }
+    
+    // Cloud cover
+    if (/\bOVC\b/.test(raw)) return isNight ? '☁️' : '☁️';  // Overcast (same day/night)
+    if (/\bBKN\b/.test(raw)) return isNight ? '☁️' : '🌥️';  // Broken clouds
+    if (/\bSCT\b/.test(raw)) return isNight ? '☁️' : '⛅';  // Scattered
+    if (/\bFEW\b/.test(raw)) return isNight ? '🌙' : '🌤️';  // Few clouds
+    
+    // Clear skies
+    if (/CAVOK|SKC|CLR|NCD|NSC/.test(raw)) {
+      return isNight ? '🌙' : '☀️';
+    }
+    
+    // Default: partly cloudy
+    return isNight ? '🌙' : '⛅';
+  }
+
   function displayMetarSummary(wrapEl, type, metar) {
     const elId = type === 'dep' ? 'i_dep_weather' : 'i_arr_weather';
     let el = document.getElementById(elId);
@@ -1074,8 +1135,9 @@
       el.className = 'airport-weather';
       wrapEl.appendChild(el);
     }
+    const emoji = getWeatherEmoji(metar);
     const summary = summarizeMetarPlain(metar) || parseMetarSummary(metar);
-    el.textContent = summary;
+    el.textContent = emoji ? `${emoji} ${summary}` : summary;
     el.style.display = summary ? 'block' : 'none';
     el.style.fontSize = '14px';
     el.style.fontWeight = '700';
