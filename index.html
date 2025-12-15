@@ -249,10 +249,6 @@
       <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
       <div><label for="cruise">Cruise Altitude</label><input id="cruise" placeholder="35,000ft"></div>
     </div>
-    <div class="grid">
-      <div><label for="dep_metar">Departure METAR</label><input id="dep_metar" placeholder="EGGP 141450Z 24010KT 9999 SCT030 09/04 Q1013" /></div>
-      <div><label for="arr_metar">Arrival METAR</label><input id="arr_metar" placeholder="EGPH 141550Z 26012KT 9999 BKN040 08/03 Q1011" /></div>
-    </div>
   </div>
 
   <!-- Departures Board Settings -->
@@ -571,11 +567,11 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","dep_metar","arr_metar","frameBorderColor","frameBorderRadius",
+  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","frameBorderColor","frameBorderRadius",
     "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", dep_metar:'', arr_metar:'', frameBorderColor: "#3d434b", frameBorderRadius: "28",
+    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
     logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" };
@@ -774,9 +770,7 @@
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw),
         dep_utc: (dep?.label||'').toString().trim(),
-        arr_utc: (arr?.label||'').toString().trim(),
-        dep_metar: depMetar || '',
-        arr_metar: arrMetar || ''
+        arr_utc: (arr?.label||'').toString().trim()
       },
       meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source }
     };
@@ -892,9 +886,7 @@
           dep_utc: editorEls['dep_utc']?.value || DEFAULTS.dep_utc,
           arr_utc: editorEls['arr_utc']?.value || DEFAULTS.arr_utc,
           aircraft: editorEls['aircraft']?.value || DEFAULTS.aircraft,
-          cruise: editorEls['cruise']?.value || DEFAULTS.cruise,
-          dep_metar: editorEls['dep_metar']?.value || '',
-          arr_metar: editorEls['arr_metar']?.value || ''
+          cruise: editorEls['cruise']?.value || DEFAULTS.cruise
         };
         // Update small in-editor previews of the info/frame overlays
         try{ renderInfo(previewD); }catch(e){}
@@ -902,7 +894,7 @@
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','dep_metar','arr_metar' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // Frame border width slider sync
@@ -1011,6 +1003,111 @@
 
   }
 
+  /* ---------- Live METAR Fetching ---------- */
+  const metarCache = { dep: { icao: '', metar: '', ts: 0 }, arr: { icao: '', metar: '', ts: 0 } };
+  const METAR_REFRESH_MS = 5 * 60 * 1000; // Refresh every 5 minutes
+
+  // Extract ICAO code from "City Name (ICAO)" format
+  function extractIcao(str) {
+    if (!str) return '';
+    const match = str.match(/\(([A-Z]{4})\)/i);
+    return match ? match[1].toUpperCase() : '';
+  }
+
+  // Fetch live METAR from AVWX API (free, no API key required for basic use)
+  async function fetchMetar(icao) {
+    if (!icao || icao.length !== 4) return '';
+    try {
+      // Using AVWX public endpoint - free tier
+      const res = await fetch(`https://avwx.rest/api/metar/${icao}?options=info,speech`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) {
+        // Fallback to met.no text service
+        const txtRes = await fetch(`https://api.met.no/weatherapi/tafmetar/1.0/metar?icao=${icao}`);
+        if (txtRes.ok) {
+          const txt = await txtRes.text();
+          const lines = txt.trim().split('\n').filter(l => l && !l.startsWith('#'));
+          return lines[lines.length - 1] || '';
+        }
+        return '';
+      }
+      const data = await res.json();
+      return data.raw || data.sanitized || '';
+    } catch (e) {
+      console.warn('METAR fetch failed for', icao, e);
+      return '';
+    }
+  }
+
+  // Update weather display for an airport
+  async function updateLiveMetar(type, icao, wrapEl) {
+    if (!icao || !wrapEl) return;
+    const cache = metarCache[type];
+    const now = Date.now();
+    
+    // Use cache if same airport and fresh enough
+    if (cache.icao === icao && cache.metar && (now - cache.ts) < METAR_REFRESH_MS) {
+      displayMetarSummary(wrapEl, type, cache.metar);
+      return;
+    }
+
+    // Fetch fresh METAR
+    const metar = await fetchMetar(icao);
+    if (metar) {
+      cache.icao = icao;
+      cache.metar = metar;
+      cache.ts = now;
+      displayMetarSummary(wrapEl, type, metar);
+    } else if (cache.metar && cache.icao === icao) {
+      // Keep showing old data if fetch failed
+      displayMetarSummary(wrapEl, type, cache.metar);
+    }
+  }
+
+  function displayMetarSummary(wrapEl, type, metar) {
+    const elId = type === 'dep' ? 'i_dep_weather' : 'i_arr_weather';
+    let el = document.getElementById(elId);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = elId;
+      el.className = 'airport-weather';
+      wrapEl.appendChild(el);
+    }
+    const summary = summarizeMetarPlain(metar) || parseMetarSummary(metar);
+    el.textContent = summary;
+    el.style.display = summary ? 'block' : 'none';
+    el.style.fontSize = '14px';
+    el.style.fontWeight = '700';
+  }
+
+  // Periodic METAR refresh (runs in info mode)
+  let metarRefreshInterval = null;
+  let lastFromIcao = '', lastToIcao = '';
+
+  function startMetarRefresh(fromStr, toStr) {
+    const depIcao = extractIcao(fromStr);
+    const arrIcao = extractIcao(toStr);
+    lastFromIcao = depIcao;
+    lastToIcao = arrIcao;
+
+    const leftWrap = document.querySelector('.info-left');
+    const rightWrap = document.querySelector('.info-right');
+
+    // Immediate fetch
+    if (depIcao) updateLiveMetar('dep', depIcao, leftWrap);
+    if (arrIcao) updateLiveMetar('arr', arrIcao, rightWrap);
+
+    // Clear any existing interval
+    if (metarRefreshInterval) clearInterval(metarRefreshInterval);
+
+    // Set up periodic refresh
+    metarRefreshInterval = setInterval(() => {
+      if (lastFromIcao) updateLiveMetar('dep', lastFromIcao, document.querySelector('.info-left'));
+      if (lastToIcao) updateLiveMetar('arr', lastToIcao, document.querySelector('.info-right'));
+    }, METAR_REFRESH_MS);
+  }
+
   function renderInfo(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
@@ -1024,18 +1121,13 @@
     const airframeSaved = val('airframe', '');
     const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
     setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise));
-    // flight condition display (only show dep/arr METAR summaries)
-    const depMet = val('dep_metar',''); const arrMet = val('arr_metar','');
-
-    // Airport-specific weather summaries (compact, parsed from METAR if present)
-    // (parsing now done by `parseMetarSummary` helper)
-
-    const depSummary = summarizeMetarPlain(depMet) || parseMetarSummary(depMet);
-    const arrSummary = summarizeMetarPlain(arrMet) || parseMetarSummary(arrMet);
-    // ensure small elements under left/right airport blocks
-    const leftWrap = document.querySelector('.info-left'); const rightWrap = document.querySelector('.info-right');
-    if(leftWrap){ let el = document.getElementById('i_dep_weather'); if(!el){ el=document.createElement('div'); el.id='i_dep_weather'; el.className='airport-weather'; leftWrap.appendChild(el); } el.textContent = depSummary; el.style.display = depSummary ? 'block' : 'none'; el.style.fontSize='14px'; el.style.fontWeight='700'; }
-    if(rightWrap){ let el = document.getElementById('i_arr_weather'); if(!el){ el=document.createElement('div'); el.id='i_arr_weather'; el.className='airport-weather'; rightWrap.appendChild(el); } el.textContent = arrSummary; el.style.display = arrSummary ? 'block' : 'none'; el.style.fontSize='14px'; el.style.fontWeight='700'; }
+    
+    // Live METAR: fetch real-time weather based on airport ICAO codes
+    const fromStr = val('from', DEFAULTS.from);
+    const toStr = val('to', DEFAULTS.to);
+    if (mode === 'info') {
+      startMetarRefresh(fromStr, toStr);
+    }
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
