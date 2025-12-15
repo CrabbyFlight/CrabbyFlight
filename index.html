@@ -1403,7 +1403,7 @@
 
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
-    if(infoWrap){ 
+    if(infoWrap && mode === 'frame'){ 
       console.log('[renderFrame] Setting embed_info position:', {left: '50%', top: infoY+'px', transform: `translateX(-50%) scale(${infoScale})`});
       infoWrap.style.left='50%'; 
       infoWrap.style.top=infoY+'px'; 
@@ -1413,7 +1413,7 @@
       infoWrap.setAttribute('aria-hidden','false'); 
       console.log('[renderFrame] Actual computed styles:', window.getComputedStyle(infoWrap).left, window.getComputedStyle(infoWrap).transform);
     }
-    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
+    if(infoIframe && mode === 'frame'){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
   function subscribe(){
