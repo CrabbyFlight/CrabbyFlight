@@ -20,8 +20,10 @@
   (function () {
     const raw = (location.hash || '').replace(/^#/, '');
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
+    console.log('[INIT] Hash:', location.hash, 'Mode:', mode);
     document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add(mode || 'editor');
+      console.log('[INIT] Body classes:', document.body.className);
       try{ const saved = localStorage.getItem('cf_theme'); if(saved==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }catch(e){}
       // Keep the toggle-in-editor in sync with the saved theme; this lets nested editors keep the right position
       try{ const themeHidden = document.getElementById('theme'); const themeToggle = document.getElementById('theme_toggle'); if(themeHidden && themeToggle){ themeToggle.checked = ((themeHidden.value||'dark') === 'dark'); } }catch(e){}
@@ -49,7 +51,7 @@
   html.dark button.primary{ background: #1f6fe8; box-shadow:0 4px 12px rgba(31,111,232,.14) }
   #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
   body.editor #screen-editor{display:block}
-  body.info #screen-info{display:block}
+  body.info #screen-info{display:flex}
   body.departures #screen-departures{display:block}
   body.frame #screen-frame{display:block}
   body.require-auth #screen-editor{display:none!important}
