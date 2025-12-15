@@ -136,7 +136,7 @@
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
 
-  .info-box{position:relative;background:rgba(33,36,41,0.95);border:1px solid rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.12);color:#fff;padding:14px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;max-width:900px;width:min(94%,900px);backdrop-filter:blur(0);box-sizing:border-box}
+  .info-box{position:relative;background:linear-gradient(to bottom, rgba(33,36,41,1) 0%, rgba(33,36,41,1) var(--info-cover-height, 50px), rgba(33,36,41,0.95) var(--info-cover-height, 50px), rgba(33,36,41,0.95) 100%);border:1px solid rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.12);color:#fff;padding:14px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;max-width:900px;width:min(94%,900px);backdrop-filter:blur(0);box-sizing:border-box}
   .airport-weather{font-size:14px;font-weight:700;color:rgba(255,255,255,.9);margin-top:6px}
 
   .board{position:absolute;top:32px;left:32px;min-width:760px;border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22)}
@@ -1229,6 +1229,16 @@
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
     // normalize dep/arr times so they match SimBrief's parsed UTC format
     try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
+    
+    // Calculate info-box cover height to hide frame border behind top portion
+    // Uses topH (frame top height) + padding to ensure full coverage
+    if (mode === 'info') {
+      const usp = new URLSearchParams(location.search);
+      const topH = parseFloat(usp.get('topH') || '') || 32; // default topH from frame
+      const pad = parseFloat(usp.get('pad') || '') || 16;
+      const coverHeight = topH + pad + 20; // extra pixels to ensure coverage
+      document.documentElement.style.setProperty('--info-cover-height', `${coverHeight}px`);
+    }
   }
 
   // Parse a METAR-like string into a compact human summary
