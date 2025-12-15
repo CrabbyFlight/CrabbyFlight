@@ -1156,7 +1156,7 @@
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
     const orStr=(k,cur)=> usp.get(k) ?? cur;
-    const pad = orNum('pad',16), topH = orNum('topH',22), logoGap = orNum('logoGap',18);
+    const pad = orNum('pad',16), topH = orNum('topH',32), logoGap = orNum('logoGap',18);
     const matte = orStr('matte','#1d1f22');
 
     const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
@@ -1239,7 +1239,7 @@
       const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
       const pad=getNum('pad',16);
       const frameRadius=getNum('frameBorderRadius',28);
-      const topH=getNum('topH',22);
+      const topH=getNum('topH',32);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
       const bTh = getNum('frameBorderWidth', 6);
