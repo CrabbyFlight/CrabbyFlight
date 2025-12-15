@@ -20,10 +20,8 @@
   (function () {
     const raw = (location.hash || '').replace(/^#/, '');
     const mode = (raw.split(':')[0] || 'editor').toLowerCase();
-    console.log('[INIT] Hash:', location.hash, 'Mode:', mode);
     document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add(mode || 'editor');
-      console.log('[INIT] Body classes:', document.body.className);
       try{ const saved = localStorage.getItem('cf_theme'); if(saved==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }catch(e){}
       // Keep the toggle-in-editor in sync with the saved theme; this lets nested editors keep the right position
       try{ const themeHidden = document.getElementById('theme'); const themeToggle = document.getElementById('theme_toggle'); if(themeHidden && themeToggle){ themeToggle.checked = ((themeHidden.value||'dark') === 'dark'); } }catch(e){}
@@ -1406,14 +1404,12 @@
     const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
     const infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
     if(infoWrap && mode === 'frame'){ 
-      console.log('[renderFrame] Setting embed_info position:', {left: '0', top: infoY+'px'});
       infoWrap.style.left='0'; 
       infoWrap.style.top=infoY+'px'; 
       infoWrap.style.transform=infoScale !== 1 ? `scale(${infoScale})` : ''; 
       infoWrap.style.transformOrigin='top left';
       infoWrap.style.display='block'; 
       infoWrap.setAttribute('aria-hidden','false'); 
-      console.log('[renderFrame] Actual computed styles:', window.getComputedStyle(infoWrap).left, window.getComputedStyle(infoWrap).transform);
     }
     if(infoIframe && mode === 'frame'){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
@@ -1461,10 +1457,8 @@
     const usp=new URLSearchParams(location.search);
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
     const place=(el)=>{ if(!el) return; 
-      console.log('[place] Before:', el.id, 'left:', el.style.left, 'transform:', el.style.transform, 'computed left:', window.getComputedStyle(el).left, 'computed width:', window.getComputedStyle(el).width);
       if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
       if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; 
-      console.log('[place] After:', el.id, 'left:', el.style.left, 'transform:', el.style.transform, 'computed left:', window.getComputedStyle(el).left, 'computed width:', window.getComputedStyle(el).width);
     };
     if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
     if (mode==='departures') place(document.getElementById('screen-departures'));
@@ -1513,14 +1507,12 @@
       const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
       const infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
       if(infoWrap){ 
-        console.log('[applyOverlayOptions] Setting embed_info position:', {left: '0', top: infoY+'px'});
         infoWrap.style.left='0'; 
         infoWrap.style.top=infoY+'px'; 
         infoWrap.style.transform=infoScale !== 1 ? `scale(${infoScale})` : ''; 
         infoWrap.style.transformOrigin='top left';
         infoWrap.style.display='block'; 
         infoWrap.setAttribute('aria-hidden','false'); 
-        console.log('[applyOverlayOptions] Actual computed styles:', window.getComputedStyle(infoWrap).left, window.getComputedStyle(infoWrap).transform);
       }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
       // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
