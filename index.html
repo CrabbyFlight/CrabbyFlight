@@ -1015,9 +1015,6 @@
       }
     });
 
-    // Ensure bindings and run diagnostics after editor is bound
-    try{ ensureBindings(); runDiagnostics(); }catch(e){}
-
   }
 
   function renderInfo(d){
@@ -1322,59 +1319,6 @@
   }
   bindAuthUI();
 
-  // Runtime diagnostics to detect missing bindings and auto-repair common issues.
-  function runDiagnostics(){
-    const issues = [];
-    // Check core elements
-    const coreIds = ['frameBorderColor','wcShow','infoLive','infoRes','infoPlatform'];
-    for(const id of coreIds){ const el=document.getElementById(id); if(!el) issues.push(`Missing element: ${id}`); }
-    // Check key handlers
-    try{ const fCol = document.getElementById('frameBorderColor'); if(fCol && !fCol._bound){ fCol._bound = true; fCol.addEventListener('input', ()=>{ updatePreview(); save(); }); } }
-    catch(e){ issues.push('frameBorderColor binding failed'); }
-
-    // Verify auth state reflects UI (if signed in, editor should be visible)
-    if(signedInUser){ if(document.body.classList.contains('require-auth')){ issues.push('UI in require-auth despite signed in; fixing'); requireAuthUI(false); } }
-
-    // Ensure editor bound
-    if(!editorBound){ try{ bindEditor(); issues.push('Editor bindings were missing; re-bound'); }catch(e){ issues.push('Failed to bind editor: '+e.message); } }
-
-    // Surface quick summary to auth_status (non-blocking)
-    const statusEl = document.getElementById('auth_status'); if(statusEl){ if(issues.length){ statusEl.textContent = 'Diagnostics: ' + issues.join(' | '); statusEl.className = 'pill warn'; } else { statusEl.textContent = ''; statusEl.className = ''; } }
-    return issues;
-  }
-
-  // Run diagnostics + ensure bindings on load/sign-in
-  try{ ensureBindings(); runDiagnostics(); }catch(e){}
-
-  // Ensure core bindings exist and attach them if missing (idempotent)
-  function ensureBindings(){
-    try{
-      const bindIfMissing = (el, key, handler)=>{
-        if(!el) return false;
-        const flag = `__cf_bound_${key}`;
-        if(el[flag]) return true;
-        el.addEventListener('input', handler);
-        el.addEventListener('change', handler);
-        el[flag]=true; return true;
-      };
-
-      // frame border color
-      const fCol = document.getElementById('frameBorderColor'); if(fCol) bindIfMissing(fCol,'frameCol', ()=>{ updatePreview(); save(); });
-      // webcam show
-      const wc = document.getElementById('wcShow'); if(wc) bindIfMissing(wc,'wcShow', ()=>{ updatePreview(); save(); });
-      // info toggles
-      const infoLive = document.getElementById('infoLive'); if(infoLive) bindIfMissing(infoLive,'infoLive', ()=>{ updatePreview(); save(); });
-      const infoRes = document.getElementById('infoRes'); if(infoRes) bindIfMissing(infoRes,'infoRes', ()=>{ updatePreview(); save(); });
-      const infoPlatform = document.getElementById('infoPlatform'); if(infoPlatform) bindIfMissing(infoPlatform,'infoPlatform', ()=>{ updatePreview(); save(); });
-      const resText = document.getElementById('infoResText'); if(resText) bindIfMissing(resText,'infoResText', ()=>{ updatePreview(); save(); });
-      const platText = document.getElementById('infoPlatformText'); if(platText) bindIfMissing(platText,'infoPlatformText', ()=>{ updatePreview(); save(); });
-      // frame border width range
-      const rangeEl = document.getElementById('frameBorderWidth_range'); if(rangeEl && !rangeEl.__cf_bound_range){ rangeEl.addEventListener('input', ()=>{ const v = rangeEl.value; const numEl = document.getElementById('frameBorderWidth'); if(numEl) numEl.value = v; updatePreview(); save(); }); rangeEl.__cf_bound_range = true; }
-
-      return true;
-    }catch(e){ return false; }
-  }
-
   function updateNetBadge(){
     const b = document.getElementById('net_badge');
     if(!b) return;
@@ -1456,7 +1400,6 @@
           setStatus('Signed in');
         }
         applyOverlayOptions();
-        try{ runDiagnostics(); }catch(e){}
       });
     } else {
       subscribe();
