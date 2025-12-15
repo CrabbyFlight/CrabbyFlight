@@ -136,9 +136,7 @@
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
 
-  /* Flight visualization */
-  .flight-track{width:100%;height:38px;background:rgba(255,255,255,.04);border-radius:999px;display:flex;align-items:center;padding:6px 10px;gap:8px}
-  /* compact flight-track that sits at top of info box */
+  /* Flight visualization - compact flight-track that sits at top of info box */
   .flight-track{position:absolute;left:50%;transform:translateX(-50%);top:8px;width:calc(100% - 40px);height:16px;background:transparent;border-radius:999px;display:flex;align-items:center;padding:4px 8px}
     /* slightly lower so there's a small visual gap between airports and the track */
     .info-box{position:relative;background:rgba(33,36,41,0.95);border:1px solid rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.12);color:#fff;padding:44px 14px 10px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;max-width:900px;width:min(94%,900px);backdrop-filter:blur(0);box-sizing:border-box}
@@ -432,7 +430,7 @@
       </div>
       <div style="font-size:15px;line-height:1.6">
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
-        <div><strong>Time:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
+        <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
@@ -954,8 +952,6 @@
     [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme','flightVizEnabled','dep_metar','arr_metar' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
-    // 'Show on info overlay' option removed; visualization is shown on the info overlay when enabled
-
     // Frame border width slider sync
     try{
       const rangeEl = document.getElementById('frameBorderWidth_range');
@@ -1194,7 +1190,6 @@
     try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
     // Update flight viz (if enabled) after populating fields
     try{ renderFlightViz(d); }catch(e){}
-    // METAR/ATIS fetching removed — SimBrief-sourced conditions are used instead
   }
 
   function parseHMToUTCDate(hmStr){
@@ -1262,9 +1257,6 @@
     const out = parts.join(' • ');
     return out.length? out : (raw.slice(0,180) + (raw.length>180? '…':''));
   }
-
-  // Summarize enroute hazards from SimBrief OFP: search NOTAMDREC/NOTAM entries and filter by time/alt
-  // Enroute summary functionality removed — only dep/arr METARs are shown
 
   function renderFlightViz(d){
     const container = document.getElementById('flightViz');
@@ -1485,9 +1477,6 @@
       if(borderOutline){ borderOutline.setAttribute('rx', frameRadius); borderOutline.setAttribute('ry', frameRadius); borderOutline.setAttribute('stroke', 'rgba(0,0,0,.6)'); borderOutline.setAttribute('stroke-width','1'); }
       if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); hairRect.setAttribute('stroke','rgba(0,0,0,.6)'); }
       if(matteRect) matteRect.setAttribute('fill', matte);
-      if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
-      if(borderRect) { borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
-      if(hairRect) { hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
 
       const lg=document.getElementById('frame_logo');
       if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
@@ -1534,11 +1523,7 @@
         }
       }catch(e){}
     }
-    // METAR/ATIS timer removed — no-op
-  }
 
-  function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
-  function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
 
   function bindAuthUI(){
     const emailEl = document.getElementById('auth_email');
