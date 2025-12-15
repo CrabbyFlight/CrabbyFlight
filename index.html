@@ -486,10 +486,6 @@
   <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px">
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
-
-  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
-    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
-  </div>
 </div>
 
 <!-- URLs Modal -->
@@ -903,8 +899,6 @@
         // Update small in-editor previews of the info/frame overlays
         try{ renderInfo(previewD); }catch(e){}
         try{ renderFrame(previewD); }catch(e){}
-        // Send transient preview to any open info iframe so its slider reflects the change immediately
-        try{ const infoIf = document.getElementById('info_iframe'); if(infoIf && infoIf.contentWindow){ infoIf.contentWindow.postMessage({type:'preview', previewD}, location.origin); } }catch(e){}
       }catch(e){}
     }
 
@@ -1195,18 +1189,6 @@
       if(shouldShow){ try{ const base = location.href.split('#')[0].split('?')[0]; imgEl.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ imgEl.src = afkPath; } imgEl.style.display = 'block'; }
       else imgEl.style.display = 'none';
     }
-
-    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-    const infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
-    if(infoWrap && mode === 'frame'){ 
-      infoWrap.style.left='50%'; 
-      infoWrap.style.top=infoY+'px'; 
-      infoWrap.style.transform=`translateX(-50%)${infoScale !== 1 ? ` scale(${infoScale})` : ''}`; 
-      infoWrap.style.transformOrigin='top center';
-      infoWrap.style.display='block'; 
-      infoWrap.setAttribute('aria-hidden','false'); 
-    }
-    if(infoIframe && mode === 'frame'){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
   function subscribe(){
@@ -1287,18 +1269,6 @@
         if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'none'; }
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
-
-      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-      const infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
-      if(infoWrap){ 
-        infoWrap.style.left='50%'; 
-        infoWrap.style.top=infoY+'px'; 
-        infoWrap.style.transform=`translateX(-50%)${infoScale !== 1 ? ` scale(${infoScale})` : ''}`; 
-        infoWrap.style.transformOrigin='top center';
-        infoWrap.style.display='block'; 
-        infoWrap.setAttribute('aria-hidden','false'); 
-      }
-      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
 
