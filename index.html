@@ -383,15 +383,13 @@
 <div id="screen-info" class="container">
   <div class="info-box">
     <div class="info-left">
-      <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
+      <div class="info-airport"><span id="i_from">LIVERPOOL (EGGP)</span><span id="i_dep_emoji" style="margin-left:12px;font-size:18px"></span></div>
       <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
     </div>
 
     <div class="info-center">
-      <div style="font-size:18px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:24px">
-        <span id="i_dep_emoji" style="font-size:20px"></span>
-        <span><span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span></span>
-        <span id="i_arr_emoji" style="font-size:20px"></span>
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px">
+        <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
       </div>
       <div style="font-size:15px;line-height:1.6">
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
@@ -404,7 +402,7 @@
     </div>
 
     <div class="info-right">
-      <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
+      <div class="info-airport"><span id="i_arr_emoji" style="margin-right:12px;font-size:18px"></span><span id="i_to">EDINBURGH (EGPH)</span></div>
       <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
     </div>
   </div>
