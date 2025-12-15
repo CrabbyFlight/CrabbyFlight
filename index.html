@@ -396,8 +396,9 @@
         <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
+        <span id="i_res">1080p60FPS</span>
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
-        <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+        <span id="i_platform">macOS + OneCast</span>
       </div>
     </div>
 
@@ -860,7 +861,6 @@
       const liveEl = document.getElementById('i_live_block');
       const resEl = document.getElementById('i_res');
       const platEl = document.getElementById('i_platform');
-      const sepEl = document.getElementById('i_sep');
       const infoLiveShown = (editorEls['infoLive']?.checked === true);
       const infoResShown = (editorEls['infoRes']?.checked === true);
       const infoPlatformShown = (editorEls['infoPlatform']?.checked === true);
@@ -869,7 +869,6 @@
       if(liveEl) liveEl.style.display = infoLiveShown ? 'inline-flex' : 'none';
       if(resEl){ resEl.textContent = resText; resEl.style.display = infoResShown ? 'inline' : 'none'; }
       if(platEl){ platEl.textContent = platText; platEl.style.display = infoPlatformShown ? 'inline' : 'none'; }
-      if(sepEl) sepEl.style.display = (infoResShown && infoPlatformShown) ? 'inline' : 'none';
       if(afkImg){
         if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
@@ -1218,11 +1217,9 @@
     const resShould = resParam === 'on' ? true : resParam === 'off' ? false : infoResSaved;
     const platShould = platParam === 'on' ? true : platParam === 'off' ? false : infoPlatformSaved;
     const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform');
-    const sepEl = document.getElementById('i_sep');
     if(liveEl) liveEl.style.display = liveShould ? 'inline-flex' : 'none';
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
-    if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
     // normalize dep/arr times so they match SimBrief's parsed UTC format
     try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
     
