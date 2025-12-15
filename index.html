@@ -1458,8 +1458,12 @@
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
-    const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
-      if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
+    const place=(el)=>{ if(!el) return; 
+      console.log('[place] Before:', el.id, 'left:', el.style.left, 'transform:', el.style.transform);
+      if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
+      if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; 
+      console.log('[place] After:', el.id, 'left:', el.style.left, 'transform:', el.style.transform);
+    };
     if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
     if (mode==='departures') place(document.getElementById('screen-departures'));
     if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
