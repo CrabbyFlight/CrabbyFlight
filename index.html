@@ -388,8 +388,10 @@
     </div>
 
     <div class="info-center">
-      <div style="font-size:18px;font-weight:700;margin-bottom:2px">
-        <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:12px">
+        <span id="i_dep_emoji" style="font-size:20px"></span>
+        <span><span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span></span>
+        <span id="i_arr_emoji" style="font-size:20px"></span>
       </div>
       <div style="font-size:15px;line-height:1.6">
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
@@ -1142,15 +1144,11 @@
     el.style.fontSize = '14px';
     el.style.fontWeight = '700';
     
-    // Update airport name with weather emoji (after the name)
-    const airportElId = type === 'dep' ? 'i_from' : 'i_to';
-    const airportEl = document.getElementById(airportElId);
-    if (airportEl && emoji) {
-      // Store original text if not already stored
-      if (!airportEl.dataset.originalText) {
-        airportEl.dataset.originalText = airportEl.textContent;
-      }
-      airportEl.textContent = `${airportEl.dataset.originalText} ${emoji}`;
+    // Update weather emoji in the center flight section
+    const emojiElId = type === 'dep' ? 'i_dep_emoji' : 'i_arr_emoji';
+    const emojiEl = document.getElementById(emojiElId);
+    if (emojiEl) {
+      emojiEl.textContent = emoji || '';
     }
   }
 
@@ -1190,8 +1188,8 @@
     const toText = val('to',DEFAULTS.to);
     const fromEl = document.getElementById('i_from');
     const toEl = document.getElementById('i_to');
-    if (fromEl) { fromEl.textContent = fromText; fromEl.dataset.originalText = fromText; }
-    if (toEl) { toEl.textContent = toText; toEl.dataset.originalText = toText; }
+    if (fromEl) { fromEl.textContent = fromText; }
+    if (toEl) { toEl.textContent = toText; }
     
     setT('i_dep_utc',val('dep_utc',DEFAULTS.dep_utc)); setT('i_arr_utc',val('arr_utc',DEFAULTS.arr_utc));
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
