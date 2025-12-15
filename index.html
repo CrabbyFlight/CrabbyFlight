@@ -1429,26 +1429,11 @@
         infoWrap.setAttribute('aria-hidden','false'); 
       }
       if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
-      // Add compact enroute/airport summaries into the frame context (fallback when iframe doesn't show them)
-      try{
-        const usp = new URLSearchParams(location.search);
-        const enrouteTxt = '';
-        const depTxt = summarizeMetarPlain(usp.get('dep_metar') || d?.dep_metar || '') || parseMetarSummary(usp.get('dep_metar') || d?.dep_metar || '');
-        const arrTxt = summarizeMetarPlain(usp.get('arr_metar') || d?.arr_metar || '') || parseMetarSummary(usp.get('arr_metar') || d?.arr_metar || '');
-        if(infoWrap){
-          let dEl = document.getElementById('embed_dep_weather');
-          if(!dEl){ dEl = document.createElement('div'); dEl.id='embed_dep_weather'; dEl.style.position='absolute'; dEl.style.left='8px'; dEl.style.top='6px'; dEl.style.fontSize='14px'; dEl.style.color='white'; dEl.style.opacity='.9'; dEl.style.pointerEvents='none'; infoWrap.appendChild(dEl); }
-          dEl.textContent = depTxt || '';
-          dEl.style.display = depTxt ? 'block' : 'none';
-
-          let aEl = document.getElementById('embed_arr_weather');
-          if(!aEl){ aEl = document.createElement('div'); aEl.id='embed_arr_weather'; aEl.style.position='absolute'; aEl.style.right='8px'; aEl.style.top='6px'; aEl.style.fontSize='14px'; aEl.style.color='white'; aEl.style.opacity='.9'; aEl.style.pointerEvents='none'; infoWrap.appendChild(aEl); }
-          aEl.textContent = arrTxt || '';
-          aEl.style.display = arrTxt ? 'block' : 'none';
-        }
-      }catch(e){}
     }
+  }
 
+  function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
+  function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
 
   function bindAuthUI(){
     const emailEl = document.getElementById('auth_email');
