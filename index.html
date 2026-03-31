@@ -290,6 +290,10 @@
         <label for="infoPlatform">Platform</label>
         <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Show platform</span></div>
       </div>
+      <div>
+        <label for="infoMetar">METAR</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoMetar" type="checkbox" checked><span class="hint">Show METAR data</span></div>
+      </div>
     </div>
     <div class="grid" style="margin-top:8px">
       <div><label for="infoResText">Resolution text</label><input id="infoResText" placeholder="1080p60FPS"></div>
@@ -398,6 +402,12 @@
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
         <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+      </div>
+      <div id="i_metar_block" style="display:none;font-size:11px;margin-top:10px;opacity:.75;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
+        <div style="display:flex;justify-content:center;gap:20px;font-family:monospace">
+          <span><span style="color:rgba(255,165,0,.85);font-weight:600">DEP:</span> <span id="i_dep_metar" style="font-size:10px">—</span></span>
+          <span><span style="color:rgba(255,165,0,.85);font-weight:600">ARR:</span> <span id="i_arr_metar" style="font-size:10px">—</span></span>
+        </div>
       </div>
     </div>
 
@@ -568,7 +578,7 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","frameBorderColor","frameBorderRadius",
-    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme"];
+    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoMetar","infoResText","infoPlatformText","theme"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", frameBorderColor: "#3d434b", frameBorderRadius: "28",
@@ -863,15 +873,18 @@
       const resEl = document.getElementById('i_res');
       const platEl = document.getElementById('i_platform');
       const sepEl = document.getElementById('i_sep');
+      const metarEl = document.getElementById('i_metar_block');
       const infoLiveShown = (editorEls['infoLive']?.checked === true);
       const infoResShown = (editorEls['infoRes']?.checked === true);
       const infoPlatformShown = (editorEls['infoPlatform']?.checked === true);
+      const infoMetarShown = (editorEls['infoMetar']?.checked === true);
       const resText = (editorEls['infoResText']?.value || '1080p60FPS').toString().trim();
       const platText = (editorEls['infoPlatformText']?.value || 'macOS + OneCast').toString().trim();
       if(liveEl) liveEl.style.display = infoLiveShown ? 'inline-flex' : 'none';
       if(resEl){ resEl.textContent = resText; resEl.style.display = infoResShown ? 'inline' : 'none'; }
       if(platEl){ platEl.textContent = platText; platEl.style.display = infoPlatformShown ? 'inline' : 'none'; }
       if(sepEl) sepEl.style.display = (infoResShown && infoPlatformShown) ? 'inline' : 'none';
+      if(metarEl) metarEl.style.display = infoMetarShown ? 'block' : 'none';
       if(afkImg){
         if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
@@ -896,7 +909,7 @@
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoMetar','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // Frame border width slider sync
@@ -1219,12 +1232,26 @@
     const liveShould = liveParam === 'on' ? true : liveParam === 'off' ? false : infoLiveSaved;
     const resShould = resParam === 'on' ? true : resParam === 'off' ? false : infoResSaved;
     const platShould = platParam === 'on' ? true : platParam === 'off' ? false : infoPlatformSaved;
-    const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform');
+    const metarParam = (usp.get('infoMetar')||'').toLowerCase();
+    const infoMetarSaved = (val('infoMetar','on') === 'on');
+    const metarShould = metarParam === 'on' ? true : metarParam === 'off' ? false : infoMetarSaved;
+    const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform'), metarEl=document.getElementById('i_metar_block');
     const sepEl = document.getElementById('i_sep');
     if(liveEl) liveEl.style.display = liveShould ? 'inline-flex' : 'none';
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
+    if(metarEl){ 
+      metarEl.style.display = metarShould ? 'block' : 'none';
+      if(metarShould){
+        const depMetarVal = val('dep_metar', '');
+        const arrMetarVal = val('arr_metar', '');
+        const depMetarEl = document.getElementById('i_dep_metar');
+        const arrMetarEl = document.getElementById('i_arr_metar');
+        if(depMetarEl) depMetarEl.textContent = depMetarVal || '—';
+        if(arrMetarEl) arrMetarEl.textContent = arrMetarVal || '—';
+      }
+    }
     // normalize dep/arr times so they match SimBrief's parsed UTC format
     try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
     
