@@ -49,7 +49,7 @@
   html.dark button.primary{ background: #1f6fe8; box-shadow:0 4px 12px rgba(31,111,232,.14) }
   #screen-editor,#screen-info,#screen-departures,#screen-auth,#screen-frame{display:none}
   body.editor #screen-editor{display:block}
-  body.info #screen-info{display:flex}
+  body.info #screen-info{display:block}
   body.departures #screen-departures{display:block}
   body.frame #screen-frame{display:block}
   body.require-auth #screen-editor{display:none!important}
@@ -119,13 +119,14 @@
   .auth-status{font-size:12px;color:#ffb4b4;min-height:18px}
   .auth-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 
-  .container{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:center;pointer-events:none}
+  .container{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center;pointer-events:none}
   .container .info-box{pointer-events:auto;z-index:20}
-  .info-left{text-align:left;display:flex;flex-direction:column;gap:6px;min-width:160px}
-  .info-center{text-align:center;display:flex;flex-direction:column;gap:6px;padding:0 14px;flex-shrink:0;white-space:nowrap}
-  .info-right{text-align:right;display:flex;flex-direction:column;gap:6px;min-width:160px}
-  .info-airport{font-size:18px;font-weight:700;color:#FFA500;letter-spacing:.3px;line-height:1.05;white-space:nowrap}
-  .info-time{font-size:13px;color:rgba(255,255,255,.9);font-weight:600}
+  .info-box{background:rgba(44,48,54,.85);border:1px solid rgba(0,0,0,.6);border-radius:var(--frame-border-radius,12px);box-shadow:0 12px 32px rgba(0,0,0,.4);color:#fff;padding:20px 32px;display:grid;grid-template-columns:1fr auto 1fr;gap:32px;align-items:start;max-width:1280px;width:min(95%,1280px);text-shadow:1px 1px 3px rgba(0,0,0,.8);backdrop-filter:blur(4px);box-sizing:border-box}
+  .info-left{text-align:left;display:flex;flex-direction:column;gap:6px;min-width:240px}
+  .info-center{text-align:center;display:flex;flex-direction:column;gap:8px;padding:0 28px;border-left:1px solid rgba(255,255,255,.2);border-right:1px solid rgba(255,255,255,.2);flex-shrink:0;white-space:nowrap}
+  .info-right{text-align:right;display:flex;flex-direction:column;gap:6px;min-width:240px}
+  .info-airport{font-size:26px;font-weight:700;color:#FFA500;letter-spacing:.3px;line-height:1.2;white-space:nowrap}
+  .info-time{font-size:15px;color:rgba(255,255,255,.9);font-weight:600}
   .info-time strong{font-weight:700;margin-right:4px}
   .plane-icon{vertical-align:middle;margin:0 5px;transform:rotate(90deg);width:16px;height:16px}
 
@@ -136,9 +137,6 @@
   .live-text{color:red;font-weight:700;animation:flashText 1s infinite}
   .dynamic{color:#FFA500;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.9)}
 
-  .info-box{position:relative;background:linear-gradient(to bottom, rgba(33,36,41,1) 0%, rgba(33,36,41,1) var(--info-cover-height, 50px), rgba(33,36,41,0.95) var(--info-cover-height, 50px), rgba(33,36,41,0.95) 100%);border:1px solid rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.12);color:#fff;padding:18px 24px;display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:start;max-width:1100px;width:min(94%,1100px);backdrop-filter:blur(0);box-sizing:border-box}
-  .airport-weather{font-size:14px;font-weight:700;color:rgba(255,255,255,.9);margin-top:6px}
-
   .board{position:absolute;top:32px;left:32px;width:calc(1920px - 64px);max-width:calc(100vw - 64px);border-radius:var(--frame-border-radius,12px);overflow:hidden;background:linear-gradient(180deg, rgba(44,48,54,.98), rgba(33,36,41,.98));border:1px solid var(--frame-border-color, #3d434b);box-shadow:0 14px 34px rgba(0,0,0,.22);box-sizing:border-box}
   .header{background:#FFA500;color:white;display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;padding:12px 18px;font-size:20px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.03)}
   .header svg{width:22px;height:22px}
@@ -146,10 +144,9 @@
   body.ready .header::after{display:block}
   @keyframes hdrSweep{0%{transform:translateX(0)}100%{transform:translateX(250%)}}
   .table{display:grid;grid-template-columns:96px 1fr 1fr 120px 72px 188px;column-gap:14px;padding:10px 18px 14px;font-size:17px;color:#1a1a1a}
-  .table .cell{color:#1a1a1a}
   .th,.tr{display:contents}
-  .th span{color:#cfcfcf;padding:8px 0 6px;border-bottom:1px solid rgba(255,255,255,.20);text-transform:uppercase;font-size:14px;letter-spacing:.8px}
-  .cell{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);min-height:44px;display:flex;align-items:center}
+  .th span{color:#1a1a1a;padding:8px 0 6px;border-bottom:1px solid rgba(0,0,0,.20);text-transform:uppercase;font-size:14px;letter-spacing:.8px}
+  .cell{padding:10px 0;border-bottom:1px solid rgba(0,0,0,.08);min-height:44px;display:flex;align-items:center;color:#1a1a1a}
   .status{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.3px;background:#31363d;border:1px solid #3f454d}
   .dot{width:8px;height:8px;border-radius:50%;background:#999}
   .on-time{color:#00ff90}.on-time .dot{background:#00ff90}
@@ -183,8 +180,8 @@
   .frame-svg{position:absolute;inset:0;pointer-events:none}
   .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:12px;display:flex;align-items:center;gap:10px;font-weight:800;padding:8px 12px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);text-shadow:2px 2px 4px rgba(0,0,0,.9)}
   .frame-logo img{width:22px;height:22px}
-  .embed{position:absolute;transform-origin:top center}
-  .embed iframe{width:1920px;height:360px;border:0;background:transparent;pointer-events:none}
+  .embed{position:absolute;transform-origin:top left}
+  .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
 </style>
 </head>
@@ -222,10 +219,9 @@
 
   <!-- SimBrief Integration -->
   <div class="card">
-    <h3 style="margin:0 0 14px;font-size:18px">SimBrief Import</h3>
     <div class="sb-row">
       <div>
-        <label for="simbrief_id">PilotID or Username</label>
+        <label for="simbrief_id">SimBrief PilotID or Username</label>
         <input id="simbrief_id" placeholder="e.g. 123456 / myhandle">
       </div>
       <button id="btn_import_sb" class="primary" type="button" title="Fetch your latest OFP and fill the fields">Import from SimBrief</button>
@@ -233,32 +229,18 @@
     </div>
   </div>
 
-  <!-- Flight Details -->
   <div class="card">
-    <h3 style="margin:0 0 14px;font-size:18px">Flight Details</h3>
     <div class="grid">
       <div><label for="from">From</label><input id="from" placeholder="Oslo (ENGM)"></div>
       <div><label for="to">To</label><input id="to" placeholder="Liverpool (EGGP)"></div>
     </div>
-    <div class="grid-3">
-      <div><label for="flight">Flight Number</label><input id="flight" placeholder="POR9392"></div>
-      <div><label for="aircraft">Aircraft</label><input id="aircraft" placeholder="A320-251N"></div>
-      <div><label for="airframe">Registration</label><input id="airframe" placeholder="G-WALI"></div>
+    <div class="grid">
+      <div><label for="flight">Flight</label><input id="flight" placeholder="POR9392"></div>
     </div>
-    <div class="grid-3">
-      <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
-      <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
-      <div><label for="cruise">Cruise Altitude</label><input id="cruise" placeholder="35,000ft"></div>
-    </div>
-  </div>
-
-  <!-- Departures Board Settings -->
-  <div class="card">
-    <h3 style="margin:0 0 14px;font-size:18px">Departures Board</h3>
-    <div class="grid-3">
-      <div><label for="gate">Gate</label><input id="gate" placeholder="B12"></div>
+    <div class="grid">
+      <div><label for="gate">Gate (Departures)</label><input id="gate" placeholder="B12"></div>
       <div>
-        <label for="status">Status</label>
+        <label for="status">Status (Departures)</label>
         <select id="status">
           <option value="on-time">ON TIME</option>
           <option value="boarding">BOARDING</option>
@@ -268,39 +250,53 @@
           <option value="custom">Custom…</option>
         </select>
       </div>
-      <div id="customRow" style="display:none">
-        <label for="status_custom">Custom status</label>
-        <input id="status_custom" placeholder="e.g. DIVERTED TO EDI">
-      </div>
     </div>
-  </div>
 
-  <!-- Info Overlay Settings -->
-  <div class="card">
-    <h3 style="margin:0 0 14px;font-size:18px">Info Overlay</h3>
+    <div class="grid" id="customRow" style="display:none">
+      <div><label for="status_custom">Custom status text</label><input id="status_custom" placeholder="e.g. DIVERTED TO EDI"></div>
+      <div><label>&nbsp;</label><input disabled value="Shown on the board as blue badge"></div>
+    </div>
+
+    <div class="grid">
+      <div><label for="dep_utc">Departure UTC</label><input id="dep_utc" placeholder="14:30 UTC"></div>
+      <div><label for="arr_utc">Arrival UTC</label><input id="arr_utc" placeholder="16:30 UTC"></div>
+    </div>
     <div class="grid-3">
+      <div><label for="aircraft">Aircraft (Info)</label><input id="aircraft" placeholder="A320-251N"></div>
+      <div><label for="airframe">Airframe (Reg)</label><input id="airframe" placeholder="G-WALI"></div>
+      <div><label for="cruise">Cruise (Info)</label><input id="cruise" placeholder="35,000ft"></div>
+    </div>
+    <div class="grid">
+      <div><label for="enroute">Time en route (Info)</label><input id="enroute" placeholder="~2hrs"></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
       <div>
-        <label for="infoLive">Live indicator</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoLive" type="checkbox" checked><span class="hint">Show LIVE badge</span></div>
+        <label for="infoLive">Show live indicator</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoLive" type="checkbox" checked><span class="hint">Show the LIVE indicator on the info overlay</span></div>
       </div>
       <div>
-        <label for="infoRes">Resolution</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoRes" type="checkbox" checked><span class="hint">Show resolution</span></div>
+        <label for="infoRes">Show resolution</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoRes" type="checkbox" checked><span class="hint">Display resolution text (e.g., 1080p60FPS)</span></div>
       </div>
       <div>
-        <label for="infoPlatform">Platform</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Show platform</span></div>
+        <label for="infoPlatform">Show platform</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Display platform text (macOS + OneCast)</span></div>
       </div>
     </div>
-    <div class="grid" style="margin-top:8px">
-      <div><label for="infoResText">Resolution text</label><input id="infoResText" placeholder="1080p60FPS"></div>
-      <div><label for="infoPlatformText">Platform text</label><input id="infoPlatformText" placeholder="macOS + OneCast"></div>
+    <div class="grid-3" style="margin-top:8px">
+      <div>
+        <label for="infoResText">Resolution text</label>
+        <input id="infoResText" placeholder="1080p60FPS">
+      </div>
+      <div>
+        <label for="infoPlatformText">Platform text</label>
+        <input id="infoPlatformText" placeholder="macOS + OneCast">
+      </div>
+      <div></div>
     </div>
-  </div>
 
-  <!-- Frame & Webcam Settings -->
-  <div class="card">
-    <h3 style="margin:0 0 14px;font-size:18px">Frame &amp; Webcam</h3>
+    <div class="card" style="margin-top:10px">
+      <h3 style="margin:0 0 10px;font-size:18px">Frame and Webcam Settings</h3>
 
       <div class="grid-3">
         <div>
@@ -332,6 +328,10 @@
             <input id="frameBorderWidth" type="number" min="0" max="48" placeholder="6" style="width:64px">
           </div>
         </div>
+        <div>
+          <label for="wcShow">Toggle webcam</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="wcShow" type="checkbox" checked><span class="hint">Toggle webcam on/off</span></div>
+        </div>
       </div>
       <div class="grid">
         <div><label>Rounded mask (matches webcam size & radius)</label></div>
@@ -340,17 +340,15 @@
 
 
 
-    <div class="grid-3" style="margin-top:10px">
-      <div>
-        <label for="logoShow">Frame logo</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="logoShow" type="checkbox" checked><span class="hint">Show CrabbyFlight logo</span></div>
+      <div class="grid-3" style="margin-top:10px">
+        <div>
+          <label for="logoShow">Show frame logo</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="logoShow" type="checkbox" checked><span class="hint">Show the CrabbyFlight logo on the frame</span></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Actions -->
-  <div class="card">
-    <div class="btns" style="margin-top:0">
+    <div class="btns">
       <button id="openInfo" type="button">Open Info</button>
       <button id="openDep" type="button">Open Departures</button>
       <button id="openFrame" type="button">Open Frame</button>
@@ -365,14 +363,13 @@
       </div>
       <button id="btn_signout" type="button" style="margin-left:8px">Sign out</button>
     </div>
-  </div>
-
-  <div class="footer">
+    <div class="footer">
       <a href="about.html" target="_blank" rel="noopener">About</a>
       <span class="sep">|</span>
       <a href="README.md" target="_blank" rel="noopener">README</a>
       <span class="sep">|</span>
       <a href="license.txt" target="_blank" rel="noopener">License</a>
+    </div>
   </div>
 </div>
 
@@ -380,7 +377,7 @@
 <div id="screen-info" class="container">
   <div class="info-box">
     <div class="info-left">
-      <div class="info-airport"><span id="i_from">LIVERPOOL (EGGP)</span></div>
+      <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
       <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
     </div>
 
@@ -390,7 +387,7 @@
       </div>
       <div style="font-size:15px;line-height:1.6">
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
-        <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span></div>
+        <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">24,000ft</span> | <strong>Time:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
@@ -399,9 +396,11 @@
     </div>
 
     <div class="info-right">
-      <div class="info-airport"><span id="i_to">EDINBURGH (EGPH)</span></div>
-      <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:30 UTC</span></div>
+      <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
+      <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
     </div>
+  </div>
+</div>
 
 <!-- DEPARTURES OVERLAY -->
 <div id="screen-departures" class="board" aria-live="polite">
@@ -476,6 +475,10 @@
 
   <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px">
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
+  </div>
+
+  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
+    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
   </div>
 </div>
 
@@ -562,14 +565,14 @@
     bind();
   });
 
-  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","frameBorderColor","frameBorderRadius",
+  const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","enroute","frameBorderColor","frameBorderRadius",
     "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
-    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", frameBorderColor: "#3d434b", frameBorderRadius: "28",
+    aircraft:"A320-251N", airframe:"", cruise:"35,000ft", enroute:"~2hrs", frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
-    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" };
+    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" }; 
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -619,19 +622,17 @@
     if(m4){ const sign=m4[1]==='-'?-1:1; const num=parseInt(m4[2],10); const hrs=Math.floor(num/100), mins=num%100; return sign*(hrs*60+mins); }
     return null;
   }
-
   function addMinutesHM(h,m,delta){
     const total=h*60+m+delta;
     const t=((total%(24*60))+(24*60))%(24*60);
     return {h:Math.floor(t/60), m:t%60};
   }
-
   function formatEte(val){
     const raw=(val||'').toString().trim();
     if(!raw) return '';
     let m=raw.match(/^(\d{1,2}):(\d{2})$/);
     if(m){ const hm=normalizeHM(parseInt(m[1],10), parseInt(m[2],10)); return `~${hm.h}h${hm.m?` ${hm.m}m`:''}`; }
-    if(/^[0-9]+$/.test(raw)){
+    if(/^\d+$/.test(raw)){
       const num=parseInt(raw,10);
       if(raw.length===4 && num<=2359){ const hm=normalizeHM(Math.floor(num/100), num%100); return `~${hm.h}h${hm.m?` ${hm.m}m`:''}`; }
       const mins = num>600 ? Math.round(num/60) : num;
@@ -730,11 +731,6 @@
     const doc=new DOMParser().parseFromString(xmlText,'application/xml');
     if(doc.querySelector('parsererror')) throw new Error('XML parse error');
 
-    return parseSimBriefDoc(doc);
-  }
-
-  // Extract useful fields from a parsed SimBrief XML document
-  function parseSimBriefDoc(doc){
     const fromIcao = pickText(doc,'OFP origin icao_code','origin icao_code','general orig_icao');
     const fromName = pickText(doc,'OFP origin name','origin name','general orig_name','origin city');
     const toIcao   = pickText(doc,'OFP destination icao_code','destination icao_code','general dest_icao');
@@ -742,34 +738,32 @@
 
     const airline  = pickText(doc,'OFP general airline_icao','general airline_icao','general icao_airline');
     const fltNum   = pickText(doc,'OFP general flight_number','general flight_number','general number');
+    // callsign removed: we display only flight number (SimBrief still contains callsign but it's redundant)
     const aircraft = pickText(doc,'OFP aircraft name','aircraft name','aircraft type','OFP aircraft icao_code','aircraft icao_code','general aircraft_icao');
     const airframe = pickText(doc,'aircraft reg','reg','OFP aircraft reg','general reg');
     const cruiseFt = pickText(doc,'OFP performance cruise_altitude','performance cruise_altitude','general cruise_altitude','general initial_altitude');
     const eteRaw   = pickText(doc,'OFP times est_time_enroute','times est_time_enroute','general ete');
 
+    
     const fmtCruise=(a)=>{ const n=parseInt(String(a||'').replace(/\D/g,''),10); return Number.isFinite(n)&&n>0? n.toLocaleString()+'ft' : (a||''); };
-    const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:'') : '';
+    const fmtLoc=(name,icao)=> (name||icao) ? (name||icao)+(icao?` (${icao.toUpperCase()})`:''):'';
 
     const dep = getUtcTime(doc, 'dep');
     const arr = getUtcTime(doc, 'arr');
-    const depMetar = pickText(doc, 'origin metar','origin weather','OFP origin metar','OFP origin weather');
-    const arrMetar = pickText(doc, 'destination metar','destination weather','OFP destination metar','OFP destination weather');
-
     return {
       patch: {
         from: fmtLoc(fromName, fromIcao),
         to:   fmtLoc(toName, toIcao),
         flight: (airline&&fltNum)?(airline.toUpperCase()+fltNum):pickText(doc,'general flight'),
+        // callsign removed from patch
         aircraft: (aircraft||'').toString().trim(),
         airframe: (airframe||'').toUpperCase(),
         cruise: fmtCruise(cruiseFt),
         enroute: formatEte(eteRaw),
         dep_utc: (dep?.label||'').toString().trim(),
         arr_utc: (arr?.label||'').toString().trim(),
-        dep_metar: (depMetar||'').toString().trim(),
-        arr_metar: (arrMetar||'').toString().trim()
       },
-      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source }
+      meta: { note: (dep?.label || arr?.label) ? 'utc_autosynced' : 'utc_unchanged', dep_src: dep?.source, arr_src: arr?.source, dep_raw: dep?.raw, arr_raw: arr?.raw, dep_hm: dep?.hm, arr_hm: arr?.hm, dep_offMin: dep?.offMin, arr_offMin: arr?.offMin, aircraft_raw: aircraft, airframe_raw: airframe }
     };
   }
 
@@ -814,7 +808,7 @@
       sanitizeUTCField(el);
     });
 
-    function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'block' : 'none'; }
+    function toggleCustom(){ if(customRow) customRow.style.display = (statusEl?.value==='custom') ? 'grid' : 'none'; }
     if (statusEl){ statusEl.addEventListener('change', toggleCustom); toggleCustom(); }
 
     (function initWcPreset(){
@@ -875,20 +869,6 @@
           afkImg.style.display = 'none';
         }
       }
-      // Render an editor preview of flight viz
-      try{
-        const previewD = {
-          from: editorEls['from']?.value || DEFAULTS.from,
-          to: editorEls['to']?.value || DEFAULTS.to,
-          dep_utc: editorEls['dep_utc']?.value || DEFAULTS.dep_utc,
-          arr_utc: editorEls['arr_utc']?.value || DEFAULTS.arr_utc,
-          aircraft: editorEls['aircraft']?.value || DEFAULTS.aircraft,
-          cruise: editorEls['cruise']?.value || DEFAULTS.cruise
-        };
-        // Update small in-editor previews of the info/frame overlays
-        try{ renderInfo(previewD); }catch(e){}
-        try{ renderFrame(previewD); }catch(e){}
-      }catch(e){}
     }
 
     [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
@@ -924,16 +904,6 @@
     }catch(e){}
 
     const byId = (id)=>document.getElementById(id);
-    // Listen for preview messages from editor (used when an editor opens an info overlay iframe)
-    addEventListener('message', (ev)=>{
-      try{
-        if(!ev.data || ev.data.type!=='preview') return;
-        // Only accept messages from same origin for safety
-        if(ev.origin !== location.origin) return;
-        const pd = ev.data.previewD;
-        if(pd) try{ renderInfo(pd); }catch(e){}
-      }catch(e){}
-    });
     const openInNew = (url)=>{
       const w = window.open(url, '_blank');
       try{ if(w) w.opener = null; }catch(e){}
@@ -975,24 +945,24 @@
         const {patch, meta} = await importFromSimBrief(id);
         // SimBrief import meta available if needed for debugging
 
-        // Apply imported values into editor fields (set even empty strings to clear)
         Object.entries(patch).forEach(([k,val])=>{
           const el = editorEls[k];
-          if (el) el.value = (typeof val === 'undefined' ? '' : val);
+          if (el && val) el.value = val;
         });
 
-        // Normalize times before triggering preview updates
         sanitizeUTCField(editorEls['dep_utc']);
         sanitizeUTCField(editorEls['arr_utc']);
 
-        // Always trigger input events so the editor preview (and frame fallback) updates immediately
-        ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise']
+        if (canSave) ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','enroute']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
-        // If signed in, save/publish the imported data
-        if (canSave) save();
-
-        setSimBriefStatus('Imported ✓' + (canSave ? '' : ' — sign in to publish'), false, true);
+        if (meta?.note === 'utc_autosynced'){
+          const depMsg = meta?.dep_src ? `DEP(${meta.dep_src})` : '';
+          const arrMsg = meta?.arr_src ? `ARR(${meta.arr_src})` : '';
+          setSimBriefStatus(`Imported ✓ (UTC updated ${depMsg} ${arrMsg})`, false, true);
+        } else {
+          setSimBriefStatus('Imported ✓ (UTC unchanged — manual)', false, true);
+        }
       }catch(err){
         setSimBriefStatus(`Import failed: ${err?.message||err}`, true);
       }
@@ -1000,20 +970,10 @@
 
   }
 
-
-
   function renderInfo(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
-    
-    // Set airport names and store original text for emoji prepending
-    const fromText = val('from',DEFAULTS.from);
-    const toText = val('to',DEFAULTS.to);
-    const fromEl = document.getElementById('i_from');
-    const toEl = document.getElementById('i_to');
-    if (fromEl) { fromEl.textContent = fromText; }
-    if (toEl) { toEl.textContent = toText; }
-    
+    setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
     setT('i_dep_utc',val('dep_utc',DEFAULTS.dep_utc)); setT('i_arr_utc',val('arr_utc',DEFAULTS.arr_utc));
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
     const frameRadiusSaved = val('frameBorderRadius', DEFAULTS.frameBorderRadius);
@@ -1022,8 +982,7 @@
     const aircraftSaved = val('aircraft', DEFAULTS.aircraft);
     const airframeSaved = val('airframe', '');
     const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
-    setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise));
-    
+    setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
@@ -1042,21 +1001,7 @@
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
-    // normalize dep/arr times so they match SimBrief's parsed UTC format
-    try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
-    
-    // Calculate info-box cover height to hide frame border behind top portion
-    // Uses topH (frame top height) + padding to ensure full coverage
-    if (mode === 'info') {
-      const usp = new URLSearchParams(location.search);
-      const topH = parseFloat(usp.get('topH') || '') || 32; // default topH from frame
-      const pad = parseFloat(usp.get('pad') || '') || 16;
-      const coverHeight = topH + pad + 20; // extra pixels to ensure coverage
-      document.documentElement.style.setProperty('--info-cover-height', `${coverHeight}px`);
-    }
   }
-
-
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
@@ -1068,7 +1013,7 @@
     const depDisp = parseTimeUTC(depRaw) || DEFAULTS.dep_utc;
     const arrDisp = parseTimeUTC(arrRaw) || DEFAULTS.arr_utc;
     // parsed departure/arrival times for display
-    setT('d_dep',depDisp); setT('d_arr',arrDisp);
+    setT('d_dep',depDisp); setT('d_arr',arrDisp); setT('d_enroute',val('enroute',DEFAULTS.enroute));
     setT('d_time',(depDisp||'').replace(' UTC',''));
 
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
@@ -1096,7 +1041,7 @@
     const usp=new URLSearchParams(location.search);
     const orNum=(k,cur)=>{ const f=parseFloat(usp.get(k)||''); return Number.isNaN(f)?cur:f; };
     const orStr=(k,cur)=> usp.get(k) ?? cur;
-    const pad = orNum('pad',16), topH = orNum('topH',32), logoGap = orNum('logoGap',18);
+    const pad = orNum('pad',16), topH = orNum('topH',22), logoGap = orNum('logoGap',18);
     const matte = orStr('matte','#1d1f22');
 
     const holeX=pad, holeY=pad+topH, holeW=1920-pad*2, holeH=Math.max(200,1080-holeY-pad);
@@ -1129,15 +1074,18 @@
       if(shouldShow){ try{ const base = location.href.split('#')[0].split('?')[0]; imgEl.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ imgEl.src = afkPath; } imgEl.style.display = 'block'; }
       else imgEl.style.display = 'none';
     }
+
+    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
+    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
   function subscribe(){
     if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
     const r = ref(db, `rooms/${room}`);
-    let lastData = null;
     dbUnsub = onValue(r, snap=>{
       const data = snap.val() || DEFAULTS;
-      lastData = data;
 
       if (mode==='info') renderInfo(data);
       if (mode==='departures') renderDepartures(data);
@@ -1151,6 +1099,31 @@
           if (typeof val === 'undefined') continue;
           if (el.type === 'checkbox') el.checked = (String(val) === 'on'); else el.value = val;
         }
+        // Keep border width slider in sync when data loads from DB
+        try{
+          const rangeEl = document.getElementById('frameBorderWidth_range');
+          const numEl = document.getElementById('frameBorderWidth');
+          if(rangeEl && numEl){
+            const v = parseInt(numEl.value||DEFAULTS.frameBorderWidth||'6',10) || 6;
+            rangeEl.value = v;
+          }
+        }catch(e){}
+        sanitizeUTCField(document.getElementById('dep_utc'));
+        sanitizeUTCField(document.getElementById('arr_utc'));
+
+        const presetEl = document.getElementById('wcPreset');
+        const wEl = document.getElementById('wcW'); const hEl = document.getElementById('wcH');
+        const key = `${wEl?.value||''}x${hEl?.value||''}`;
+        if (presetEl){
+          if (![...presetEl.options].some(o=>o.value===presetEl.value)) presetEl.value = key;
+          const presetHidden = document.getElementById('wcPreset');
+          if (presetHidden) presetHidden.value = presetEl.value;
+        }
+        // Ensure preview picks up new values loaded from DB
+        try{ setTimeout(()=>{ updatePreview(); }, 8); }catch(e){}
+      }
+
+      if (!firstPaint) {
         document.body.classList.add('ready');
         firstPaint = true;
         canSave = true;
@@ -1165,10 +1138,8 @@
   function applyOverlayOptions(){
     const usp=new URLSearchParams(location.search);
     const x=parseFloat(usp.get('x')||''); const y=parseFloat(usp.get('y')||''); const s=parseFloat(usp.get('scale')||''); const onlyReal=usp.get('onlyReal');
-    const place=(el)=>{ if(!el) return; 
-      if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
-      if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; 
-    };
+    const place=(el)=>{ if(!el) return; if(!Number.isNaN(x)) el.style.left=x+'px'; if(!Number.isNaN(y)) el.style.top=y+'px';
+      if(!Number.isNaN(s)) el.style.transform=`scale(${s})`; el.style.transformOrigin='top left'; };
     if (mode==='info') place(document.querySelector('#screen-info .info-box')?.parentElement);
     if (mode==='departures') place(document.getElementById('screen-departures'));
     if (mode==='departures' && (onlyReal==='1'||onlyReal==='true')){
@@ -1179,7 +1150,7 @@
       const getNum=(k,d)=>{const v=parseFloat(usp.get(k)||'');return Number.isNaN(v)?d:v};
       const pad=getNum('pad',16);
       const frameRadius=getNum('frameBorderRadius',28);
-      const topH=getNum('topH',32);
+      const topH=getNum('topH',22);
       const logoGap=getNum('logoGap',18);
       const matte= usp.get('matte') || '#1d1f22';
       const bTh = getNum('frameBorderWidth', 6);
@@ -1194,6 +1165,9 @@
       if(borderOutline){ borderOutline.setAttribute('rx', frameRadius); borderOutline.setAttribute('ry', frameRadius); borderOutline.setAttribute('stroke', 'rgba(0,0,0,.6)'); borderOutline.setAttribute('stroke-width','1'); }
       if(hairRect){ hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); hairRect.setAttribute('stroke','rgba(0,0,0,.6)'); }
       if(matteRect) matteRect.setAttribute('fill', matte);
+      if(hole) { hole.setAttribute('rx', frameRadius); hole.setAttribute('ry', frameRadius); }
+      if(borderRect) { borderRect.setAttribute('rx', frameRadius); borderRect.setAttribute('ry', frameRadius); }
+      if(hairRect) { hairRect.setAttribute('rx', frameRadius); hairRect.setAttribute('ry', frameRadius); }
 
       const lg=document.getElementById('frame_logo');
       if(lg){ const approxLogoH=30; const top=Math.max(8, holeY - (approxLogoH + logoGap)); lg.style.top = top+'px';
@@ -1209,6 +1183,11 @@
         if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'none'; }
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
+
+      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
 
@@ -1286,13 +1265,9 @@
 
   function bind(){
     if (mode === 'editor') {
-      // Always initialise editor bindings so controls work even when not signed-in.
-      // Keep binding only on sign-in (ensure we don't leak bindings before auth)
-      // bindEditor() will be called after successful auth in onAuthStateChanged.
-
       onAuthStateChanged(auth, (user)=>{
         signedInUser = user || null;
-        // reset save flag until we've synced initial room state
+        editorBound = false;
         canSave = false;
         ensureUIDRoomAndBadge();
         if (!signedInUser){
@@ -1301,13 +1276,10 @@
           const s = document.getElementById('inapp-splash');
           if (s) { try { s.remove(); } catch {} }
           if (dbUnsub) { try{ dbUnsub(); }catch{} dbUnsub=null; }
-          setStatus('Signed out');
         } else {
           requireAuthUI(false);
-          // Bind editor and subscribe once we have a valid user
-          try{ bindEditor(); }catch(e){}
+          bindEditor();
           subscribe();
-          setStatus('Signed in');
         }
         applyOverlayOptions();
       });
