@@ -291,10 +291,6 @@
         <label for="infoPlatform">Platform</label>
         <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoPlatform" type="checkbox" checked><span class="hint">Show platform</span></div>
       </div>
-      <div>
-        <label for="infoMetar">METAR</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><input id="infoMetar" type="checkbox" checked><span class="hint">Show METAR data</span></div>
-      </div>
     </div>
     <div class="grid" style="margin-top:8px">
       <div><label for="infoResText">Resolution text</label><input id="infoResText" placeholder="1080p60FPS"></div>
@@ -399,12 +395,6 @@
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
         <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
-      </div>
-      <div id="i_metar_block" style="display:none;font-size:11px;margin-top:10px;opacity:.75;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
-        <div style="display:flex;justify-content:center;gap:20px;font-family:monospace">
-          <span><span style="color:rgba(255,165,0,.85);font-weight:600">DEP:</span> <span id="i_dep_metar" style="font-size:10px">—</span></span>
-          <span><span style="color:rgba(255,165,0,.85);font-weight:600">ARR:</span> <span id="i_arr_metar" style="font-size:10px">—</span></span>
-        </div>
       </div>
     </div>
 
@@ -573,13 +563,13 @@
   });
 
   const FIELDS = ["simbrief_id","from","to","flight","gate","status","status_custom","dep_utc","arr_utc","aircraft","airframe","cruise","frameBorderColor","frameBorderRadius",
-    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoMetar","infoResText","infoPlatformText","theme"];
+    "wcPreset","wcX","wcY","wcW","wcH","frameBorderWidth","wcShow","logoShow","infoLive","infoRes","infoPlatform","infoResText","infoPlatformText","theme"];
   const DEFAULTS = { simbrief_id:"", from:"Oslo (ENGM)", to:"Liverpool (EGGP)", flight:"POR9392", gate:"B12",
     status:"on-time", status_custom:"", dep_utc:"14:30 UTC", arr_utc:"16:30 UTC",
     aircraft:"A320-251N", airframe:"", cruise:"35,000ft", frameBorderColor: "#3d434b", frameBorderRadius: "28",
     wcPreset:"1280x720", wcX:"32", wcY:"700", wcW:"1280", wcH:"720", frameBorderWidth:"6", wcShow:"on",
     theme: "dark",
-    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoMetar:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" };
+    logoShow:"on", infoLive:"on", infoRes:"on", infoPlatform:"on", infoResText:"1080p60FPS", infoPlatformText:"macOS + OneCast" };
 
   /* ---------- Time helpers ---------- */
   function normalizeHM(h, m){
@@ -868,18 +858,15 @@
       const resEl = document.getElementById('i_res');
       const platEl = document.getElementById('i_platform');
       const sepEl = document.getElementById('i_sep');
-      const metarEl = document.getElementById('i_metar_block');
       const infoLiveShown = (editorEls['infoLive']?.checked === true);
       const infoResShown = (editorEls['infoRes']?.checked === true);
       const infoPlatformShown = (editorEls['infoPlatform']?.checked === true);
-      const infoMetarShown = (editorEls['infoMetar']?.checked === true);
       const resText = (editorEls['infoResText']?.value || '1080p60FPS').toString().trim();
       const platText = (editorEls['infoPlatformText']?.value || 'macOS + OneCast').toString().trim();
       if(liveEl) liveEl.style.display = infoLiveShown ? 'inline-flex' : 'none';
       if(resEl){ resEl.textContent = resText; resEl.style.display = infoResShown ? 'inline' : 'none'; }
       if(platEl){ platEl.textContent = platText; platEl.style.display = infoPlatformShown ? 'inline' : 'none'; }
       if(sepEl) sepEl.style.display = (infoResShown && infoPlatformShown) ? 'inline' : 'none';
-      if(metarEl) metarEl.style.display = infoMetarShown ? 'block' : 'none';
       if(afkImg){
         if(wcShown && afkPath){
           try{ const base = location.href.split('#')[0].split('?')[0]; afkImg.src = /^[a-zA-Z]+:/.test(afkPath) ? afkPath : new URL(afkPath, base).href; }catch(e){ afkImg.src = afkPath; }
@@ -904,7 +891,7 @@
       }catch(e){}
     }
 
-    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoMetar','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
+    [ 'wcX','wcY','wcW','wcH','frameBorderWidth','wcShow','frameBorderColor','frameBorderRadius','logoShow','infoLive','infoRes','infoPlatform','infoResText','infoPlatformText', 'theme' ].forEach(k=>{ const el=editorEls[k]; if(!el) return; el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); });
     setTimeout(updatePreview, 80);
 
     // Frame border width slider sync
@@ -999,7 +986,7 @@
         sanitizeUTCField(editorEls['arr_utc']);
 
         // Always trigger input events so the editor preview (and frame fallback) updates immediately
-        ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise','dep_metar','arr_metar']
+        ['dep_utc','arr_utc','from','to','flight','aircraft','airframe','cruise']
           .forEach(k => editorEls[k]?.dispatchEvent(new Event('input')));
 
         // If signed in, save/publish the imported data
@@ -1013,159 +1000,7 @@
 
   }
 
-  /* ---------- Live METAR Fetching ---------- */
-  const metarCache = { dep: { icao: '', metar: '', ts: 0 }, arr: { icao: '', metar: '', ts: 0 } };
-  const METAR_REFRESH_MS = 5 * 60 * 1000; // Refresh every 5 minutes
 
-  // Extract ICAO code from "City Name (ICAO)" format
-  function extractIcao(str) {
-    if (!str) return '';
-    const match = str.match(/\(([A-Z]{4})\)/i);
-    return match ? match[1].toUpperCase() : '';
-  }
-
-  // Fetch live METAR from AVWX API (free, no API key required for basic use)
-  async function fetchMetar(icao) {
-    if (!icao || icao.length !== 4) return '';
-    try {
-      // Using AVWX public endpoint - free tier
-      const res = await fetch(`https://avwx.rest/api/metar/${icao}?options=info,speech`, {
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!res.ok) {
-        // Fallback to met.no text service
-        const txtRes = await fetch(`https://api.met.no/weatherapi/tafmetar/1.0/metar?icao=${icao}`);
-        if (txtRes.ok) {
-          const txt = await txtRes.text();
-          const lines = txt.trim().split('\n').filter(l => l && !l.startsWith('#'));
-          return lines[lines.length - 1] || '';
-        }
-        return '';
-      }
-      const data = await res.json();
-      return data.raw || data.sanitized || '';
-    } catch (e) {
-      console.warn('METAR fetch failed for', icao, e);
-      return '';
-    }
-  }
-
-  // Update weather display for an airport
-  async function updateLiveMetar(type, icao, wrapEl) {
-    if (!icao || !wrapEl) return;
-    const cache = metarCache[type];
-    const now = Date.now();
-    
-    // Use cache if same airport and fresh enough
-    if (cache.icao === icao && cache.metar && (now - cache.ts) < METAR_REFRESH_MS) {
-      displayMetarSummary(wrapEl, type, cache.metar);
-      return;
-    }
-
-    // Fetch fresh METAR
-    const metar = await fetchMetar(icao);
-    if (metar) {
-      cache.icao = icao;
-      cache.metar = metar;
-      cache.ts = now;
-      displayMetarSummary(wrapEl, type, metar);
-    } else if (cache.metar && cache.icao === icao) {
-      // Keep showing old data if fetch failed
-      displayMetarSummary(wrapEl, type, cache.metar);
-    }
-  }
-
-  // Determine weather emoji based on METAR conditions
-  function getWeatherEmoji(metar) {
-    if (!metar) return '';
-    const raw = String(metar).toUpperCase();
-    
-    // Check if it's currently night (rough estimate based on METAR time or current UTC)
-    let isNight = false;
-    const timeMatch = raw.match(/\b\d{2}(\d{2})(\d{2})Z\b/);
-    if (timeMatch) {
-      const hour = parseInt(timeMatch[1], 10);
-      // Rough night estimate: 18:00-06:00 UTC
-      isNight = hour >= 18 || hour < 6;
-    } else {
-      // Fallback to current UTC time
-      const nowHour = new Date().getUTCHours();
-      isNight = nowHour >= 18 || nowHour < 6;
-    }
-
-    // Priority order: severe weather first, then precipitation, then clouds/clear
-    
-    // Thunderstorms
-    if (/\bTS\b|TSTM/.test(raw)) return '⛈️';
-    
-    // Heavy precipitation
-    if (/\+RA|\+SN|\+SHRA/.test(raw)) return '🌧️';
-    
-    // Snow
-    if (/\bSN\b|BLSN/.test(raw)) return '🌨️';
-    
-    // Rain/drizzle
-    if (/\bRA\b|\bDZ\b|SHRA|SHRADZ/.test(raw)) return '🌧️';
-    
-    // Freezing conditions
-    if (/\bFZ|\bIC\b/.test(raw)) return '🥶';
-    
-    // Fog/mist/haze (low visibility)
-    if (/\bFG\b|\bBR\b|\bHZ\b|\bMIFG\b/.test(raw)) return '🌫️';
-    
-    // Very strong winds (25kt+)
-    const windMatch = raw.match(/\b(?:\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
-    if (windMatch) {
-      const speed = parseInt(windMatch[1], 10);
-      const gust = windMatch[2] ? parseInt(windMatch[2], 10) : 0;
-      if (speed >= 25 || gust >= 35) return '💨';
-    }
-    
-    // Cloud cover
-    if (/\bOVC\b/.test(raw)) return isNight ? '☁️' : '☁️';  // Overcast (same day/night)
-    if (/\bBKN\b/.test(raw)) return isNight ? '☁️' : '🌥️';  // Broken clouds
-    if (/\bSCT\b/.test(raw)) return isNight ? '☁️' : '⛅';  // Scattered
-    if (/\bFEW\b/.test(raw)) return isNight ? '🌙' : '🌤️';  // Few clouds
-    
-    // Clear skies
-    if (/CAVOK|SKC|CLR|NCD|NSC/.test(raw)) {
-      return isNight ? '🌙' : '☀️';
-    }
-    
-    // Default: partly cloudy
-    return isNight ? '🌙' : '⛅';
-  }
-
-  function displayMetarSummary(wrapEl, type, metar) {
-    // This function is no longer used - METAR display uses the i_metar_block instead
-  }
-
-  // Periodic METAR refresh (runs in info mode)
-  let metarRefreshInterval = null;
-  let lastFromIcao = '', lastToIcao = '';
-
-  function startMetarRefresh(fromStr, toStr) {
-    const depIcao = extractIcao(fromStr);
-    const arrIcao = extractIcao(toStr);
-    lastFromIcao = depIcao;
-    lastToIcao = arrIcao;
-
-    const leftWrap = document.querySelector('.info-left');
-    const rightWrap = document.querySelector('.info-right');
-
-    // Immediate fetch
-    if (depIcao) updateLiveMetar('dep', depIcao, leftWrap);
-    if (arrIcao) updateLiveMetar('arr', arrIcao, rightWrap);
-
-    // Clear any existing interval
-    if (metarRefreshInterval) clearInterval(metarRefreshInterval);
-
-    // Set up periodic refresh
-    metarRefreshInterval = setInterval(() => {
-      if (lastFromIcao) updateLiveMetar('dep', lastFromIcao, document.querySelector('.info-left'));
-      if (lastToIcao) updateLiveMetar('arr', lastToIcao, document.querySelector('.info-right'));
-    }, METAR_REFRESH_MS);
-  }
 
   function renderInfo(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
@@ -1189,12 +1024,6 @@
     const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
     setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise));
     
-    // Live METAR: fetch real-time weather based on airport ICAO codes
-    const fromStr = val('from', DEFAULTS.from);
-    const toStr = val('to', DEFAULTS.to);
-    if (mode === 'info') {
-      startMetarRefresh(fromStr, toStr);
-    }
     // live indicator block handled below
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
@@ -1207,26 +1036,12 @@
     const liveShould = liveParam === 'on' ? true : liveParam === 'off' ? false : infoLiveSaved;
     const resShould = resParam === 'on' ? true : resParam === 'off' ? false : infoResSaved;
     const platShould = platParam === 'on' ? true : platParam === 'off' ? false : infoPlatformSaved;
-    const metarParam = (usp.get('infoMetar')||'').toLowerCase();
-    const infoMetarSaved = (val('infoMetar','on') === 'on');
-    const metarShould = metarParam === 'on' ? true : metarParam === 'off' ? false : infoMetarSaved;
-    const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform'), metarEl=document.getElementById('i_metar_block');
+    const liveEl=document.getElementById('i_live_block'), resEl=document.getElementById('i_res'), platEl=document.getElementById('i_platform');
     const sepEl = document.getElementById('i_sep');
     if(liveEl) liveEl.style.display = liveShould ? 'inline-flex' : 'none';
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
-    if(metarEl){ 
-      metarEl.style.display = metarShould ? 'block' : 'none';
-      if(metarShould){
-        const depMetarVal = val('dep_metar', '');
-        const arrMetarVal = val('arr_metar', '');
-        const depMetarEl = document.getElementById('i_dep_metar');
-        const arrMetarEl = document.getElementById('i_arr_metar');
-        if(depMetarEl) depMetarEl.textContent = depMetarVal || '—';
-        if(arrMetarEl) arrMetarEl.textContent = arrMetarVal || '—';
-      }
-    }
     // normalize dep/arr times so they match SimBrief's parsed UTC format
     try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
     
@@ -1241,64 +1056,6 @@
     }
   }
 
-  // Parse a METAR-like string into a compact human summary
-  function parseMetarSummary(m){
-    if(!m) return '';
-    const raw = String(m).trim();
-    // wind: 24010KT or VRB03KT or 24010G20KT
-    const windMatch = raw.match(/\b((?:\d{3}|VRB)\d{2,3})(G(\d{2,3}))?KT\b/);
-    // visibility: 9999 or 10SM or CAVOK
-    const visMatch = raw.match(/\b(\d{4}|\d+SM|CAVOK)\b/);
-    // cloud layers (take most significant)
-    const cloudMatch = raw.match(/\b(FEW|SCT|BKN|OVC)\d{3}\b/);
-    // temperature/dewpoint pair like 09/04 or M02/M05
-    const tempMatch = raw.match(/\b(M?\d{1,2})\/(M?\d{1,2})\b/);
-    // altimeter Q1009 or A2992
-    const qMatch = raw.match(/\b(Q\d{4})\b/);
-    const aMatch = raw.match(/\b(A\d{4})\b/);
-    // Build a friendly, labeled summary for viewers
-    const pieces = [];
-    if(windMatch){ const dirRaw = windMatch[1]; const dir = dirRaw==='VRB' ? 'Variable' : String(parseInt(dirRaw,10)); const sp = windMatch[1].replace(/VRB/,'').slice(-3).replace(/^0+/,'')||''; const gust = windMatch[3]?parseInt(windMatch[3],10):null; pieces.push(`Wind ${dir} ${sp?`${sp}kt`:''}${gust?` G${gust}kt`:''}`); }
-    if(tempMatch){ const t = tempMatch[1].replace(/^M/,'-'); pieces.push(`Temp ${t}°C`); }
-    if(cloudMatch){ const cls = cloudMatch[0]; const friendly = cls.replace(/^FEW/,'Few').replace(/^SCT/,'Scattered').replace(/^BKN/,'Broken').replace(/^OVC/,'Overcast'); pieces.push(`${friendly} clouds`); }
-    else if(/CAVOK/i.test(raw) || /SKC|NOCLOUDS/i.test(raw)) { pieces.push('Clouds: Clear'); }
-    if(visMatch){ if(/SM/i.test(visMatch[0])){ const mi = parseFloat(visMatch[1]); pieces.push(`Visibility ${Math.round(mi*1.609*10)/10} km`); } else { const v = visMatch[1]; pieces.push(v==='9999' ? 'Visibility 10 km+' : `Visibility ${v}`); } }
-    if(qMatch) pieces.push(`${qMatch[1]}`); else if(aMatch) pieces.push(`${aMatch[1]}`);
-    return pieces.join(' • ');
-  }
-
-  // Convert METAR/TAF-like text into a short, plain-language summary
-  function summarizeMetarPlain(m){
-    if(!m) return '';
-    const raw = String(m).trim();
-    if(!raw) return '';
-    // quick checks
-    if(/CAVOK/i.test(raw) || /SKC|NOCLOUDS/i.test(raw)) return 'Clear skies';
-    const parts = [];
-    // wind (format: 'Wind 260 15kt' and include gusts as 'G25kt')
-    const windMatch = raw.match(/\b((?:\d{3}|VRB))(\d{2,3})(?:G(\d{2,3}))?KT\b/);
-    if(windMatch){ const dirRaw = windMatch[1]; const dir = dirRaw === 'VRB' ? 'Variable' : String(parseInt(dirRaw,10)); const sp = parseInt(windMatch[2],10); const gust = windMatch[3]?parseInt(windMatch[3],10):null; parts.push(`Wind ${dir} ${sp}kt${gust?` G${gust}kt`:''}`); }
-    // precipitation / thunderstorms
-    if(/TS|TSTM/.test(raw)) parts.push('Thunderstorms');
-    else if(/SHRA|SH(RA|DZ)/.test(raw)) parts.push('Showery rain');
-    else if(/RA/.test(raw)) parts.push('Rain');
-    else if(/SN/.test(raw)) parts.push('Snow');
-    // visibility (normalize to km and use a readable unit)
-    const visMatch = raw.match(/\b(\d{4})\b/) || raw.match(/\b(\d+(?:\.\d+)?)SM\b/i);
-    if(visMatch){ if(/SM/i.test(visMatch[0])){ const mi = parseFloat(visMatch[1]); parts.push(`Visibility ${Math.round(mi*1.609*10)/10} km`); } else { const v = parseInt(visMatch[1],10); parts.push(v>=9999 ? 'Visibility 10 km+' : (v%1000===0?`Visibility ${v/1000} km`:`Visibility ${(v/1000).toFixed(1)} km`)); } }
-    // clouds (drop altitude; keep concise)
-    const cloudMatch = raw.match(/\b(FEW|SCT|BKN|OVC)(\d{3})\b/);
-    if(cloudMatch){ const code = cloudMatch[1]; const friendly = code==='FEW'?'Few':code==='SCT'?'Scattered':code==='BKN'?'Broken':'Overcast'; parts.push(`${friendly} clouds`); }
-    // temp
-    const tempMatch = raw.match(/\b(M?\d{1,2})\/(M?\d{1,2})\b/);
-    if(tempMatch){ const t=tempMatch[1].replace(/^M/,'-'); parts.push(`Temp ${t}°C`); }
-    // altimeter
-    const qMatch = raw.match(/\b(Q\d{4})\b/); const aMatch = raw.match(/\b(A\d{4})\b/);
-    if(qMatch) parts.push(`${qMatch[1]}`); else if(aMatch) parts.push(`${aMatch[1]}`);
-    // shorten and join
-    const out = parts.join(' • ');
-    return out.length? out : (raw.slice(0,180) + (raw.length>180? '…':''));
-  }
 
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
