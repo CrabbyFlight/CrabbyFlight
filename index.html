@@ -476,10 +476,6 @@
   <div id="wc" class="wc-frame" style="left:32px;top:700px;width:420px;height:236px">
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
-
-  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
-    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
-  </div>
 </div>
 
 <!-- URLs Modal -->
@@ -1075,10 +1071,6 @@
       else imgEl.style.display = 'none';
     }
 
-    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
-    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
-    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
   function subscribe(){
@@ -1183,13 +1175,9 @@
         if(wcShowParam === 'off'){ wc.style.outline = 'none'; wc.style.boxShadow = 'none'; if(imgEl) imgEl.style.display = 'none'; }
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
-
-      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
-      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
-      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
-      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
+
 
   function setStatus(msg){ const el=document.getElementById('auth_status'); if(el){ el.textContent=msg||''; } }
   function requireAuthUI(on){ document.body.classList.toggle('require-auth', !!on); }
