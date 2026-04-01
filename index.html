@@ -971,17 +971,16 @@
   function renderInfo(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
-    setT('i_from',val('from',DEFAULTS.from)); setT('i_to',val('to',DEFAULTS.to));
+    const fromVal=val('from',DEFAULTS.from); const toVal=val('to',DEFAULTS.to);
+    const fromName = fromVal.replace(/\s*\([^)]*\)\s*$/, '').trim(); const toName = toVal.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    setT('i_from', fromName || fromVal); setT('i_to', toName || toVal);
     setT('i_dep_utc',val('dep_utc',DEFAULTS.dep_utc)); setT('i_arr_utc',val('arr_utc',DEFAULTS.arr_utc));
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
     const frameRadiusSaved = val('frameBorderRadius', DEFAULTS.frameBorderRadius);
     try{ document.documentElement.style.setProperty('--frame-border-color', frameColSaved); document.documentElement.style.setProperty('--frame-border-radius', `${frameRadiusSaved}px`); }catch(e){}
     setT('i_flight',val('flight',DEFAULTS.flight));
     const aircraftSaved = val('aircraft', DEFAULTS.aircraft);
-    const airframeSaved = val('airframe', '');
-    const aircraftDisplay = airframeSaved ? `${aircraftSaved} (${airframeSaved})` : aircraftSaved;
-    setT('i_aircraft', aircraftDisplay); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
-    // live indicator block handled below
+    setT('i_aircraft', aircraftSaved); setT('i_cruise',val('cruise',DEFAULTS.cruise)); setT('i_enroute',val('enroute',DEFAULTS.enroute));
     // Info display toggles
     const infoLiveSaved = (val('infoLive','on') === 'on');
     const infoResSaved = (val('infoRes','on') === 'on');
