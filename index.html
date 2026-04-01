@@ -121,13 +121,13 @@
 
   .container{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center;pointer-events:none}
   .container .info-box{pointer-events:auto;z-index:20}
-  .info-box{background:rgba(44,48,54,.85);border:1px solid rgba(0,0,0,.6);border-radius:var(--frame-border-radius,12px);box-shadow:0 12px 32px rgba(0,0,0,.4);color:#fff;padding:20px 32px;display:grid;grid-template-columns:1fr auto 1fr;gap:32px;align-items:start;max-width:1280px;width:min(95%,1280px);text-shadow:1px 1px 3px rgba(0,0,0,.8);backdrop-filter:blur(4px);box-sizing:border-box}
-  .info-left{text-align:left;display:flex;flex-direction:column;gap:6px;min-width:240px}
-  .info-center{text-align:center;display:flex;flex-direction:column;gap:8px;padding:0 28px;border-left:1px solid rgba(255,255,255,.2);border-right:1px solid rgba(255,255,255,.2);flex-shrink:0;white-space:nowrap}
-  .info-right{text-align:right;display:flex;flex-direction:column;gap:6px;min-width:240px}
-  .info-airport{font-size:26px;font-weight:700;color:#FFA500;letter-spacing:.3px;line-height:1.2;white-space:nowrap}
-  .info-time{font-size:15px;color:rgba(255,255,255,.9);font-weight:600}
-  .info-time strong{font-weight:700;margin-right:4px}
+  .info-box{background:linear-gradient(135deg, rgba(26,30,40,.92) 0%, rgba(33,36,44,.92) 100%);border:1px solid rgba(255,165,0,.15);border-radius:var(--frame-border-radius,16px);box-shadow:0 16px 48px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.08);color:#fff;padding:28px 40px;display:grid;grid-template-columns:1fr auto 1fr;gap:48px;align-items:center;max-width:1400px;width:min(96%,1400px);text-shadow:1px 1px 2px rgba(0,0,0,.9);backdrop-filter:blur(8px);box-sizing:border-box}
+  .info-left{text-align:left;display:flex;flex-direction:column;gap:14px;min-width:280px;padding:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,165,0,.08);border-radius:12px}
+  .info-center{text-align:center;display:flex;flex-direction:column;gap:14px;padding:20px 32px;background:rgba(255,255,255,.04);border:1px solid rgba(255,165,0,.08);border-radius:12px;flex-shrink:0;white-space:nowrap}
+  .info-right{text-align:right;display:flex;flex-direction:column;gap:14px;min-width:280px;padding:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,165,0,.08);border-radius:12px}
+  .info-airport{font-size:32px;font-weight:800;color:#FFA500;letter-spacing:.2px;line-height:1.1;white-space:nowrap;text-transform:uppercase}
+  .info-time{font-size:14px;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+  .info-time strong{font-weight:800;margin-right:6px;color:rgba(255,255,255,.95)}
   .plane-icon{vertical-align:middle;margin:0 5px;transform:rotate(90deg);width:16px;height:16px}
 
   @keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}100%{transform:scale(1);opacity:1}}
@@ -377,27 +377,29 @@
 <div id="screen-info" class="container">
   <div class="info-box">
     <div class="info-left">
-      <div class="info-airport" id="i_from">LIVERPOOL (EGGP)</div>
-      <div class="info-time"><strong>Departs:</strong> <span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.6px;font-weight:700">Departure</div>
+      <div class="info-airport" id="i_from">LIVERPOOL</div>
+      <div class="info-time"><strong>Depart</strong><span class="dynamic" id="i_dep_utc">15:05 UTC</span></div>
     </div>
 
     <div class="info-center">
-      <div style="font-size:18px;font-weight:700;margin-bottom:2px">
-        <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:4px">Flight</div>
+      <div style="font-size:36px;font-weight:900;color:#FFA500;letter-spacing:.2px;line-height:1"><span class="dynamic" id="i_flight">WAL113</span></div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:8px;line-height:1.4">
+        <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N</span></div>
+        <div style="margin-top:4px"><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">24,000ft</span></div>
+        <div style="margin-top:4px"><strong>Duration:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
       </div>
-      <div style="font-size:15px;line-height:1.6">
-        <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
-        <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">24,000ft</span> | <strong>Time:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.3px">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
-        <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+        <span id="i_res">1080p60FPS</span> <span id="i_sep">•</span> <span id="i_platform">macOS + OneCast</span>
       </div>
     </div>
 
     <div class="info-right">
-      <div class="info-airport" id="i_to">EDINBURGH (EGPH)</div>
-      <div class="info-time"><strong>Arrives:</strong> <span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.6px;font-weight:700;text-align:right">Arrival</div>
+      <div class="info-airport" id="i_to">EDINBURGH</div>
+      <div class="info-time"><strong>Arrive</strong><span class="dynamic" id="i_arr_utc">16:10 UTC</span></div>
     </div>
   </div>
 </div>
