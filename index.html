@@ -383,12 +383,17 @@
     </div>
 
     <div class="info-center">
+<<<<<<< HEAD
       <div style="font-size:13px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:4px">Flight</div>
       <div style="font-size:36px;font-weight:900;color:#FFA500;letter-spacing:.2px;line-height:1"><span class="dynamic" id="i_flight">WAL113</span></div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:8px;line-height:1.4">
         <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N</span></div>
         <div style="margin-top:4px"><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">24,000ft</span></div>
         <div style="margin-top:4px"><strong>Duration:</strong> <span class="dynamic" id="i_enroute">~42m</span></div>
+=======
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px">
+        <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
+>>>>>>> parent of 22a0af4 (prev work)
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.3px">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
@@ -968,12 +973,205 @@
 
   }
 
+<<<<<<< HEAD
   function renderInfo(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
     const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
     const fromVal=val('from',DEFAULTS.from); const toVal=val('to',DEFAULTS.to);
     const fromName = fromVal.replace(/\s*\([^)]*\)\s*$/, '').trim(); const toName = toVal.replace(/\s*\([^)]*\)\s*$/, '').trim();
     setT('i_from', fromName || fromVal); setT('i_to', toName || toVal);
+=======
+  /* ---------- Live METAR Fetching ---------- */
+  const metarCache = { dep: { icao: '', metar: '', ts: 0 }, arr: { icao: '', metar: '', ts: 0 } };
+  const METAR_REFRESH_MS = 5 * 60 * 1000; // Refresh every 5 minutes
+
+  // Extract ICAO code from "City Name (ICAO)" format
+  function extractIcao(str) {
+    if (!str) return '';
+    const match = str.match(/\(([A-Z]{4})\)/i);
+    return match ? match[1].toUpperCase() : '';
+  }
+
+  // Fetch live METAR from AVWX API (free, no API key required for basic use)
+  async function fetchMetar(icao) {
+    if (!icao || icao.length !== 4) return '';
+    try {
+      // Using AVWX public endpoint - free tier
+      const res = await fetch(`https://avwx.rest/api/metar/${icao}?options=info,speech`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) {
+        // Fallback to met.no text service
+        const txtRes = await fetch(`https://api.met.no/weatherapi/tafmetar/1.0/metar?icao=${icao}`);
+        if (txtRes.ok) {
+          const txt = await txtRes.text();
+          const lines = txt.trim().split('\n').filter(l => l && !l.startsWith('#'));
+          return lines[lines.length - 1] || '';
+        }
+        return '';
+      }
+      const data = await res.json();
+      return data.raw || data.sanitized || '';
+    } catch (e) {
+      console.warn('METAR fetch failed for', icao, e);
+      return '';
+    }
+  }
+
+  // Update weather display for an airport
+  async function updateLiveMetar(type, icao, wrapEl) {
+    if (!icao || !wrapEl) return;
+    const cache = metarCache[type];
+    const now = Date.now();
+    
+    // Use cache if same airport and fresh enough
+    if (cache.icao === icao && cache.metar && (now - cache.ts) < METAR_REFRESH_MS) {
+      displayMetarSummary(wrapEl, type, cache.metar);
+      return;
+    }
+
+    // Fetch fresh METAR
+    const metar = await fetchMetar(icao);
+    if (metar) {
+      cache.icao = icao;
+      cache.metar = metar;
+      cache.ts = now;
+      displayMetarSummary(wrapEl, type, metar);
+    } else if (cache.metar && cache.icao === icao) {
+      // Keep showing old data if fetch failed
+      displayMetarSummary(wrapEl, type, cache.metar);
+    }
+  }
+
+  // Determine weather emoji based on METAR conditions
+  function getWeatherEmoji(metar) {
+    if (!metar) return '';
+    const raw = String(metar).toUpperCase();
+    
+    // Check if it's currently night (rough estimate based on METAR time or current UTC)
+    let isNight = false;
+    const timeMatch = raw.match(/\b\d{2}(\d{2})(\d{2})Z\b/);
+    if (timeMatch) {
+      const hour = parseInt(timeMatch[1], 10);
+      // Rough night estimate: 18:00-06:00 UTC
+      isNight = hour >= 18 || hour < 6;
+    } else {
+      // Fallback to current UTC time
+      const nowHour = new Date().getUTCHours();
+      isNight = nowHour >= 18 || nowHour < 6;
+    }
+
+    // Priority order: severe weather first, then precipitation, then clouds/clear
+    
+    // Thunderstorms
+    if (/\bTS\b|TSTM/.test(raw)) return '⛈️';
+    
+    // Heavy precipitation
+    if (/\+RA|\+SN|\+SHRA/.test(raw)) return '🌧️';
+    
+    // Snow
+    if (/\bSN\b|BLSN/.test(raw)) return '🌨️';
+    
+    // Rain/drizzle
+    if (/\bRA\b|\bDZ\b|SHRA|SHRADZ/.test(raw)) return '🌧️';
+    
+    // Freezing conditions
+    if (/\bFZ|\bIC\b/.test(raw)) return '🥶';
+    
+    // Fog/mist/haze (low visibility)
+    if (/\bFG\b|\bBR\b|\bHZ\b|\bMIFG\b/.test(raw)) return '🌫️';
+    
+    // Very strong winds (25kt+)
+    const windMatch = raw.match(/\b(?:\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+    if (windMatch) {
+      const speed = parseInt(windMatch[1], 10);
+      const gust = windMatch[2] ? parseInt(windMatch[2], 10) : 0;
+      if (speed >= 25 || gust >= 35) return '💨';
+    }
+    
+    // Cloud cover
+    if (/\bOVC\b/.test(raw)) return isNight ? '☁️' : '☁️';  // Overcast (same day/night)
+    if (/\bBKN\b/.test(raw)) return isNight ? '☁️' : '🌥️';  // Broken clouds
+    if (/\bSCT\b/.test(raw)) return isNight ? '☁️' : '⛅';  // Scattered
+    if (/\bFEW\b/.test(raw)) return isNight ? '🌙' : '🌤️';  // Few clouds
+    
+    // Clear skies
+    if (/CAVOK|SKC|CLR|NCD|NSC/.test(raw)) {
+      return isNight ? '🌙' : '☀️';
+    }
+    
+    // Default: partly cloudy
+    return isNight ? '🌙' : '⛅';
+  }
+
+  function displayMetarSummary(wrapEl, type, metar) {
+    const elId = type === 'dep' ? 'i_dep_weather' : 'i_arr_weather';
+    let el = document.getElementById(elId);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = elId;
+      el.className = 'airport-weather';
+      wrapEl.appendChild(el);
+    }
+    const emoji = getWeatherEmoji(metar);
+    const summary = summarizeMetarPlain(metar) || parseMetarSummary(metar);
+    el.textContent = summary;
+    el.style.display = summary ? 'block' : 'none';
+    el.style.fontSize = '14px';
+    el.style.fontWeight = '700';
+    
+    // Update airport name with weather emoji (after the name)
+    const airportElId = type === 'dep' ? 'i_from' : 'i_to';
+    const airportEl = document.getElementById(airportElId);
+    if (airportEl && emoji) {
+      // Store original text if not already stored
+      if (!airportEl.dataset.originalText) {
+        airportEl.dataset.originalText = airportEl.textContent;
+      }
+      airportEl.textContent = `${airportEl.dataset.originalText} ${emoji}`;
+    }
+  }
+
+  // Periodic METAR refresh (runs in info mode)
+  let metarRefreshInterval = null;
+  let lastFromIcao = '', lastToIcao = '';
+
+  function startMetarRefresh(fromStr, toStr) {
+    const depIcao = extractIcao(fromStr);
+    const arrIcao = extractIcao(toStr);
+    lastFromIcao = depIcao;
+    lastToIcao = arrIcao;
+
+    const leftWrap = document.querySelector('.info-left');
+    const rightWrap = document.querySelector('.info-right');
+
+    // Immediate fetch
+    if (depIcao) updateLiveMetar('dep', depIcao, leftWrap);
+    if (arrIcao) updateLiveMetar('arr', arrIcao, rightWrap);
+
+    // Clear any existing interval
+    if (metarRefreshInterval) clearInterval(metarRefreshInterval);
+
+    // Set up periodic refresh
+    metarRefreshInterval = setInterval(() => {
+      if (lastFromIcao) updateLiveMetar('dep', lastFromIcao, document.querySelector('.info-left'));
+      if (lastToIcao) updateLiveMetar('arr', lastToIcao, document.querySelector('.info-right'));
+    }, METAR_REFRESH_MS);
+  }
+
+  function renderInfo(d){
+    const val=(k,def='')=>(d?.[k]||'').trim()||def;
+    const setT=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    
+    // Set airport names and store original text for emoji prepending
+    const fromText = val('from',DEFAULTS.from);
+    const toText = val('to',DEFAULTS.to);
+    const fromEl = document.getElementById('i_from');
+    const toEl = document.getElementById('i_to');
+    if (fromEl) { fromEl.textContent = fromText; fromEl.dataset.originalText = fromText; }
+    if (toEl) { toEl.textContent = toText; toEl.dataset.originalText = toText; }
+    
+>>>>>>> parent of 22a0af4 (prev work)
     setT('i_dep_utc',val('dep_utc',DEFAULTS.dep_utc)); setT('i_arr_utc',val('arr_utc',DEFAULTS.arr_utc));
     const frameColSaved = val('frameBorderColor', DEFAULTS.frameBorderColor);
     const frameRadiusSaved = val('frameBorderRadius', DEFAULTS.frameBorderRadius);
