@@ -180,6 +180,8 @@
   .frame-svg{position:absolute;inset:0;pointer-events:none}
   .frame-logo{position:absolute;left:50%;transform:translateX(-50%);top:12px;display:flex;align-items:center;gap:10px;font-weight:800;padding:8px 12px;border-radius:999px;background:rgba(33,36,41,.7);border:1px solid rgba(61,67,75,.85);text-shadow:2px 2px 4px rgba(0,0,0,.9)}
   .frame-logo img{width:22px;height:22px}
+  .embed{position:absolute;transform-origin:top left}
+  .embed iframe{width:980px;height:360px;border:0;background:transparent;pointer-events:none}
   .wc-frame{position:absolute;box-sizing:border-box;border-radius:16px;outline:6px solid var(--brand);box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)}
 </style>
 </head>
@@ -475,6 +477,9 @@
     <img id="wc_afk" src="afklogo.png" alt="AFK logo">
   </div>
 
+  <div id="embed_info" class="embed info" style="display:none" aria-hidden="true">
+    <iframe id="info_iframe" src="" allowtransparency="true" title="Info overlay"></iframe>
+  </div>
 </div>
 
 <!-- URLs Modal -->
@@ -1070,6 +1075,10 @@
       else imgEl.style.display = 'none';
     }
 
+    const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+    const infoX=orNum('infoX',pad+16), infoY=orNum('infoY',holeY+6), infoScale=orNum('infoScale',1);
+    if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+    if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
   }
 
   function subscribe(){
@@ -1175,6 +1184,10 @@
         else if (wcShowParam === 'on'){ wc.style.outline = `${bTh}px solid ${bCol}`; wc.style.boxShadow = '0 0 0 1px rgba(0,0,0,.6), 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35)'; if(imgEl) imgEl.style.display = 'block'; }
       }
 
+      const infoWrap=document.getElementById('embed_info'); const infoIframe=document.getElementById('info_iframe');
+      const infoX=getNum('infoX',pad+16), infoY=getNum('infoY',holeY+6), infoScale=getNum('infoScale',1);
+      if(infoWrap){ infoWrap.style.left='50%'; infoWrap.style.top=infoY+'px'; infoWrap.style.transform=`translateX(-50%) scale(${infoScale})`; infoWrap.style.display='block'; infoWrap.setAttribute('aria-hidden','false'); }
+      if(infoIframe){ const base=location.href.split('#')[0]; infoIframe.src=`${base}#info:${room}`; }
     }
   }
 
