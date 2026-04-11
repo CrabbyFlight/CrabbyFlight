@@ -405,9 +405,19 @@
         <span style="color:rgba(255,255,255,.85)">Flight:</span> <span class="dynamic" id="i_flight">WAL113</span>
 >>>>>>> parent of 22a0af4 (prev work)
       </div>
+<<<<<<< HEAD
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.3px">
         <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
         <span id="i_res">1080p60FPS</span> <span id="i_sep">•</span> <span id="i_platform">macOS + OneCast</span>
+=======
+      <div style="font-size:15px;line-height:1.6">
+        <div><strong>Aircraft:</strong> <span class="dynamic" id="i_aircraft">A320-251N (G-WALI)</span></div>
+        <div><strong>Cruise:</strong> <span class="dynamic" id="i_cruise">35,000ft</span></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;font-size:12px;opacity:.85">
+        <span class="live-indicator" id="i_live_block"><span class="live-dot"></span><span class="live-text">LIVE</span></span>
+        <span id="i_res">1080p60FPS</span> <span id="i_sep" class="sep">|</span> <span id="i_platform">macOS + OneCast</span>
+>>>>>>> parent of a5fa846 (Update index.html)
       </div>
     </div>
 
@@ -1206,6 +1216,21 @@
     if(resEl){ resEl.textContent = resTextSaved; resEl.style.display = resShould ? 'inline' : 'none' }
     if(platEl){ platEl.textContent = platTextSaved; platEl.style.display = platShould ? 'inline' : 'none' }
     if(sepEl) sepEl.style.display = (resShould && platShould) ? 'inline' : 'none';
+<<<<<<< HEAD
+=======
+    // normalize dep/arr times so they match SimBrief's parsed UTC format
+    try{ const depNormalized = parseTimeUTC(val('dep_utc', DEFAULTS.dep_utc)) || val('dep_utc', DEFAULTS.dep_utc); const arrNormalized = parseTimeUTC(val('arr_utc', DEFAULTS.arr_utc)) || val('arr_utc', DEFAULTS.arr_utc); setT('i_dep_utc', depNormalized); setT('i_arr_utc', arrNormalized); }catch(e){}
+    
+    // Calculate info-box cover height to hide frame border behind top portion
+    // Uses topH (frame top height) + padding to ensure full coverage
+    if (mode === 'info') {
+      const usp = new URLSearchParams(location.search);
+      const topH = parseFloat(usp.get('topH') || '') || 32; // default topH from frame
+      const pad = parseFloat(usp.get('pad') || '') || 16;
+      const coverHeight = topH + pad + 20; // extra pixels to ensure coverage
+      document.documentElement.style.setProperty('--info-cover-height', `${coverHeight}px`);
+    }
+>>>>>>> parent of a5fa846 (Update index.html)
   }
   function renderDepartures(d){
     const val=(k,def='')=>(d?.[k]||'').trim()||def;
